@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required
 from app.extensions import db
-from app.models import Participant, Client
+from app.models import Participant, Client, Inscription
 from app.services.permissions import gestionnaire_ou_admin_required
 
 participants_bp = Blueprint("participants", __name__, url_prefix="/api/participants")
@@ -76,3 +76,22 @@ def modifier_participant(participant_id):
 
     db.session.commit()
     return jsonify(participant_vers_dict(participant)), 200
+
+@participants_bp.route("/<int:participant_id>", methods=["DELETE"])
+@gestionnaire_ou_admin_required
+def supprimer_participant(participant_id):
+    participant = Participant.query.get_or_404(participant_id)
+
+    inscription_existante = Inscription.query.filter_by(participant_id=participant_id).first()
+
+    if inscription_existante is not None:
+        nb_inscriptions = Inscription.query.filter_by(participant_id=participant_id).count()
+        return jsonify({
+            "erreur": f"Impossible de supprimer ce participant : {nb_inscriptions} inscription(s) y sont associée(s)."
+        }), 409
+
+    db.session.delete(participant)
+    db.session.commit()
+
+    return "", 204
+

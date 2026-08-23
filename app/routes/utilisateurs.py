@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from app.extensions import db
-from app.models import Utilisateur, Role
+from app.models import Utilisateur, Role, Formateur
 from app.services.permissions import admin_required
 
 utilisateurs_bp = Blueprint("utilisateurs", __name__, url_prefix="/api/utilisateurs")
@@ -13,6 +13,7 @@ def utilisateur_vers_dict(utilisateur):
     raison de sortir de la base de données vers l'extérieur, même vers
     un admin. Personne n'a besoin de le voir, ni de le vérifier à l'œil.
     """
+    formateur = Formateur.query.filter_by(utilisateur_id=utilisateur.id).first()
     return {
         "id": utilisateur.id,
         "nom": utilisateur.nom,
@@ -23,6 +24,15 @@ def utilisateur_vers_dict(utilisateur):
             "id": utilisateur.role.id,
             "nom": utilisateur.role.nom,
         },
+        "formateur": {
+            "id": formateur.id,
+            "nom": formateur.nom,
+            "telephone": formateur.telephone,
+            "domaine": {
+                "id": formateur.domaine.id,
+                "nom": formateur.domaine.nom,
+            } if formateur.domaine else None,
+        } if formateur else None,
     }
 
 @utilisateurs_bp.route("", methods=["GET"])

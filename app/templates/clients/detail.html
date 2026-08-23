@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block page_title %}Détail du client{% endblock %}
+
+{% block content %}
+
+<div x-data="pageClientDetailData({{ client_id }})" x-init="charger()">
+
+    <a href="{{ url_for('pages.clients') }}" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        Retour aux clients
+    </a>
+
+    <template x-if="chargementEnCours">
+        <div class="bg-white rounded-xl border border-gray-200 px-5 py-10 text-center text-gray-400 text-sm">
+            <i data-lucide="loader-2" class="w-5 h-5 mx-auto mb-2 animate-spin"></i>
+            Chargement...
+        </div>
+    </template>
+
+    <template x-if="erreur">
+        <div class="bg-white rounded-xl border border-gray-200 px-5 py-10 text-center text-red-500 text-sm">
+            <i data-lucide="alert-circle" class="w-5 h-5 mx-auto mb-2"></i>
+            <span x-text="erreur"></span>
+        </div>
+    </template>
+
+    <template x-if="!chargementEnCours && !erreur && client">
+        <div>
+            <!-- ============ EN-TÊTE CLIENT ============ -->
+            <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                <h2 class="text-lg font-semibold text-gray-900" x-text="client.nom_entreprise"></h2>
+                <p class="text-sm text-gray-500 mt-1" x-text="client.secteur || 'Secteur non renseigné'"></p>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4 mt-4 border-t border-gray-100">
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Contact</p>
+                        <p class="text-sm text-gray-900" x-text="client.contact_email || '—'"></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Participants</p>
+                        <p class="text-sm text-gray-900" x-text="client.nb_participants"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ TABLEAU DES PARTICIPANTS ============ -->
+            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div class="px-5 py-4 border-b border-gray-200">
+                    <p class="text-sm font-medium text-gray-900">
+                        Participants — <span x-text="participants.length"></span>
+                    </p>
+                </div>
+
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200 text-left text-gray-500">
+                            <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Nom</th>
+                            <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Email</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-if="participants.length === 0">
+                            <tr><td colspan="2" class="px-5 py-10 text-center text-gray-400 text-sm">
+                                Aucun participant pour ce client.
+                            </td></tr>
+                        </template>
+
+                        <template x-for="p in participants" :key="p.id">
+                            <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                                <td class="px-5 py-4 font-medium text-gray-900" x-text="p.nom"></td>
+                                <td class="px-5 py-4 text-gray-500 text-xs" x-text="p.email"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </template>
+
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/client_detail.js') }}"></script>
+{% endblock %}
+

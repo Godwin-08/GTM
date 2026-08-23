@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block page_title %}Vue d'ensemble{% endblock %}
+
+{% block content %}
+
+<!-- ============ EN-TÊTE DE PAGE ============ -->
+<div class="mb-6">
+    <p class="text-sm text-gray-500">Pilotez l'activité de formation de Galaxy Solutions.</p>
+</div>
+
+<!-- ============ CARTES KPI ============ -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+        <p class="text-sm text-gray-500 mb-1">Sessions</p>
+        <p class="text-2xl font-semibold text-gray-900" id="kpi-sessions">–</p>
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+        <p class="text-sm text-gray-500 mb-1">Clients actifs</p>
+        <p class="text-2xl font-semibold text-gray-900" id="kpi-clients">–</p>
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+        <p class="text-sm text-gray-500 mb-1">Participants</p>
+        <p class="text-2xl font-semibold text-gray-900" id="kpi-participants">–</p>
+        <!-- Nouvelle ligne pour la tendance, vide par défaut -->
+        <p class="text-xs text-gray-400 mt-1" id="kpi-participants-tendance"></p>
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+        <p class="text-sm text-gray-500 mb-1">Taux de remplissage</p>
+        <p class="text-2xl font-semibold text-gray-900" id="kpi-remplissage">–</p>
+    </div>
+
+</div>
+
+<!-- ============ GRAPHIQUES ============ -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+        <p class="text-sm font-medium text-gray-900 mb-4">Sessions par domaine</p>
+        <canvas id="chartDomaine"></canvas>
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+        <p class="text-sm font-medium text-gray-900 mb-4">Évolution des inscriptions</p>
+        <canvas id="chartEvolution"></canvas>
+    </div>
+
+</div>
+
+<!-- ============ TABLEAU FORMATEURS ============ -->
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <p class="text-sm font-medium text-gray-900 px-5 py-4 border-b border-gray-200">
+        Performance des formateurs
+    </p>
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="border-b border-gray-200 text-left text-gray-500">
+                <th class="px-5 py-3 font-medium">Formateur</th>
+                <th class="px-5 py-3 font-medium">Sessions</th>
+                <th class="px-5 py-3 font-medium">Remplissage moyen</th>
+            </tr>
+        </thead>
+        <tbody id="tableFormateurs"></tbody>
+    </table>
+</div>
+
+<!-- ============ SESSIONS À VENIR ============ -->
+<div class="bg-white rounded-xl border border-gray-200 overflow-hidden mt-6">
+    <p class="text-sm font-medium text-gray-900 px-5 py-4 border-b border-gray-200">
+        Sessions à venir
+    </p>
+    <!-- Rempli dynamiquement par le JS, une div par session -->
+    <div id="listeSessionsAVenir" class="divide-y divide-gray-100"></div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const urlRemplissage = "{{ url_for('stats.remplissage') }}";
+    const urlDomaine = "{{ url_for('stats.activite_domaine') }}";
+    const urlClient = "{{ url_for('stats.activite_client') }}";
+    const urlFormateur = "{{ url_for('stats.activite_formateur') }}";
+    const urlEvolution = "{{ url_for('stats.evolution_inscriptions') }}";
+    const urlSessions = "{{ url_for('sessions.liste_sessions') }}";
+</script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

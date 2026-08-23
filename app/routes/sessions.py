@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required
 from app.extensions import db
-from app.models import Session, Formation, Formateur
+from app.models import Session, Formation, Formateur, Inscription
 from app.services.permissions import gestionnaire_ou_admin_required
 
 sessions_bp = Blueprint("sessions", __name__, url_prefix="/api/sessions")
@@ -48,6 +48,10 @@ def liste_sessions():
     formateur_id = request.args.get("formateur_id", type=int)
     if formateur_id:
         query = query.filter_by(formateur_id=formateur_id)
+
+    formation_id = request.args.get("formation_id", type=int)
+    if formation_id:
+        query = query.filter_by(formation_id=formation_id)
 
     sessions = query.all()
     return jsonify([session_vers_dict(s) for s in sessions]), 200
@@ -129,3 +133,22 @@ def modifier_session(session_id):
 
     db.session.commit()
     return jsonify(session_vers_dict(session)), 200
+
+@sessions_bp.route("/<int:session_id>", methods=["DELETE"])
+@gestionnaire_ou_admin_required
+def supprimer_session(session_id):
+    session_obj = Session.query.get_or_404(session_id)
+
+    inscription_existante = Inscription.query.filter_by(session_id=session_id).first()
+
+    if inscription_existante is not None:
+        nb_inscriptions = Inscription.query.filter_by(session_id=session_id).count()
+        return jsonify({
+            "erreur": f"Impossible de supprimer cette session : {nb_inscriptions} inscription(s) y sont associée(s)."
+        }), 409
+
+    db.session.delete(session_obj)
+    db.session.commit()
+
+    return "", 204
+

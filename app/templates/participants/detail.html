@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block page_title %}Détail du participant{% endblock %}
+
+{% block content %}
+
+<div x-data="pageParticipantDetailData({{ participant_id }})" x-init="charger()">
+
+    <a href="{{ url_for('pages.participants') }}" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        Retour aux participants
+    </a>
+
+    <template x-if="chargementEnCours">
+        <div class="bg-white rounded-xl border border-gray-200 px-5 py-10 text-center text-gray-400 text-sm">
+            <i data-lucide="loader-2" class="w-5 h-5 mx-auto mb-2 animate-spin"></i>
+            Chargement...
+        </div>
+    </template>
+
+    <template x-if="erreur">
+        <div class="bg-white rounded-xl border border-gray-200 px-5 py-10 text-center text-red-500 text-sm">
+            <i data-lucide="alert-circle" class="w-5 h-5 mx-auto mb-2"></i>
+            <span x-text="erreur"></span>
+        </div>
+    </template>
+
+    <template x-if="!chargementEnCours && !erreur && participant">
+        <div>
+            <!-- ============ EN-TÊTE PARTICIPANT ============ -->
+            <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                <div class="flex items-start justify-between mb-3">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900" x-text="participant.nom"></h2>
+                        <p class="text-sm text-gray-500 mt-0.5" x-text="participant.email"></p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4 mt-4 border-t border-gray-100">
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Entreprise / Client</p>
+                        <template x-if="participant.client">
+                            <a :href="`/clients/${participant.client.id}`"
+                               class="text-sm font-medium text-primary hover:text-primary-hover underline"
+                               x-text="participant.client.nom_entreprise"></a>
+                        </template>
+                        <template x-if="!participant.client">
+                            <p class="text-sm text-gray-900">—</p>
+                        </template>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Nombre d'inscriptions</p>
+                        <p class="text-sm text-gray-900 font-semibold" x-text="inscriptions.length"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ TABLEAU DES INSCRIPTIONS ============ -->
+            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div class="px-5 py-4 border-b border-gray-200">
+                    <p class="text-sm font-medium text-gray-900">
+                        Inscriptions aux sessions — <span x-text="inscriptions.length"></span>
+                    </p>
+                </div>
+
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200 text-left text-gray-500">
+                            <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Formation</th>
+                            <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Dates</th>
+                            <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Date d'inscription</th>
+                            <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-if="inscriptions.length === 0">
+                            <tr><td colspan="4" class="px-5 py-10 text-center text-gray-400 text-sm">
+                                Aucune inscription pour ce participant.
+                            </td></tr>
+                        </template>
+
+                        <template x-for="i in inscriptions" :key="i.id">
+                            <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50 cursor-pointer"
+                                @click="window.location.href = `/sessions/${i.session.id}`">
+                                <td class="px-5 py-4">
+                                    <p class="font-medium text-gray-900" x-text="i.session?.formation?.titre || 'Session #' + i.session_id"></p>
+                                    <p class="text-xs text-gray-500" x-text="i.session?.formateur ? 'Formateur: ' + i.session.formateur.nom : ''"></p>
+                                </td>
+                                <td class="px-5 py-4 text-gray-700 text-xs"
+                                    x-text="i.session ? (formaterDate(i.session.date_debut) + ' → ' + formaterDate(i.session.date_fin)) : '—'"></td>
+                                <td class="px-5 py-4 text-gray-500 text-xs" x-text="formaterDate(i.date_inscription)"></td>
+                                <td class="px-5 py-4">
+                                    <span class="text-xs font-medium px-2.5 py-1 rounded-full"
+                                          :class="classeBadgeInscription(i.statut)"
+                                          x-text="labelInscription(i.statut)"></span>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </template>
+
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/participant_detail.js') }}"></script>
+{% endblock %}
+

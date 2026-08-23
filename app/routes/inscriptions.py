@@ -14,20 +14,43 @@ def inscription_vers_dict(inscription):
         "date_inscription": inscription.date_inscription.isoformat(),
         "statut": inscription.statut,
         "session_id": inscription.session_id,
+        "session": {
+            "id": inscription.session.id,
+            "date_debut": inscription.session.date_debut.isoformat(),
+            "date_fin": inscription.session.date_fin.isoformat(),
+            "type": inscription.session.type,
+            "statut": inscription.session.statut,
+            "formation": {
+                "id": inscription.session.formation.id,
+                "titre": inscription.session.formation.titre,
+            } if inscription.session and inscription.session.formation else None,
+            "formateur": {
+                "id": inscription.session.formateur.id,
+                "nom": inscription.session.formateur.nom,
+            } if inscription.session and inscription.session.formateur else None,
+        } if inscription.session else None,
         "participant": {
             "id": inscription.participant.id,
             "nom": inscription.participant.nom,
-        },
+            "email": inscription.participant.email,
+            "client": {
+                "id": inscription.participant.client.id,
+                "nom_entreprise": inscription.participant.client.nom_entreprise,
+            } if inscription.participant.client else None,
+        } if inscription.participant else None,
     }
 
 @inscriptions_bp.route("", methods=["GET"])
 @login_required
 def liste_inscriptions():
-    """Filtre optionnel : /api/inscriptions?session_id=5"""
+    """Filtres optionnels : /api/inscriptions?session_id=5 ou /api/inscriptions?participant_id=3"""
     query = Inscription.query
     session_id = request.args.get("session_id", type=int)
     if session_id:
         query = query.filter_by(session_id=session_id)
+    participant_id = request.args.get("participant_id", type=int)
+    if participant_id:
+        query = query.filter_by(participant_id=participant_id)
     inscriptions = query.all()
     return jsonify([inscription_vers_dict(i) for i in inscriptions]), 200
 

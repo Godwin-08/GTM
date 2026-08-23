@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required
 from app.extensions import db
-from app.models import Formation, Domaine
+from app.models import Formation, Domaine, Session
 from app.services.permissions import gestionnaire_ou_admin_required
 
 formations_bp = Blueprint("formations", __name__, url_prefix="/api/formations")
@@ -97,3 +97,20 @@ def modifier_formation(formation_id):
 
     db.session.commit()
     return jsonify(formation_vers_dict(formation)), 200
+
+@formations_bp.route("/<int:formation_id>", methods=["DELETE"])
+@gestionnaire_ou_admin_required
+def supprimer_formation(formation_id):
+    formation = Formation.query.get_or_404(formation_id)
+
+    session_existante = Session.query.filter_by(formation_id=formation_id).first()
+    if session_existante is not None:
+        nb_sessions = Session.query.filter_by(formation_id=formation_id).count()
+        return jsonify({
+            "erreur": f"Impossible de supprimer cette formation : {nb_sessions} session(s) y sont associée(s)."
+        }), 409
+
+    db.session.delete(formation)
+    db.session.commit()
+    return "", 204
+

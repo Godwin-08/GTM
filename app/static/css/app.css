@@ -1,0 +1,9 @@
+/* Fichier pour tout ce qui n'est pas pratique à faire en classes Tailwind inline.
+   Pour l'instant, juste x-cloak, qui est indispensable dès qu'on utilise Alpine. */
+
+/* x-cloak cache un élément tant qu'Alpine n'a pas fini de s'initialiser.
+   Sans ça, on voit un flash du menu/overlay ouvert pendant une fraction de seconde 
+   au chargement de la page, avant qu'Alpine ne prenne le contrôle. */
+[x-cloak] {
+    display: none !important;
+}

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required
 from app.extensions import db
-from app.models import Client
+from app.models import Client, Participant
 from app.services.permissions import gestionnaire_ou_admin_required
 
 clients_bp = Blueprint("clients", __name__, url_prefix="/api/clients")
@@ -65,3 +65,20 @@ def modifier_client(client_id):
 
     db.session.commit()
     return jsonify(client_vers_dict(client)), 200
+
+@clients_bp.route("/<int:client_id>", methods=["DELETE"])
+@gestionnaire_ou_admin_required
+def supprimer_client(client_id):
+    client = Client.query.get_or_404(client_id)
+
+    participant_existant = Participant.query.filter_by(client_id=client_id).first()
+    if participant_existant is not None:
+        nb_participants = Participant.query.filter_by(client_id=client_id).count()
+        return jsonify({
+            "erreur": f"Impossible de supprimer ce client : {nb_participants} participant(s) y sont associé(s)."
+        }), 409
+
+    db.session.delete(client)
+    db.session.commit()
+    return "", 204
+

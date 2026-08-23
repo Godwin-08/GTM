@@ -1,65 +1,66 @@
 # Galaxy Training Manager (GTM)
 
-Un outil pour suivre et analyser l'activité de formation de Galaxy Solutions.
+**Galaxy Training Manager (GTM)** est une application web pour gérer et analyser l'activité de formation de l'entreprise **Galaxy Solutions**.
 
-Il rassemble en un seul endroit toutes les infos sur les formations, les sessions,
-les inscriptions, les clients et les formateurs. Il permet aussi de calculer des
-chiffres utiles (comme le taux de remplissage des sessions) pour aider à mieux
-gérer l'activité.
+L'application permet de centraliser la gestion des formations, des sessions, des inscriptions, des clients, des formateurs, des participants et des comptes utilisateurs. Elle calcule aussi des indicateurs clés (comme le taux de remplissage des sessions) pour faciliter la prise de décision.
 
-## Technologies utilisées
+---
 
-- **Backend** : Python, avec le framework Flask et SQLAlchemy (pour parler à la base de données)
+## 🛠️ Technologies utilisées
+
+- **Backend** : Python 3, Flask, SQLAlchemy (ORM pour MySQL)
 - **Base de données** : MySQL
-- **Connexion des utilisateurs** : Flask-Login (garde en mémoire qui est connecté)
-- **Suivi des changements de la base** : Flask-Migrate
+- **Authentification & Sécurité** : Flask-Login (gestion des sessions utilisateur)
+- **Migrations** : Flask-Migrate (Alembic)
+- **Frontend** : HTML5, Tailwind CSS, Alpine.js (JS réactif léger), Lucide Icons
 
-## Comment installer le projet
+---
 
-### 1. Récupérer le projet et créer un environnement virtuel
+## 🚀 Installation et démarrage
 
-Un environnement virtuel sert à installer les librairies Python seulement pour ce
-projet, sans toucher au reste de ta machine.
+### 1. Cloner le projet et créer un environnement virtuel
+
+Un environnement virtuel permet d'installer les dépendances isolément du reste du système.
 
 ```bash
 git clone <url-du-depot>
-cd galaxy_solutions_app
+cd PFA_galaxy_solutions
+
+# Création de l'environnement virtuel
 python -m venv venv
-venv\Scripts\Activate.ps1    # sous Windows PowerShell
+
+# Activation (Windows PowerShell)
+venv\Scripts\Activate.ps1
+
+# Activation (Linux / macOS)
+source venv/bin/activate
 ```
 
-### 2. Installer les librairies nécessaires
+### 2. Installer les dépendances Python
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Configurer les informations de connexion
+### 3. Configurer les variables d'environnement
 
-Crée un fichier `.env` à la racine du projet, avec ce contenu (remplace par tes
-vraies valeurs) :
-```
-SECRET_KEY=une_cle_secrete_a_toi
+Créez un fichier `.env` à la racine du projet en vous inspirant du modèle suivant :
 
+```env
+SECRET_KEY=votre_cle_secrete_ici
 DB_USER=root
-
-DB_PASSWORD=ton_mot_de_passe_mysql
-
+DB_PASSWORD=votre_mot_de_passe_mysql
 DB_HOST=localhost
-
 DB_NAME=galaxy_solutions
-
 FLASK_ENV=development
 ```
 
-### 4. Créer la base de données et la remplir
+### 4. Initialiser la base de données MySQL
 
-Dans MySQL Workbench, exécute ces deux fichiers dans cet ordre :
+Dans MySQL Workbench ou en ligne de commande, exécutez les scripts SQL du dossier `database/` dans cet ordre :
 
-```bash
-database/schema_galaxy_solutions.sql   # crée les tables (vides)
-database/seed_demo_data.sql            # ajoute des données de test réalistes
-```
+1. `database/schema_galaxy_solutions.sql` : crée la structure de la base de données.
+2. `database/seed_demo_data.sql` : insère des données de démonstration réalistes.
 
 ### 5. Démarrer l'application
 
@@ -67,185 +68,147 @@ database/seed_demo_data.sql            # ajoute des données de test réalistes
 python run.py
 ```
 
-Le serveur démarre à l'adresse `http://127.0.0.1:5000`.
+L'application sera disponible sur `http://127.0.0.1:5000/`.
 
-## Comptes pour tester l'application
+---
+
+## 👥 Comptes de démonstration
+
+Voici les identifiants préconfigurés pour tester les différents rôles :
 
 | Rôle | Email | Mot de passe |
 |---|---|---|
-| Admin | admin@galaxysolutions.ma | Admin@2026 |
-| Gestionnaire | sofia.amrani@galaxysolutions.ma | Sofia@2026 |
-| Gestionnaire | yassine.el.idrissi@galaxysolutions.ma | Yassine@2026 |
-| Formateur | karim.bensouda@galaxysolutions.ma | Karim@2026 |
-| Formateur | nadia.chraibi@galaxysolutions.ma | Nadia@2026 |
-| Formateur | hicham.berrada@galaxysolutions.ma | Hicham@2026 |
+| **Admin** | `admin@galaxysolutions.ma` | `Admin@2026` |
+| **Gestionnaire** | `sofia.amrani@galaxysolutions.ma` | `Sofia@2026` |
+| **Gestionnaire** | `yassine.el.idrissi@galaxysolutions.ma` | `Yassine@2026` |
+| **Formateur** | `karim.bensouda@galaxysolutions.ma` | `Karim@2026` |
+| **Formateur** | `nadia.chraibi@galaxysolutions.ma` | `Nadia@2026` |
+| **Formateur** | `hicham.berrada@galaxysolutions.ma` | `Hicham@2026` |
 
-## Qui peut faire quoi
+---
 
-| Rôle | Ce qu'il peut faire |
-|---|---|
-| **admin** | Tout, y compris créer et gérer les comptes des autres utilisateurs |
-| **gestionnaire** | Créer et modifier les formations, sessions, clients, formateurs, participants, inscriptions |
-| **formateur** | Seulement consulter (voir les données, sans pouvoir les modifier) |
+## 🔐 Rôles et autorisations
 
-## Les endpoints de l'API
+- **Admin** : Accès complet. Seul rôle autorisé à gérer les comptes utilisateurs (`/utilisateurs`).
+- **Gestionnaire** : Création, modification et suppression des formations, sessions, clients, formateurs, participants et inscriptions.
+- **Formateur** : Consultation seule des informations (mode lecture).
 
-Un "endpoint" est une adresse précise de l'application qu'on peut appeler pour
-récupérer ou modifier des données. Toutes les réponses sont au format JSON.
+---
 
-Il faut être connecté pour utiliser presque tous les endpoints (sauf la connexion
-elle-même).
+## 🖥️ Pages de l'application (Frontend)
 
-### Connexion — `/api/auth`
+L'interface est construite avec un rendu Jinja2 couplé à **Alpine.js** pour des interactions fluides sans rechargement de page.
 
-| Méthode | Adresse | Ce que ça fait | Qui peut l'utiliser |
-|---|---|---|---|
-| POST | `/api/auth/login` | Se connecter (avec email + mot de passe) | Tout le monde |
-| POST | `/api/auth/logout` | Se déconnecter | Une personne connectée |
-| GET | `/api/auth/me` | Voir les infos de la personne connectée | Une personne connectée |
+### Vues principales (Listes & Dashboards)
+- `/dashboard` : Tableau de bord principal avec indicateurs globaux et alertes.
+- `/formations` : Catalogue des formations et filtre par domaine.
+- `/sessions` : Liste des sessions de formation et filtres par statut / formateur.
+- `/clients` : Répertoire des entreprises clientes.
+- `/formateurs` : Liste des formateurs internes et externes.
+- `/participants` : Répertoire des salariés inscrits.
+- `/notifications` : Points d'attention et alertes de gestion.
+- `/utilisateurs` : Gestion des comptes utilisateurs (Admin uniquement).
 
-**Exemple — se connecter avec POST `/api/auth/login`**
+### Vues de détail
+- `/sessions/<id>` : Détail d'une session (dates, remplissage, formateur, lieu) et tableau des participants inscrits avec leur statut d'inscription.
+- `/clients/<id>` : Fiche d'un client et liste de ses salariés inscrits.
+- `/formations/<id>` : Présentation d'une formation et historique de toutes ses sessions.
+- `/participants/<id>` : Fiche d'un participant et liste de ses inscriptions aux formations.
+- `/utilisateurs/<id>` : Informations sur le compte utilisateur et affichage de la fiche Formateur associée si le compte appartient à un formateur.
 
-Ce qu'on envoie :
-```json
-{ "email": "admin@galaxysolutions.ma", "mot_de_passe": "Admin@2026" }
-```
+---
 
-Ce qu'on reçoit si ça marche :
-```json
-{
-  "message": "Connexion réussie",
-  "utilisateur": { "id": 1, "nom": "Admin Galaxy", "email": "admin@galaxysolutions.ma", "role": "admin" }
-}
-```
+## 🔌 API REST (Endpoints)
+
+Toutes les réponses de l'API sont envoyées au format JSON. La connexion est obligatoire pour accéder aux endpoints (sauf la connexion `/api/auth/login`).
+
+### Authentification — `/api/auth`
+- `POST /api/auth/login` : Connexion (email + mot de passe).
+- `POST /api/auth/logout` : Déconnexion.
+- `GET /api/auth/me` : Obtenir le profil de l'utilisateur connecté.
 
 ### Formations — `/api/formations`
-
-| Méthode | Adresse | Ce que ça fait | Qui peut l'utiliser |
-|---|---|---|---|
-| GET | `/api/formations` | Voir toutes les formations | Connecté |
-| GET | `/api/formations/<id>` | Voir une formation précise | Connecté |
-| POST | `/api/formations` | Créer une formation | Gestionnaire ou Admin |
-| PUT | `/api/formations/<id>` | Modifier une formation | Gestionnaire ou Admin |
-
-**Pour créer une formation, il faut envoyer** : `titre`, `domaine_id`, `duree_jours`
-(entre 2 et 5 jours) — ces 3 champs sont obligatoires. `description` est facultatif.
+- `GET /api/formations` : Obtenir toutes les formations.
+- `GET /api/formations/<id>` : Obtenir le détail d'une formation.
+- `POST /api/formations` : Créer une formation (`titre`, `domaine_id`, `duree_jours` entre 2 et 5).
+- `PUT /api/formations/<id>` : Modifier une formation.
+- `DELETE /api/formations/<id>` : Supprimer une formation.
 
 ### Domaines — `/api/domaines`
-
-| Méthode | Adresse | Ce que ça fait | Qui peut l'utiliser |
-|---|---|---|---|
-| GET | `/api/domaines` | Voir les 3 domaines existants | Connecté |
-| GET | `/api/domaines/<id>` | Voir un domaine précis | Connecté |
-| POST | `/api/domaines` | Créer un domaine | Gestionnaire ou Admin |
-| PUT | `/api/domaines/<id>` | Modifier un domaine | Gestionnaire ou Admin |
-
-### Clients — `/api/clients`
-
-| Méthode | Adresse | Ce que ça fait | Qui peut l'utiliser |
-|---|---|---|---|
-| GET | `/api/clients` | Voir tous les clients | Connecté |
-| GET | `/api/clients/<id>` | Voir un client précis | Connecté |
-| POST | `/api/clients` | Créer un client | Gestionnaire ou Admin |
-| PUT | `/api/clients/<id>` | Modifier un client | Gestionnaire ou Admin |
-
-**Pour créer un client** : `nom_entreprise` est obligatoire. `secteur` et
-`contact_email` sont facultatifs.
-
-### Formateurs — `/api/formateurs`
-
-| Méthode | Adresse | Ce que ça fait | Qui peut l'utiliser |
-|---|---|---|---|
-| GET | `/api/formateurs` | Voir tous les formateurs | Connecté |
-| GET | `/api/formateurs/<id>` | Voir un formateur précis | Connecté |
-| POST | `/api/formateurs` | Créer un formateur | Gestionnaire ou Admin |
-| PUT | `/api/formateurs/<id>` | Modifier un formateur | Gestionnaire ou Admin |
-
-**Pour créer un formateur** : `nom` et `domaine_id` sont obligatoires. `email`,
-`telephone` et `utilisateur_id` (si le formateur a un compte) sont facultatifs.
-
-### Participants — `/api/participants`
-
-| Méthode | Adresse | Ce que ça fait | Qui peut l'utiliser |
-|---|---|---|---|
-| GET | `/api/participants` | Voir les participants (on peut filtrer par client avec `?client_id=`) | Connecté |
-| GET | `/api/participants/<id>` | Voir un participant précis | Connecté |
-| POST | `/api/participants` | Créer un participant | Gestionnaire ou Admin |
-| PUT | `/api/participants/<id>` | Modifier un participant | Gestionnaire ou Admin |
-
-**Pour créer un participant, il faut** : `nom`, `email`, `client_id` (tous obligatoires).
+- `GET /api/domaines` : Obtenir les domaines de formation.
+- `GET /api/domaines/<id>` : Obtenir un domaine spécifique.
+- `POST /api/domaines` : Créer un domaine.
+- `PUT /api/domaines/<id>` : Modifier un domaine.
 
 ### Sessions — `/api/sessions`
-
-| Méthode | Adresse | Ce que ça fait | Qui peut l'utiliser |
-|---|---|---|---|
-| GET | `/api/sessions` | Voir les sessions (filtres possibles : `?statut=` ou `?formateur_id=`) | Connecté |
-| GET | `/api/sessions/<id>` | Voir une session précise, avec son taux de remplissage | Connecté |
-| POST | `/api/sessions` | Créer une session | Gestionnaire ou Admin |
-| PUT | `/api/sessions/<id>` | Modifier une session | Gestionnaire ou Admin |
-
-**Pour créer une session, il faut** : `formation_id`, `formateur_id`, `date_debut`
-(format `AAAA-MM-JJ`), `date_fin`, `type` (`intra` ou `inter`), `capacite_max`.
-`lieu` et `statut` sont facultatifs.
-
-**Trois informations calculées automatiquement** (pas stockées dans la base, juste
-calculées à chaque fois qu'on demande la session) : `nb_inscrits_confirmes` (nombre
-de personnes vraiment inscrites), `taux_remplissage` (pourcentage de la capacité
-remplie), `est_complete` (vrai ou faux, si la session est pleine).
+- `GET /api/sessions` : Obtenir la liste des sessions.  
+  *Filtres disponibles* : `?statut=`, `?formateur_id=`, `?formation_id=`
+- `GET /api/sessions/<id>` : Obtenir une session avec ses indicateurs (`nb_inscrits_confirmes`, `taux_remplissage`, `est_complete`).
+- `POST /api/sessions` : Créer une session (`formation_id`, `formateur_id`, `date_debut`, `date_fin`, `type`, `capacite_max`).
+- `PUT /api/sessions/<id>` : Modifier une session.
+- `DELETE /api/sessions/<id>` : Supprimer une session.
 
 ### Inscriptions — `/api/inscriptions`
+- `GET /api/inscriptions` : Obtenir les inscriptions.  
+  *Filtres disponibles* : `?session_id=`, `?participant_id=`
+- `POST /api/inscriptions` : Inscrire un participant (`session_id`, `participant_id`, `statut`).
+- `PUT /api/inscriptions/<id>` : Modifier le statut d'une inscription (`confirmee`, `annulee`, `liste_attente`).
 
-| Méthode | Adresse | Ce que ça fait | Qui peut l'utiliser |
-|---|---|---|---|
-| GET | `/api/inscriptions` | Voir les inscriptions (filtre possible : `?session_id=`) | Connecté |
-| POST | `/api/inscriptions` | Inscrire un participant à une session | Gestionnaire ou Admin |
-| PUT | `/api/inscriptions/<id>` | Changer le statut d'une inscription | Gestionnaire ou Admin |
+### Clients — `/api/clients`
+- `GET /api/clients` : Obtenir la liste des clients.
+- `GET /api/clients/<id>` : Obtenir un client spécifique.
+- `POST /api/clients` : Créer un client (`nom_entreprise` obligatoire).
+- `PUT /api/clients/<id>` : Modifier un client.
+- `DELETE /api/clients/<id>` : Supprimer un client.
 
-**Pour créer une inscription, il faut** : `session_id`, `participant_id`
-(obligatoires), `statut` (facultatif, `confirmee` par défaut).
+### Participants — `/api/participants`
+- `GET /api/participants` : Obtenir les participants (*Filtre* : `?client_id=`).
+- `GET /api/participants/<id>` : Obtenir un participant spécifique.
+- `POST /api/participants` : Créer un participant (`nom`, `email`, `client_id`).
+- `PUT /api/participants/<id>` : Modifier un participant.
+- `DELETE /api/participants/<id>` : Supprimer un participant.
 
-### Utilisateurs — `/api/utilisateurs`
+### Formateurs — `/api/formateurs`
+- `GET /api/formateurs` : Obtenir les formateurs.
+- `GET /api/formateurs/<id>` : Obtenir un formateur spécifique.
+- `POST /api/formateurs` : Créer un formateur (`nom`, `domaine_id`).
+- `PUT /api/formateurs/<id>` : Modifier un formateur.
 
-| Méthode | Adresse | Ce que ça fait | Qui peut l'utiliser |
-|---|---|---|---|
-| GET | `/api/utilisateurs` | Voir tous les comptes | Admin seulement |
-| GET | `/api/utilisateurs/<id>` | Voir un compte précis | Admin seulement |
-| POST | `/api/utilisateurs` | Créer un compte | Admin seulement |
-| PUT | `/api/utilisateurs/<id>` | Modifier un compte | Admin seulement |
+### Utilisateurs — `/api/utilisateurs` *(Admin uniquement)*
+- `GET /api/utilisateurs` : Obtenir la liste des comptes.
+- `GET /api/utilisateurs/<id>` : Obtenir un compte spécifique.
+- `POST /api/utilisateurs` : Créer un compte (`nom`, `email`, `mot_de_passe`, `role_id`).
+- `PUT /api/utilisateurs/<id>` : Modifier un compte ou réinitialiser le mot de passe.
 
-**Pour créer un compte, il faut** : `nom`, `email`, `mot_de_passe`, `role_id`
-(tous obligatoires).
+---
 
-## Les codes d'erreur que tu peux rencontrer
+## 🚦 Codes d'erreur HTTP
 
-| Code | Ce que ça veut dire |
+| Code | Signification |
 |---|---|
-| 400 | La requête est mal formée (un champ manque ou est incorrect) |
-| 401 | Il faut se connecter d'abord |
-| 403 | Tu es connecté, mais ton rôle ne te donne pas le droit de faire ça |
-| 404 | La donnée demandée n'existe pas |
-| 409 | Conflit — par exemple, un email déjà utilisé par un autre compte |
+| **400** | Requête invalide (données manquantes ou incorrectes). |
+| **401** | Non authentifié (connexion requise). |
+| **403** | Accès interdit (droits insuffisants). |
+| **404** | Ressource introuvable. |
+| **409** | Conflit (ex: doublon d'email ou suppression impossible d'une donnée liée). |
 
-## Comment le projet est organisé
+---
 
-``` 
+## 📁 Structure du projet
 
-galaxy_solutions_app/
-
+```text
+PFA_galaxy_solutions/
 ├── app/
-
-│   ├── models/       # Les 9 entités de la base de données (une classe par entité)
-
-│   ├── routes/       # Les endpoints de l'API (un fichier par entité)
-
-│   ├── services/      # La logique métier (permissions, calculs de stats)
-
-│   └── config.py      # La configuration (lit le fichier .env)
-
-├── database/          # Les scripts SQL (création des tables + données de test)
-
-├── scripts/           # Le script qui génère les données de démonstration
-
-└── run.py             # Le fichier qui démarre l'application
-
+│   ├── blueprints/    # Routes des pages HTML (render_template)
+│   ├── models/        # Modèles SQLAlchemy (9 entités)
+│   ├── routes/        # Contrôleurs API REST (JSON)
+│   ├── services/      # Logique métier et permissions
+│   ├── static/        # Fichiers statiques (CSS, JS Alpine.js)
+│   ├── templates/     # Templates HTML Jinja2
+│   ├── config.py      # Configuration de l'application
+│   └── extensions.py  # Extensions Flask (db, login_manager, migrate)
+├── database/          # Schemas et données SQL de démonstration
+├── scripts/           # Generator de données de test
+├── run.py             # Point d'entrée pour démarrer le serveur
+└── requirements.txt   # Dépendances Python
 ```

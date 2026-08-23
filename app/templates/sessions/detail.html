@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block page_title %}Détail de la session{% endblock %}
+
+{% block content %}
+
+<div x-data="pageSessionDetailData({{ session_id }})" x-init="charger()">
+
+    <!-- Fil d'ariane simple pour revenir à la liste -->
+    <a href="{{ url_for('pages.sessions') }}" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        Retour aux sessions
+    </a>
+
+    <template x-if="chargementEnCours">
+        <div class="bg-white rounded-xl border border-gray-200 px-5 py-10 text-center text-gray-400 text-sm">
+            <i data-lucide="loader-2" class="w-5 h-5 mx-auto mb-2 animate-spin"></i>
+            Chargement...
+        </div>
+    </template>
+
+    <template x-if="erreur">
+        <div class="bg-white rounded-xl border border-gray-200 px-5 py-10 text-center text-red-500 text-sm">
+            <i data-lucide="alert-circle" class="w-5 h-5 mx-auto mb-2"></i>
+            <span x-text="erreur"></span>
+        </div>
+    </template>
+
+    <!-- Contenu principal, affiché uniquement une fois la session chargée -->
+    <template x-if="!chargementEnCours && !erreur && session">
+
+        <div>
+            <!-- ============ EN-TÊTE SESSION ============ -->
+            <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900" x-text="session.formation.titre"></h2>
+                        <p class="text-sm text-gray-500 mt-1" x-text="session.type === 'intra' ? 'Intra-entreprise' : 'Inter-entreprises'"></p>
+                    </div>
+                    <span class="text-xs font-medium px-2.5 py-1 rounded-full"
+                          :class="classeBadgeStatut(session.statut)"
+                          x-text="labelStatut(session.statut)"></span>
+                </div>
+
+                <!-- Grille d'infos clés, 4 colonnes sur desktop -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Dates</p>
+                        <p class="text-sm text-gray-900" x-text="formaterDate(session.date_debut) + ' → ' + formaterDate(session.date_fin)"></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Formateur</p>
+                        <p class="text-sm text-gray-900" x-text="session.formateur.nom"></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Lieu</p>
+                        <p class="text-sm text-gray-900" x-text="session.lieu || '—'"></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Remplissage</p>
+                        <p class="text-sm text-gray-900">
+                            <span x-text="session.nb_inscrits_confirmes"></span>/<span x-text="session.capacite_max"></span>
+                            (<span x-text="Math.round(session.taux_remplissage * 100)"></span>%)
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ TABLEAU DES INSCRITS ============ -->
+            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <p class="text-sm font-medium text-gray-900">
+                        Participants inscrits — <span x-text="inscriptions.length"></span>
+                    </p>
+                </div>
+
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200 text-left text-gray-500">
+                            <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Participant</th>
+                            <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Entreprise</th>
+                            <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Date d'inscription</th>
+                            <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-if="inscriptions.length === 0">
+                            <tr><td colspan="4" class="px-5 py-10 text-center text-gray-400 text-sm">
+                                Aucun participant inscrit pour l'instant.
+                            </td></tr>
+                        </template>
+
+                        <template x-for="i in inscriptions" :key="i.id">
+                            <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                                <td class="px-5 py-4">
+                                    <p class="font-medium text-gray-900" x-text="i.participant.nom"></p>
+                                    <p class="text-xs text-gray-500" x-text="i.participant.email"></p>
+                                </td>
+                                <td class="px-5 py-4 text-gray-700" x-text="i.participant.client.nom_entreprise"></td>
+                                <td class="px-5 py-4 text-gray-500 text-xs" x-text="formaterDate(i.date_inscription)"></td>
+                                <td class="px-5 py-4">
+                                    <span class="text-xs font-medium px-2.5 py-1 rounded-full"
+                                          :class="classeBadgeInscription(i.statut)"
+                                          x-text="labelInscription(i.statut)"></span>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </template>
+
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/session_detail.js') }}"></script>
+{% endblock %}
+

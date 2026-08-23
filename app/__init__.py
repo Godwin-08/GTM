@@ -16,6 +16,8 @@ def create_app():
 	# Branche les extensions (créées dans extensions.py) à cette app précise
 	db.init_app(app)
 	login_manager.init_app(app)
+	# Redirige les utilisateurs non connectés vers la page de connexion HTML.
+	login_manager.login_view = "pages.login_page"
 	migrate.init_app(app, db)
 
 	# Les imports de modèles se font ICI, à l'intérieur de la factory,
@@ -32,6 +34,10 @@ def create_app():
 	# Enregistrement des blueprints (groupes de routes)
 	from app.routes.auth import auth_bp
 	app.register_blueprint(auth_bp)
+
+	# Pages HTML (templates côté frontend)
+	from app.blueprints.pages import pages_bp
+	app.register_blueprint(pages_bp)
 
 	from app.routes.formations import formations_bp
 	app.register_blueprint(formations_bp)
@@ -56,5 +62,8 @@ def create_app():
 
 	from app.routes.utilisateurs import utilisateurs_bp
 	app.register_blueprint(utilisateurs_bp)
+
+	from app.routes.stats import stats_bp
+	app.register_blueprint(stats_bp)
 
 	return app

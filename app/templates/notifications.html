@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block page_title %}Notifications{% endblock %}
+
+{% block content %}
+
+<div x-data="pageNotificationsData()" x-init="charger()">
+
+    <div class="mb-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-1">Notifications</h2>
+        <p class="text-sm text-gray-500">
+            Ce qui mérite votre attention aujourd'hui —
+            <span x-text="items.length"></span> élément<span x-text="items.length > 1 ? 's' : ''"></span>.
+        </p>
+    </div>
+
+    <!-- ============ FILTRES PAR TYPE ============ -->
+    <div class="flex gap-2 mb-5">
+        <button @click="filtreNiveau = ''"
+                :class="filtreNiveau === '' ? 'bg-primary text-white' : 'bg-white border border-gray-300 text-gray-700'"
+                class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+            Toutes
+        </button>
+        <button @click="filtreNiveau = 'danger'"
+                :class="filtreNiveau === 'danger' ? 'bg-primary text-white' : 'bg-white border border-gray-300 text-gray-700'"
+                class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+            Risques
+        </button>
+        <button @click="filtreNiveau = 'warning'"
+                :class="filtreNiveau === 'warning' ? 'bg-primary text-white' : 'bg-white border border-gray-300 text-gray-700'"
+                class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+            Opportunités
+        </button>
+        <button @click="filtreNiveau = 'info'"
+                :class="filtreNiveau === 'info' ? 'bg-primary text-white' : 'bg-white border border-gray-300 text-gray-700'"
+                class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+            Tendances
+        </button>
+    </div>
+
+    <!-- ============ LISTE DES NOTIFICATIONS ============ -->
+    <div class="space-y-3">
+        <template x-if="chargementEnCours">
+            <div class="bg-white rounded-xl border border-gray-200 px-5 py-10 text-center text-gray-400 text-sm">
+                <i data-lucide="loader-2" class="w-5 h-5 mx-auto mb-2 animate-spin"></i>
+                Chargement...
+            </div>
+        </template>
+
+        <template x-if="erreur">
+            <div class="bg-white rounded-xl border border-gray-200 px-5 py-10 text-center text-red-500 text-sm">
+                <i data-lucide="alert-circle" class="w-5 h-5 mx-auto mb-2"></i>
+                <span x-text="erreur"></span>
+            </div>
+        </template>
+
+        <template x-if="!chargementEnCours && !erreur && itemsFiltres().length === 0">
+            <div class="bg-white rounded-xl border border-gray-200 px-5 py-10 text-center text-gray-400 text-sm">
+                <i data-lucide="check-circle-2" class="w-5 h-5 mx-auto mb-2 text-success"></i>
+                Aucune notification pour le moment.
+            </div>
+        </template>
+
+        <template x-for="item in itemsFiltres()" :key="item.titre + item.message">
+            <div class="bg-white rounded-xl border border-gray-200 p-5 flex items-start justify-between gap-4">
+                <div class="flex items-start gap-3">
+                    <span class="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" :class="couleurNiveau(item.niveau)"></span>
+                    <div>
+                        <p class="text-sm font-medium text-gray-900" x-text="item.titre"></p>
+                        <p class="text-sm text-gray-500 mt-0.5" x-text="item.message"></p>
+                    </div>
+                </div>
+                <a :href="item.url"
+                   class="text-xs font-medium text-primary hover:text-primary-hover flex-shrink-0 whitespace-nowrap">
+                    Voir →
+                </a>
+            </div>
+        </template>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const urlPointsAttention = "{{ url_for('stats.points_attention') }}";
+</script>
+<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+{% endblock %}
+
