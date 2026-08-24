@@ -7,6 +7,7 @@ from app.services.permissions import gestionnaire_ou_admin_required, admin_requi
 formateurs_bp = Blueprint("formateurs", __name__, url_prefix="/api/formateurs")
 
 def formateur_vers_dict(formateur):
+    nb_sessions = len([s for s in formateur.sessions if s.statut != "annulee"])
     return {
         "id": formateur.id,
         "nom": formateur.nom,
@@ -16,6 +17,7 @@ def formateur_vers_dict(formateur):
             "id": formateur.domaine.id,
             "nom": formateur.domaine.nom,
         },
+        "nb_sessions": nb_sessions,
         # a_un_compte : pratique côté frontend pour savoir si ce formateur
         # peut se connecter à l'application ou non
         "a_un_compte": formateur.utilisateur_id is not None,

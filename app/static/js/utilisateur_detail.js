@@ -46,6 +46,13 @@ function pageUtilisateurDetailData(utilisateurId) {
         labelRole(roleNom) {
             return ROLES_LABELS[roleNom] || roleNom;
         },
+
+        initiales(nom) {
+            if (!nom) return 'U';
+            const parts = nom.trim().split(/\s+/);
+            if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+            return nom.substring(0, 2).toUpperCase();
+        },
     };
 }
 

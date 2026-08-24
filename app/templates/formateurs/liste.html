@@ -57,16 +57,17 @@
                 <tr class="border-b border-gray-200 text-left text-gray-500">
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Formateur</th>
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Domaine</th>
+                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Sessions</th>
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Contact</th>
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Statut</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Actions</th>
+                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <!-- Les états informatifs utilisent les mêmes repères visuels que les autres pages. -->
                 <template x-if="chargementEnCours">
                     <tr>
-                        <td colspan="5" class="px-5 py-10 text-center text-gray-400 text-sm">
+                        <td colspan="6" class="px-5 py-10 text-center text-gray-400 text-sm">
                             <i data-lucide="loader-2" class="w-5 h-5 mx-auto mb-2 animate-spin"></i>
                             Chargement...
                         </td>
@@ -75,7 +76,7 @@
 
                 <template x-if="erreur">
                     <tr>
-                        <td colspan="5" class="px-5 py-10 text-center text-red-500 text-sm">
+                        <td colspan="6" class="px-5 py-10 text-center text-red-500 text-sm">
                             <i data-lucide="alert-circle" class="w-5 h-5 mx-auto mb-2"></i>
                             <span x-text="erreur"></span>
                         </td>
@@ -84,7 +85,7 @@
 
                 <template x-if="!chargementEnCours && !erreur && formateursFiltres().length === 0">
                     <tr>
-                        <td colspan="5" class="px-5 py-10 text-center text-gray-400 text-sm">
+                        <td colspan="6" class="px-5 py-10 text-center text-gray-400 text-sm">
                             <i data-lucide="search-x" class="w-5 h-5 mx-auto mb-2"></i>
                             Aucun formateur ne correspond à votre recherche.
                         </td>
@@ -102,6 +103,10 @@
                                   :class="couleurDomaine(nomDomaine(formateur))"
                                   x-text="nomDomaine(formateur)"></span>
                         </td>
+                        <td class="px-5 py-4 text-right">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800"
+                                  x-text="(formateur.nb_sessions || 0) + ' session' + ((formateur.nb_sessions || 0) > 1 ? 's' : '')"></span>
+                        </td>
                         <td class="px-5 py-4 text-gray-500 text-xs">
                             <p x-text="formateur.email || '—'"></p>
                             <p x-text="formateur.telephone || '—'"></p>
@@ -111,7 +116,8 @@
                                   :class="formateur.a_un_compte ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-600'"
                                   x-text="formateur.a_un_compte ? 'Interne' : 'Externe'"></span>
                         </td>
-                        <td class="px-5 py-4">
+                        <td class="px-5 py-4 text-right">
+                            <div class="flex items-center justify-end">
                             <button @click="ouvrirModaleEdition(formateur)" class="text-xs font-medium text-primary hover:text-primary-hover flex items-center gap-1">
                                 <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                                 Modifier

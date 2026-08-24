@@ -52,9 +52,9 @@
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Dates</th>
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Formateur</th>
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Lieu</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Remplissage</th>
+                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Remplissage</th>
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Statut</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Actions</th>
+                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -98,18 +98,26 @@
                             x-text="formaterDate(session.date_debut) + ' → ' + formaterDate(session.date_fin)"></td>
                         <td class="px-5 py-4 text-gray-700" x-text="nomFormateur(session)"></td>
                         <td class="px-5 py-4 text-gray-500 text-xs" x-text="session.lieu || '—'"></td>
-                        <td class="px-5 py-4">
-                            <span class="text-xs font-medium px-2.5 py-1 rounded-full"
-                                  :class="classeBadgeRemplissage(session)"
-                                  x-text="texteBadgeRemplissage(session)"></span>
+                        <td class="px-5 py-4 text-right">
+                            <div class="flex flex-col items-end gap-1">
+                                <div class="flex items-center gap-2 text-xs">
+                                    <span class="font-medium text-gray-900" x-text="(session.nb_inscrits_confirmes || 0) + ' / ' + (session.capacite_max || 0)"></span>
+                                    <span class="font-bold" :class="couleurTexteRemplissage(session)" x-text="Math.round((Number(session.taux_remplissage) || 0) * 100) + '%'"></span>
+                                </div>
+                                <div class="w-24 bg-gray-100 h-1.5 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-300"
+                                         :class="couleurBarreRemplissage(session)"
+                                         :style="`width: ${Math.min(100, Math.round((Number(session.taux_remplissage) || 0) * 100))}%`"></div>
+                                </div>
+                            </div>
                         </td>
                         <td class="px-5 py-4">
                             <span class="text-xs font-medium px-2.5 py-1 rounded-full"
                                   :class="classeBadgeStatut(session.statut)"
                                   x-text="labelStatut(session.statut)"></span>
                         </td>
-                        <td class="px-5 py-4">
-                            <div class="flex items-center gap-3">
+                        <td class="px-5 py-4 text-right">
+                            <div class="flex items-center justify-end gap-3">
                                 <a :href="`/sessions/${session.id}`"
                                    class="text-xs font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1">
                                     <i data-lucide="eye" class="w-3.5 h-3.5"></i>

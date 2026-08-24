@@ -59,9 +59,9 @@
     <table class="w-full text-sm">
         <thead>
             <tr class="border-b border-gray-200 text-left text-gray-500">
-                <th class="px-5 py-3 font-medium">Formateur</th>
-                <th class="px-5 py-3 font-medium">Sessions</th>
-                <th class="px-5 py-3 font-medium">Remplissage moyen</th>
+                <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Formateur</th>
+                <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Sessions</th>
+                <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Remplissage moyen</th>
             </tr>
         </thead>
         <tbody id="tableFormateurs"></tbody>
@@ -88,5 +88,5 @@
     const urlEvolution = "{{ url_for('stats.evolution_inscriptions') }}";
     const urlSessions = "{{ url_for('sessions.liste_sessions') }}";
 </script>
-<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}?v={{ range(1, 10000) | random }}"></script>
 {% endblock %}

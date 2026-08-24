@@ -46,3 +46,11 @@ def points_attention():
     """Renvoie l'ensemble des points d'attention calculés par le backend."""
     return jsonify(points_attention_service.get_points_attention()), 200
 
+
+@stats_bp.route("/pca", methods=["GET"])
+@gestionnaire_ou_admin_required
+def pca():
+    from app.services.pca_service import get_acp_complete
+    return jsonify(get_acp_complete()), 200
+
+

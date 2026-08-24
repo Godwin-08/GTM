@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import Session, Formation, Formateur, Inscription
 from app.services.permissions import gestionnaire_ou_admin_required
@@ -38,15 +38,26 @@ def liste_sessions():
     Liste les sessions, avec filtres optionnels :
     /api/sessions?statut=planifiee
     /api/sessions?formateur_id=3
+    /api/sessions?formation_id=2
+
+    Si l'utilisateur connecté est un formateur, la liste est
+    automatiquement restreinte à ses propres sessions.
     """
     query = Session.query
+
+    # Restriction RBAC pour le rôle Formateur
+    if current_user.a_role("formateur"):
+        formateur_lie = current_user.formateur
+        if not formateur_lie:
+            return jsonify([]), 200
+        query = query.filter_by(formateur_id=formateur_lie.id)
 
     statut = request.args.get("statut")
     if statut:
         query = query.filter_by(statut=statut)
 
     formateur_id = request.args.get("formateur_id", type=int)
-    if formateur_id:
+    if formateur_id and not current_user.a_role("formateur"):
         query = query.filter_by(formateur_id=formateur_id)
 
     formation_id = request.args.get("formation_id", type=int)
@@ -60,6 +71,13 @@ def liste_sessions():
 @login_required
 def detail_session(session_id):
     session = Session.query.get_or_404(session_id)
+
+    # Restriction RBAC : si l'utilisateur est un formateur, il ne peut voir que sa propre session
+    if current_user.a_role("formateur"):
+        formateur_lie = current_user.formateur
+        if not formateur_lie or session.formateur_id != formateur_lie.id:
+            return jsonify({"erreur": "Accès interdit : vous ne pouvez consulter que vos propres sessions"}), 403
+
     return jsonify(session_vers_dict(session)), 200
 
 @sessions_bp.route("", methods=["POST"])

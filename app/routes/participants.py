@@ -15,6 +15,7 @@ def participant_vers_dict(participant):
             "id": participant.client.id,
             "nom_entreprise": participant.client.nom_entreprise,
         },
+        "nb_inscriptions": len(participant.inscriptions),
     }
 
 @participants_bp.route("", methods=["GET"])

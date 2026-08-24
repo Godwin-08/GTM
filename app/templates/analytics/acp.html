@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block page_title %}Analytique ACP{% endblock %}
+
+{% block content %}
+
+<div x-data="pageAcpData()" x-init="charger()">
+
+    <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-base font-semibold text-gray-900 mb-1">Analyse en composantes principales (ACP)</h2>
+            <p class="text-sm text-gray-500">Profils de consommation des clients selon les formations suivies.</p>
+        </div>
+    </div>
+
+    <template x-if="chargementEnCours">
+        <div class="bg-white rounded-xl border border-gray-200 px-5 py-12 text-center text-gray-400 text-sm shadow-sm">
+            <i data-lucide="loader-2" class="w-6 h-6 mx-auto mb-3 animate-spin text-primary"></i>
+            Calcul des composantes principales et des métriques en cours...
+        </div>
+    </template>
+
+    <template x-if="erreur">
+        <div class="bg-white rounded-xl border border-red-200 p-6 text-center text-red-600 text-sm shadow-sm">
+            <i data-lucide="alert-circle" class="w-6 h-6 mx-auto mb-2 text-red-500"></i>
+            <span x-text="erreur"></span>
+        </div>
+    </template>
+
+    <template x-if="!chargementEnCours && !erreur && donnees">
+        <div class="space-y-6">
+
+            <!-- ============ 1. INTERPRÉTATION MÉTIER (NIVEAU B1-B2 SIMPLIFIÉ) ============ -->
+            <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+                <div class="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
+                    <div class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="text-base font-semibold text-gray-900">Ce que montre l'analyse</h3>
+                </div>
+
+                <template x-if="!donnees.interpretation.peut_conclure">
+                    <div class="bg-amber-50 rounded-lg p-4 border border-amber-200 text-amber-800 text-sm flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 flex-shrink-0"></i>
+                        Les données actuelles ne permettent pas de tirer une conclusion fiable (trop peu de clients avec des données suffisantes).
+                    </div>
+                </template>
+
+                <template x-if="donnees.interpretation.peut_conclure">
+                    <div class="space-y-5">
+
+                        <!-- Profil distinct -->
+                        <template x-if="donnees.interpretation.client_distinct">
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                                <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">Profil différent</p>
+                                <p class="text-sm text-gray-700">
+                                    <span class="font-semibold text-gray-900" x-text="donnees.interpretation.client_distinct.nom"></span>
+                                    <span x-text="donnees.interpretation.client_distinct.niveau === 'fort'
+                                        ? ' suit des formations très différentes des autres clients.'
+                                        : ' suit des formations un peu différentes des autres clients.'"></span>
+                                </p>
+                            </div>
+                        </template>
+
+                        <!-- Profils proches -->
+                        <template x-if="donnees.interpretation.paire_proche">
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                                <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">Profils proches</p>
+                                <p class="text-sm text-gray-700">
+                                    <span class="font-semibold text-gray-900" x-text="donnees.interpretation.paire_proche.client_a"></span> et
+                                    <span class="font-semibold text-gray-900" x-text="donnees.interpretation.paire_proche.client_b"></span>
+                                    suivent des formations similaires.
+                                </p>
+                            </div>
+                        </template>
+
+                        <!-- Axe 1 : Effet taille -->
+                        <template x-if="donnees.interpretation.axe_1.effet_taille">
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                                <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">Différence principale</p>
+                                <p class="text-sm text-gray-700">
+                                    La différence entre les clients vient surtout du <strong>nombre de formations suivies</strong> :
+                                    certains clients en suivent beaucoup, d'autres peu, toutes formations confondues.
+                                </p>
+                            </div>
+                        </template>
+
+                        <!-- Axe 1 : Opposition -->
+                        <template x-if="!donnees.interpretation.axe_1.effet_taille && (donnees.interpretation.axe_1.positif.length || donnees.interpretation.axe_1.negatif.length)">
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                                <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">Différence principale</p>
+                                <p class="text-sm text-gray-700">
+                                    Les clients se séparent surtout entre ceux qui suivent
+                                    <span class="font-semibold text-gray-900" x-text="donnees.interpretation.axe_1.positif.join(', ') || 'certaines formations'"></span>
+                                    et ceux qui suivent plutôt
+                                    <span class="font-semibold text-gray-900" x-text="donnees.interpretation.axe_1.negatif.join(', ') || 'd\'autres formations'"></span>.
+                                </p>
+                            </div>
+                        </template>
+
+                        <!-- Axe 2 : Oppositions -->
+                        <template x-if="!donnees.interpretation.axe_2.effet_taille && (donnees.interpretation.axe_2.positif.length || donnees.interpretation.axe_2.negatif.length)">
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                                <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">Deuxième différence</p>
+                                <p class="text-sm text-gray-700">
+                                    <span x-show="donnees.interpretation.axe_2.positif.length && donnees.interpretation.axe_2.negatif.length">
+                                        Une deuxième différence sépare les clients qui suivent
+                                        <span class="font-semibold text-gray-900" x-text="donnees.interpretation.axe_2.positif.join(', ')"></span>
+                                        de ceux qui suivent plutôt
+                                        <span class="font-semibold text-gray-900" x-text="donnees.interpretation.axe_2.negatif.join(', ')"></span>.
+                                    </span>
+                                    <span x-show="donnees.interpretation.axe_2.positif.length && !donnees.interpretation.axe_2.negatif.length">
+                                        Une deuxième différence distingue les clients qui suivent
+                                        <span class="font-semibold text-gray-900" x-text="donnees.interpretation.axe_2.positif.join(', ')"></span>.
+                                    </span>
+                                    <span x-show="!donnees.interpretation.axe_2.positif.length && donnees.interpretation.axe_2.negatif.length">
+                                        Une deuxième différence distingue les clients qui suivent
+                                        <span class="font-semibold text-gray-900" x-text="donnees.interpretation.axe_2.negatif.join(', ')"></span>.
+                                    </span>
+                                </p>
+                            </div>
+                        </template>
+
+                    </div>
+                </template>
+
+                <!-- Disclaimer méthodologique -->
+                <template x-if="donnees.interpretation.avertissement_methode">
+                    <p class="text-xs text-gray-400 mt-4 pt-4 border-t border-gray-100 italic" x-text="donnees.interpretation.avertissement_methode"></p>
+                </template>
+            </div>
+
+            <!-- ============ 2. TOGGLE DÉTAILS STATISTIQUES ============ -->
+            <div class="pt-2">
+                <button @click="vueStatistique = !vueStatistique"
+                        class="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary-hover transition-colors">
+                    <span x-text="vueStatistique ? 'Masquer l\'analyse statistique détaillée' : 'Voir l\'analyse statistique détaillée'"></span>
+                    <i data-lucide="chevron-down" class="w-4 h-4 transition-transform duration-200" :class="vueStatistique ? 'rotate-180' : ''"></i>
+                </button>
+            </div>
+
+            <!-- ============ 3. DÉTAILS STATISTIQUES ET PLAN FACTORIEL ============ -->
+            <div x-show="vueStatistique" x-cloak class="space-y-6">
+
+                <!-- PLAN FACTORIEL (CHART.JS) -->
+                <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-900">Plan factoriel — Clients (F1 × F2)</h3>
+                            <p class="text-xs text-gray-500">Positionnement relatif des entreprises dans l'espace à 2 dimensions.</p>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs text-gray-500">
+                            <span class="inline-flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-primary inline-block"></span> Client bien représenté (cos² &ge; 0.5)
+                            </span>
+                            <span class="inline-flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span> Client peu représenté (cos² &lt; 0.5)
+                            </span>
+                        </div>
+                    </div>
+                    <div class="relative h-80">
+                        <canvas id="chartAcp"></canvas>
+                    </div>
+                </div>
+
+                <!-- VARIANCE EXPLIQUÉE ET ÉBOULIS -->
+                <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                    <h3 class="text-sm font-semibold text-gray-900 mb-3">Éboulis des valeurs propres & Variance expliquée</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="bg-gray-50 p-3.5 rounded-lg border border-gray-100">
+                            <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Axe F1</p>
+                            <p class="text-2xl font-bold text-gray-900" x-text="donnees.variance_expliquee.par_axe[0] + '%'"></p>
+                            <p class="text-xs text-gray-400 mt-1" x-text="'λ1 = ' + (donnees.valeurs_propres[0] || '0')"></p>
+                        </div>
+                        <div class="bg-gray-50 p-3.5 rounded-lg border border-gray-100">
+                            <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Axe F2</p>
+                            <p class="text-2xl font-bold text-gray-900" x-text="donnees.variance_expliquee.par_axe[1] + '%'"></p>
+                            <p class="text-xs text-gray-400 mt-1" x-text="'λ2 = ' + (donnees.valeurs_propres[1] || '0')"></p>
+                        </div>
+                        <div class="bg-gray-50 p-3.5 rounded-lg border border-gray-100">
+                            <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Inertie cumulée (F1 + F2)</p>
+                            <p class="text-2xl font-bold text-primary" x-text="donnees.variance_expliquee.cumulee[1] + '%'"></p>
+                            <p class="text-xs text-gray-400 mt-1">Seuil recommandé &ge; 60%</p>
+                        </div>
+                        <div class="bg-gray-50 p-3.5 rounded-lg border border-gray-100">
+                            <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Qualité de représentation</p>
+                            <p class="text-2xl font-bold text-gray-900" x-text="donnees.interpretation.nb_clients_fiables + ' / ' + donnees.interpretation.nb_clients_analyses"></p>
+                            <p class="text-xs text-gray-400 mt-1">Clients avec cos² &ge; 0.5</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABLEAU DES CLIENTS -->
+                <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                    <div class="px-5 py-4 border-b border-gray-200">
+                        <h3 class="text-sm font-semibold text-gray-900">Coordonnées factorielles, Qualité (cos²) et Contributions (CTR) des Clients</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-gray-50 text-gray-500 font-semibold border-b border-gray-200">
+                                <tr>
+                                    <th class="px-4 py-3">Client</th>
+                                    <th class="px-4 py-3 text-right">F1</th>
+                                    <th class="px-4 py-3 text-right">F2</th>
+                                    <th class="px-4 py-3 text-right">cos²(F1)</th>
+                                    <th class="px-4 py-3 text-right">cos²(F2)</th>
+                                    <th class="px-4 py-3 text-right font-bold">cos² Total</th>
+                                    <th class="px-4 py-3 text-right">CTR F1 (%)</th>
+                                    <th class="px-4 py-3 text-right">CTR F2 (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 text-gray-700">
+                                <template x-for="c in donnees.clients" :key="c.nom">
+                                    <tr class="hover:bg-gray-50" :class="(c.cos2_f1 + c.cos2_f2) >= 0.5 ? '' : 'text-gray-400 bg-gray-50/50'">
+                                        <td class="px-4 py-2.5 font-medium text-gray-900" x-text="c.nom"></td>
+                                        <td class="px-4 py-2.5 text-right font-mono" x-text="c.f1.toFixed(3)"></td>
+                                        <td class="px-4 py-2.5 text-right font-mono" x-text="c.f2.toFixed(3)"></td>
+                                        <td class="px-4 py-2.5 text-right font-mono" x-text="c.cos2_f1.toFixed(3)"></td>
+                                        <td class="px-4 py-2.5 text-right font-mono" x-text="c.cos2_f2.toFixed(3)"></td>
+                                        <td class="px-4 py-2.5 text-right font-mono font-bold"
+                                            :class="(c.cos2_f1 + c.cos2_f2) >= 0.5 ? 'text-emerald-600' : 'text-amber-600'"
+                                            x-text="(c.cos2_f1 + c.cos2_f2).toFixed(3)"></td>
+                                        <td class="px-4 py-2.5 text-right font-mono" x-text="c.ctr_f1.toFixed(2)"></td>
+                                        <td class="px-4 py-2.5 text-right font-mono" x-text="c.ctr_f2.toFixed(2)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </template>
+
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const urlAcp = "{{ url_for('stats.pca') }}";
+</script>
+<script src="{{ url_for('static', filename='js/acp.js') }}"></script>
+{% endblock %}

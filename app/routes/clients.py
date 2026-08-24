@@ -1,12 +1,21 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required
 from app.extensions import db
-from app.models import Client, Participant
+from app.models import Client, Participant, Inscription
 from app.services.permissions import gestionnaire_ou_admin_required
 
 clients_bp = Blueprint("clients", __name__, url_prefix="/api/clients")
 
 def client_vers_dict(client):
+    inscriptions_confirmees = (
+        Inscription.query
+        .join(Participant)
+        .filter(Participant.client_id == client.id, Inscription.statut == "confirmee")
+        .all()
+    )
+    dates = [i.date_inscription for i in inscriptions_confirmees if i.date_inscription]
+    date_derniere = max(dates).isoformat() if dates else None
+
     return {
         "id": client.id,
         "nom_entreprise": client.nom_entreprise,
@@ -15,6 +24,7 @@ def client_vers_dict(client):
         # nb_participants : pratique pour un futur affichage, sans avoir
         # à faire un appel séparé juste pour compter
         "nb_participants": len(client.participants),
+        "derniere_activite": date_derniere,
     }
 
 @clients_bp.route("", methods=["GET"])

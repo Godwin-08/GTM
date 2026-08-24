@@ -1,5 +1,5 @@
-from flask import Blueprint, render_template
-from flask_login import login_required
+from flask import Blueprint, render_template, redirect, url_for
+from flask_login import login_required, current_user
 
 # Ce blueprint gère uniquement l'affichage des pages HTML.
 # Il ne contient aucune logique métier, aucune requête SQLAlchemy.
@@ -14,6 +14,8 @@ def login_page():
 @pages_bp.route('/dashboard')
 @login_required
 def dashboard():
+    if current_user.a_role("formateur"):
+        return redirect(url_for('pages.sessions'))
     return render_template('dashboard.html')
 
 @pages_bp.route('/formations')
@@ -64,6 +66,8 @@ def participant_detail(participant_id):
 @pages_bp.route('/notifications')
 @login_required
 def notifications():
+    if current_user.a_role("formateur"):
+        return redirect(url_for('pages.sessions'))
     return render_template('notifications.html')
 
 @pages_bp.route('/utilisateurs')
@@ -75,3 +79,11 @@ def utilisateurs():
 @login_required
 def utilisateur_detail(utilisateur_id):
     return render_template('utilisateurs/detail.html', utilisateur_id=utilisateur_id)
+
+@pages_bp.route('/analytics/acp')
+@login_required
+def analytics_acp():
+    if current_user.a_role("formateur"):
+        return redirect(url_for('pages.sessions'))
+    return render_template('analytics/acp.html')
+

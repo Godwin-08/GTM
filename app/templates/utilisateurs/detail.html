@@ -28,29 +28,36 @@
     <template x-if="!chargementEnCours && !erreur && utilisateur">
         <div>
             <!-- ============ EN-TÊTE UTILISATEUR ============ -->
-            <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                <div class="flex items-start justify-between mb-3">
-                    <div>
-                        <h2 class="text-lg font-semibold text-gray-900" x-text="utilisateur.nom"></h2>
-                        <p class="text-sm text-gray-500 mt-0.5" x-text="utilisateur.email"></p>
+            <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6 shadow-sm">
+                <div class="flex items-start gap-4">
+                    <div class="w-14 h-14 rounded-full bg-primary/10 text-primary font-bold text-lg flex items-center justify-center flex-shrink-0">
+                        <span x-text="initiales(utilisateur.nom)"></span>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary"
-                              x-text="labelRole(utilisateur.role.nom)"></span>
-                        <span class="text-xs font-medium px-2.5 py-1 rounded-full"
-                              :class="utilisateur.actif ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'"
-                              x-text="utilisateur.actif ? 'Actif' : 'Inactif'"></span>
-                    </div>
-                </div>
+                    <div class="flex-1">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h2 class="text-lg font-semibold text-gray-900" x-text="utilisateur.nom"></h2>
+                                <p class="text-sm text-gray-500 mt-0.5" x-text="utilisateur.email"></p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary"
+                                      x-text="labelRole(utilisateur.role.nom)"></span>
+                                <span class="text-xs font-medium px-2.5 py-1 rounded-full"
+                                      :class="utilisateur.actif ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'"
+                                      x-text="utilisateur.actif ? 'Actif' : 'Inactif'"></span>
+                            </div>
+                        </div>
 
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4 mt-4 border-t border-gray-100">
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Date de création</p>
-                        <p class="text-sm text-gray-900" x-text="formaterDate(utilisateur.date_creation)"></p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Rôle système</p>
-                        <p class="text-sm text-gray-900 capitalize" x-text="utilisateur.role.nom"></p>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4 mt-4 border-t border-gray-100">
+                            <div>
+                                <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Date de création</p>
+                                <p class="text-sm text-gray-900" x-text="formaterDate(utilisateur.date_creation)"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Rôle système</p>
+                                <p class="text-sm text-gray-900 capitalize" x-text="utilisateur.role.nom"></p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

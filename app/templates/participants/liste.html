@@ -50,14 +50,15 @@
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Participant</th>
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Email</th>
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Entreprise</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Actions</th>
+                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Inscriptions</th>
+                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <!-- Les états de table sont illustrés pour être repérables immédiatement. -->
                 <template x-if="chargementEnCours">
                     <tr>
-                        <td colspan="4" class="px-5 py-10 text-center text-gray-400 text-sm">
+                        <td colspan="5" class="px-5 py-10 text-center text-gray-400 text-sm">
                             <i data-lucide="loader-2" class="w-5 h-5 mx-auto mb-2 animate-spin"></i>
                             Chargement...
                         </td>
@@ -66,7 +67,7 @@
 
                 <template x-if="erreur">
                     <tr>
-                        <td colspan="4" class="px-5 py-10 text-center text-red-500 text-sm">
+                        <td colspan="5" class="px-5 py-10 text-center text-red-500 text-sm">
                             <i data-lucide="alert-circle" class="w-5 h-5 mx-auto mb-2"></i>
                             <span x-text="erreur"></span>
                         </td>
@@ -75,7 +76,7 @@
 
                 <template x-if="!chargementEnCours && !erreur && participantsFiltres().length === 0">
                     <tr>
-                        <td colspan="4" class="px-5 py-10 text-center text-gray-400 text-sm">
+                        <td colspan="5" class="px-5 py-10 text-center text-gray-400 text-sm">
                             <i data-lucide="search-x" class="w-5 h-5 mx-auto mb-2"></i>
                             Aucun participant ne correspond à votre recherche.
                         </td>
@@ -93,8 +94,12 @@
                             <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary"
                                   x-text="nomEntreprise(participant)"></span>
                         </td>
-                        <td class="px-5 py-4">
-                            <div class="flex items-center gap-3">
+                        <td class="px-5 py-4 text-right">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800"
+                                  x-text="(participant.nb_inscriptions || 0) + ' formation' + ((participant.nb_inscriptions || 0) > 1 ? 's' : '')"></span>
+                        </td>
+                        <td class="px-5 py-4 text-right">
+                            <div class="flex items-center justify-end gap-3">
                                 <a :href="`/participants/${participant.id}`"
                                    class="text-xs font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1">
                                     <i data-lucide="eye" class="w-3.5 h-3.5"></i>

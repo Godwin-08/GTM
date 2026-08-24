@@ -167,6 +167,18 @@ function pageSessionsData() {
         formaterDate(dateStr) { const date = new Date(dateStr); return Number.isNaN(date.getTime()) ? '' : `${date.getDate()} ${MOIS_ABREGES[date.getMonth()]}`; },
         classeBadgeStatut(statut) { return COULEURS_STATUT[statut]?.classe || 'bg-gray-100 text-gray-600'; },
         labelStatut(statut) { return COULEURS_STATUT[statut]?.label || statut || ''; },
+        couleurBarreRemplissage(session) {
+            const pct = Math.round((Number(session.taux_remplissage) || 0) * 100);
+            if (pct >= 75) return 'bg-emerald-500';
+            if (pct >= 40) return 'bg-amber-500';
+            return 'bg-rose-500';
+        },
+        couleurTexteRemplissage(session) {
+            const pct = Math.round((Number(session.taux_remplissage) || 0) * 100);
+            if (pct >= 75) return 'text-emerald-600';
+            if (pct >= 40) return 'text-amber-600';
+            return 'text-rose-600';
+        },
         classeBadgeRemplissage(session) {
             if (session.est_complete) return 'bg-gray-100 text-gray-600';
             if (session.taux_remplissage >= 0.7) return 'bg-success/10 text-success';
