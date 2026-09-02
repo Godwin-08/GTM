@@ -1,10 +1,21 @@
+const COULEURS_STATUT_ACTIVITE = {
+    actif: 'bg-success/10 text-success',
+    inactif: 'bg-warning/10 text-warning',
+    aucune: 'bg-gray-100 text-gray-600',
+};
+
 // État Alpine de la page /clients : liste, recherche et création par modale.
 function pageClientsData() {
     return {
         clients: [],
-        recherche: '',
         chargementEnCours: true,
         erreur: null,
+        filtres: {
+            q: '',
+            secteur: '',
+            statut_activite: '',
+            tri: '',
+        },
         modaleOuverte: false,
         envoiEnCours: false,
         erreurFormulaire: null,
@@ -14,83 +25,124 @@ function pageClientsData() {
         erreurEdition: null,
         edition: { id: null, nom_entreprise: '', secteur: '', contact_email: '' },
 
-        modaleSuppressionOuverte: false,
-        suppressionEnCours: false,
-        erreurSuppression: null,
-        aSupprimer: null,
-
-        ouvrirModaleSuppression(client) {
-            this.aSupprimer = client;
-            this.erreurSuppression = null;
-            this.modaleSuppressionOuverte = true;
-            this.$nextTick(() => lucide.createIcons());
+        init() {
+            window.addEventListener('popstate', () => {
+                this.lireFiltresDepuisUrl();
+                this.appliquerFiltres(true, false);
+            });
         },
 
-        fermerModaleSuppression() {
-            if (!this.suppressionEnCours) {
-                this.modaleSuppressionOuverte = false;
-                this.aSupprimer = null;
+        lireFiltresDepuisUrl() {
+            const params = new URLSearchParams(window.location.search);
+            this.filtres.q = params.get('q') || '';
+            this.filtres.secteur = params.get('secteur') || '';
+            this.filtres.statut_activite = params.get('statut_activite') || '';
+            this.filtres.tri = params.get('tri') || '';
+        },
+
+        synchroniserUrlNavigateur(reinitialiser = false) {
+            if (reinitialiser) {
+                if (window.location.search) {
+                    window.history.pushState(null, '', window.location.pathname);
+                }
+                return;
+            }
+            const params = new URLSearchParams();
+            if (this.filtres.q && this.filtres.q.trim()) {
+                params.set('q', this.filtres.q.trim());
+            }
+            if (this.filtres.secteur && this.filtres.secteur.trim()) {
+                params.set('secteur', this.filtres.secteur.trim());
+            }
+            if (this.filtres.statut_activite) {
+                params.set('statut_activite', this.filtres.statut_activite);
+            }
+            if (this.filtres.tri) {
+                params.set('tri', this.filtres.tri);
+            }
+            const query = params.toString();
+            const cible = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+            if (window.location.pathname + window.location.search !== cible) {
+                window.history.pushState(null, '', cible);
             }
         },
 
-        async confirmerSuppression() {
-            this.suppressionEnCours = true;
-            this.erreurSuppression = null;
-
-            try {
-                const res = await fetch(`${urlClients}/${this.aSupprimer.id}`, {
-                    method: 'DELETE',
-                    credentials: 'include',
-                });
-
-                if (res.status === 204) {
-                    this.clients = this.clients.filter(c => c.id !== this.aSupprimer.id);
-                    this.modaleSuppressionOuverte = false;
-                    this.aSupprimer = null;
-                    return;
-                }
-
-                let data;
-                try {
-                    data = await res.json();
-                } catch {
-                    data = { erreur: 'Erreur inattendue du serveur.' };
-                }
-                this.erreurSuppression = data.erreur || 'Impossible de supprimer ce client.';
-
-            } catch (err) {
-                console.error('Erreur suppression client :', err);
-                this.erreurSuppression = 'Impossible de contacter le serveur.';
-            } finally {
-                this.suppressionEnCours = false;
+        construireUrlFiltree() {
+            const params = new URLSearchParams();
+            if (this.filtres.q && this.filtres.q.trim()) {
+                params.set('q', this.filtres.q.trim());
             }
+            if (this.filtres.secteur && this.filtres.secteur.trim()) {
+                params.set('secteur', this.filtres.secteur.trim());
+            }
+            if (this.filtres.statut_activite) {
+                params.set('statut_activite', this.filtres.statut_activite);
+            }
+            const query = params.toString();
+            return query ? `${urlClients}?${query}` : urlClients;
         },
 
         async charger() {
             this.chargementEnCours = true;
             this.erreur = null;
             try {
-                const res = await fetch(urlClients);
-                if (!res.ok) throw new Error('Réponse serveur invalide');
-                this.clients = await res.json();
+                this.lireFiltresDepuisUrl();
+                await this.appliquerFiltres(false, false);
             } catch (err) {
                 console.error('Erreur chargement clients :', err);
                 this.erreur = 'Impossible de charger les clients.';
             } finally {
                 this.chargementEnCours = false;
-                this.$nextTick(() => lucide.createIcons());
+                this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
             }
         },
 
+        async appliquerFiltres(gererChargement = true, majHistorique = true) {
+            if (gererChargement) this.chargementEnCours = true;
+            this.erreur = null;
+            if (majHistorique) {
+                this.synchroniserUrlNavigateur(false);
+            }
+            try {
+                const res = await fetch(this.construireUrlFiltree());
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.erreur || 'Réponse serveur invalide');
+                this.clients = data;
+            } catch (err) {
+                console.error('Erreur filtrage clients :', err);
+                this.erreur = err.message || 'Impossible de charger les clients.';
+                this.clients = [];
+            } finally {
+                if (gererChargement) this.chargementEnCours = false;
+                this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
+            }
+        },
+
+        reinitialiserFiltres() {
+            this.filtres = { q: '', secteur: '', statut_activite: '', tri: '' };
+            this.synchroniserUrlNavigateur(true);
+            this.appliquerFiltres(true, false);
+        },
+
         clientsFiltres() {
-            const rechercheMin = this.recherche.toLocaleLowerCase().trim();
-            return this.clients
-                .filter(client => {
-                    const entreprise = (client.nom_entreprise || '').toLocaleLowerCase();
-                    const secteur = (client.secteur || '').toLocaleLowerCase();
-                    return !rechercheMin || entreprise.includes(rechercheMin) || secteur.includes(rechercheMin);
-                })
-                .sort((a, b) => (b.nb_participants || 0) - (a.nb_participants || 0));
+            const copie = [...this.clients];
+            const t = this.filtres.tri;
+            if (t === 'nom_desc') {
+                return copie.sort((a, b) => (b.nom_entreprise || '').localeCompare(a.nom_entreprise || '', 'fr'));
+            }
+            if (t === 'secteur_asc') {
+                return copie.sort((a, b) => (a.secteur || '').localeCompare(b.secteur || '', 'fr'));
+            }
+            if (t === 'statut_asc') {
+                const ordre = { actif: 0, inactif: 1, aucune: 2 };
+                return copie.sort((a, b) => (ordre[a.statut_activite] ?? 3) - (ordre[b.statut_activite] ?? 3));
+            }
+            // Par défaut (nom_asc) : nom A → Z
+            return copie.sort((a, b) => (a.nom_entreprise || '').localeCompare(b.nom_entreprise || '', 'fr'));
+        },
+
+        classeStatut(statut) {
+            return COULEURS_STATUT_ACTIVITE[statut] || 'bg-gray-100 text-gray-600';
         },
 
         ouvrirModaleCreation() {
@@ -121,10 +173,12 @@ function pageClientsData() {
                 const data = await res.json();
                 if (!res.ok) {
                     this.erreurFormulaire = data.erreur || 'Une erreur est survenue.';
+                    if (typeof window.afficherToast === 'function') window.afficherToast('erreur', this.erreurFormulaire);
                     return;
                 }
                 this.clients.push({ ...data, nb_participants: data.nb_participants ?? 0 });
                 this.modaleOuverte = false;
+                if (typeof window.afficherToast === 'function') window.afficherToast('succes', 'Client créé avec succès.');
             } catch (err) {
                 console.error('Erreur création client :', err);
                 this.erreurFormulaire = 'Impossible de contacter le serveur.';

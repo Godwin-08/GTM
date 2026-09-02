@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 from app.models import Utilisateur
@@ -42,6 +42,7 @@ def login():
 @login_required
 def logout():
     logout_user()
+    session.clear()
     return jsonify({"message": "Déconnexion réussie"}), 200
 
 @auth_bp.route("/me", methods=["GET"])

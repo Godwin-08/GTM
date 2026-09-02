@@ -1,22 +1,74 @@
 {% extends "base.html" %}
 {% block page_title %}Formations{% endblock %}
+{% block content_container %}max-w-7xl mx-auto px-2 sm:px-4{% endblock %}
 {% block content %}
 <div x-data="pageFormationsData()" x-init="charger()">
-    <div class="mb-6 flex items-start justify-between gap-4">
-        <div><h2 class="text-base font-semibold text-gray-900 mb-1">Catalogue des formations</h2><p class="text-sm text-gray-500">Formations proposées par Galaxy Solutions — <span x-text="formationsFiltrees().length"></span> résultat<span x-text="formationsFiltrees().length > 1 ? 's' : ''"></span>.</p></div>
+    <div class="gtm-list-heading">
+        <div><h2 class="gtm-list-title">Catalogue des formations</h2><p class="gtm-list-description">Formations proposées par Galaxy Solutions.</p></div>
         {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
-        <button @click="ouvrirModaleCreation()" class="flex items-center gap-2 bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2.5 rounded-lg flex-shrink-0 transition-colors"><i data-lucide="plus" class="w-4 h-4"></i>Nouvelle formation</button>
+        <button @click="ouvrirModaleCreation()" class="gtm-btn gtm-btn-primary text-sm flex-shrink-0"><i data-lucide="plus" class="w-4 h-4"></i>Nouvelle formation</button>
         {% endif %}
     </div>
-    <div class="flex flex-col sm:flex-row gap-3 mb-5">
-        <div class="relative flex-1"><i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i><input type="search" x-model="recherche" placeholder="Rechercher une formation..." class="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-shadow"></div>
-        <select x-model="filtreDomaine" class="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white min-w-[160px] focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-shadow"><option value="">Tous les domaines</option><template x-for="domaine in domainesDisponibles()" :key="domaine"><option :value="domaine" x-text="domaine"></option></template></select>
-    </div>
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden"><table class="w-full text-sm"><thead><tr class="border-b border-gray-200 text-left text-gray-500"><th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Formation</th><th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Domaine</th><th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Durée</th><th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Actions</th></tr></thead><tbody>
-        <div x-init="cols = 4; nomElement = 'formation'"></div>
-        {% include "components/empty_state.html" %}
-        <template x-for="formation in formationsFiltrees()" :key="formation.id"><tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"><td class="px-5 py-4"><p class="font-medium text-gray-900" x-text="formation.titre"></p><template x-if="formation.description"><p class="text-xs text-gray-500 mt-0.5 truncate max-w-md" x-text="formation.description"></p></template></td><td class="px-5 py-4"><span class="text-xs font-medium px-2.5 py-1 rounded-full" :class="couleurDomaine(nomDomaine(formation))" x-text="nomDomaine(formation)"></span></td><td class="px-5 py-4 text-gray-700" x-text="formation.duree_jours + ' jour' + (formation.duree_jours > 1 ? 's' : '')"></td><td class="px-5 py-4 text-right">
-            <div class="flex items-center justify-end gap-3">
+    <form @submit.prevent="appliquerFiltres()" class="gtm-card gtm-filter-bar" x-data="{ avances: false }">
+        <div class="flex items-center gap-2 mb-4">
+            <i data-lucide="sliders-horizontal" class="w-4 h-4 text-primary"></i>
+            <h3 class="text-sm font-semibold text-gray-900">Filtres</h3>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="relative sm:col-span-2">
+                <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                <input type="search" x-model.trim="filtres.q" placeholder="Rechercher une formation..." class="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+            </div>
+            <select x-model="filtres.domaine_id" class="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                <option value="">Tous les domaines</option>
+                <template x-for="domaine in domaines" :key="domaine.id">
+                    <option :value="domaine.id" x-text="domaine.nom"></option>
+                </template>
+            </select>
+            <select x-show="avances" x-model="filtres.tri" class="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                <option value="">Trier par (par défaut : Titre A-Z)</option>
+                <option value="titre_asc">Titre (A → Z)</option>
+                <option value="titre_desc">Titre (Z → A)</option>
+                <option value="duree_desc">Durée (Plus longue)</option>
+                <option value="duree_asc">Durée (Plus courte)</option>
+                <option value="domaine_asc">Domaine (A → Z)</option>
+            </select>
+        </div>
+        <div class="flex justify-between gap-2 mt-4 pt-3 border-t border-slate-100">
+            <button type="button" @click="avances = !avances" class="gtm-btn gtm-btn-ghost text-xs"><span x-text="avances ? 'Masquer les filtres avancés' : 'Filtres avancés'"></span></button><div class="flex gap-2">
+            <button type="button" @click="reinitialiserFiltres()" class="gtm-btn gtm-btn-ghost text-xs">Réinitialiser</button>
+            <button type="submit" class="gtm-btn gtm-btn-primary text-xs">Appliquer</button></div>
+        </div>
+    </form>
+    <div class="gtm-list-context"><div><strong x-text="formationsFiltrees().length"></strong> résultat<span x-text="formationsFiltrees().length > 1 ? 's' : ''"></span></div></div>
+    <div class="gtm-catalog-grid">
+        <template x-if="chargementEnCours">
+            <div class="gtm-card col-span-full text-center text-gray-400 text-sm">
+                    <i data-lucide="loader-2" class="w-5 h-5 mx-auto mb-2 animate-spin"></i>
+                    Chargement...
+            </div>
+        </template>
+        <template x-if="erreur">
+            <div class="gtm-card col-span-full text-center text-red-500 text-sm">
+                    <i data-lucide="alert-circle" class="w-5 h-5 mx-auto mb-2"></i>
+                    <span x-text="erreur"></span>
+            </div>
+        </template>
+        <template x-if="!chargementEnCours && !erreur && formations.length === 0">
+            <div class="gtm-card col-span-full text-center">
+                    <i data-lucide="search-x" class="w-10 h-10 mx-auto mb-3 text-gray-300"></i>
+                    <p class="text-sm font-medium text-gray-900 mb-1">Aucune formation trouvée</p>
+                    <p class="text-sm text-gray-500 mb-4">Essayez de modifier vos termes de recherche ou vos filtres.</p>
+                    <template x-if="filtres.q || filtres.domaine_id">
+                        <button @click="reinitialiserFiltres()"
+                                class="text-sm font-medium text-primary hover:text-primary-hover">
+                            Réinitialiser les filtres
+                        </button>
+                    </template>
+            </div>
+        </template>
+        <template x-for="formation in formationsFiltrees()" :key="formation.id"><article class="gtm-card gtm-catalog-card"><div class="flex items-start justify-between gap-3"><div class="min-w-0"><h3 class="font-bold text-slate-900" x-text="formation.titre"></h3><p class="text-xs text-slate-500 mt-1 line-clamp-2" x-text="formation.description || 'Aucune description disponible.'"></p></div><span class="gtm-badge gtm-badge-info text-xs" x-text="nomDomaine(formation)"></span></div><div class="flex items-center gap-2 text-xs text-slate-600"><i data-lucide="clock-3" class="w-4 h-4 text-slate-400"></i><span class="font-tabular" x-text="formation.duree_jours + ' jour' + (formation.duree_jours > 1 ? 's' : '')"></span></div><footer>
+            <div class="flex items-center gap-3">
                 <a :href="`/formations/${formation.id}`"
                    class="text-xs font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1">
                     <i data-lucide="eye" class="w-3.5 h-3.5"></i>
@@ -26,9 +78,8 @@
                 <button @click="ouvrirModaleEdition(formation)" class="text-xs font-medium text-primary hover:text-primary-hover flex items-center gap-1"><i data-lucide="pencil" class="w-3.5 h-3.5"></i>Modifier</button>
                 <button @click="ouvrirModaleSuppression(formation)" class="text-xs font-medium text-danger hover:opacity-70 flex items-center gap-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Supprimer</button>
                 {% endif %}
-            </div>
-        </td></tr></template>
-    </tbody></table></div>
+            </div></footer></article></template>
+    </div>
     <div x-show="modaleOuverte" x-cloak @click.self="fermerModaleCreation()" @keydown.escape.window="fermerModaleCreation()" class="fixed inset-0 bg-gray-900/50 z-50 flex items-center justify-center p-4"><div class="bg-white rounded-xl w-full max-w-md p-6" @click.stop>
         <div class="flex items-center justify-between mb-4"><h3 class="text-base font-semibold text-gray-900">Nouvelle formation</h3><button type="button" @click="fermerModaleCreation()" class="text-gray-400 hover:text-gray-600" aria-label="Fermer la modale"><i data-lucide="x" class="w-5 h-5"></i></button></div>
         <template x-if="erreurFormulaire"><p class="text-sm text-red-500 bg-danger/5 rounded-lg px-3 py-2 mb-4" x-text="erreurFormulaire"></p></template>

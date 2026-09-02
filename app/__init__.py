@@ -1,4 +1,5 @@
-from flask import Flask
+from flask import Flask, jsonify, redirect, request, url_for
+from sqlalchemy.exc import IntegrityError
 from app.config import Config
 from app.extensions import db, login_manager, migrate
 
@@ -25,11 +26,52 @@ def create_app():
 	# (les modèles ont besoin de "db", qui vient d'être initialisé juste au-dessus)
 	from app import models
 
+	def est_requete_api():
+		return request.path.startswith("/api/")
+
+	@login_manager.unauthorized_handler
+	def utilisateur_non_connecte():
+		if est_requete_api():
+			return jsonify({"erreur": "Connexion requise."}), 401
+		return redirect(url_for("pages.login_page"))
+
+	@app.errorhandler(400)
+	def erreur_requete_invalide(erreur):
+		if est_requete_api():
+			return jsonify({"erreur": getattr(erreur, "description", "Requête invalide.")}), 400
+		return erreur
+
+	@app.errorhandler(403)
+	def erreur_acces_interdit(erreur):
+		if est_requete_api():
+			return jsonify({"erreur": getattr(erreur, "description", "Accès interdit.")}), 403
+		return erreur
+
+	@app.errorhandler(404)
+	def erreur_introuvable(erreur):
+		if est_requete_api():
+			return jsonify({"erreur": "Ressource introuvable."}), 404
+		return erreur
+
+	@app.errorhandler(IntegrityError)
+	def erreur_integrite(erreur):
+		db.session.rollback()
+		if est_requete_api():
+			return jsonify({"erreur": "Conflit avec une donnée existante ou liée."}), 409
+		raise erreur
+
+	@app.errorhandler(500)
+	def erreur_interne(erreur):
+		db.session.rollback()
+		if est_requete_api():
+			return jsonify({"erreur": "Une erreur interne est survenue."}), 500
+		return erreur
+
 	# Indique à Flask-Login comment recharger un utilisateur à partir
 	# de l'ID stocké dans son cookie de session à chaque requête
 	@login_manager.user_loader
 	def load_user(user_id):
-		return models.Utilisateur.query.get(int(user_id))
+		return db.session.get(models.Utilisateur, int(user_id))
 
 	# Enregistrement des blueprints (groupes de routes)
 	from app.routes.auth import auth_bp

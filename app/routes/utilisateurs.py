@@ -44,7 +44,7 @@ def liste_utilisateurs():
 @utilisateurs_bp.route("/<int:utilisateur_id>", methods=["GET"])
 @admin_required
 def detail_utilisateur(utilisateur_id):
-    utilisateur = Utilisateur.query.get_or_404(utilisateur_id)
+    utilisateur = db.get_or_404(Utilisateur, utilisateur_id)
     return jsonify(utilisateur_vers_dict(utilisateur)), 200
 
 @utilisateurs_bp.route("", methods=["POST"])
@@ -59,7 +59,7 @@ def creer_utilisateur():
     if not all([nom, email, mot_de_passe, role_id]):
         return jsonify({"erreur": "nom, email, mot_de_passe et role_id sont obligatoires"}), 400
 
-    if not Role.query.get(role_id):
+    if not db.session.get(Role, role_id):
         return jsonify({"erreur": "role_id invalide"}), 400
 
     if Utilisateur.query.filter_by(email=email).first():
@@ -78,7 +78,7 @@ def creer_utilisateur():
 @utilisateurs_bp.route("/<int:utilisateur_id>", methods=["PUT"])
 @admin_required
 def modifier_utilisateur(utilisateur_id):
-    utilisateur = Utilisateur.query.get_or_404(utilisateur_id)
+    utilisateur = db.get_or_404(Utilisateur, utilisateur_id)
     donnees = request.get_json()
 
     if "nom" in donnees:
@@ -90,7 +90,7 @@ def modifier_utilisateur(utilisateur_id):
             return jsonify({"erreur": "cet email est déjà utilisé par un autre compte"}), 409
         utilisateur.email = donnees["email"]
     if "role_id" in donnees:
-        if not Role.query.get(donnees["role_id"]):
+        if not db.session.get(Role, donnees["role_id"]):
             return jsonify({"erreur": "role_id invalide"}), 400
         utilisateur.role_id = donnees["role_id"]
     if "actif" in donnees:

@@ -1,117 +1,165 @@
 {% extends "base.html" %}
 
-{% block page_title %}Utilisateurs{% endblock %}
+{% block title %}Gestion des Utilisateurs | GTM{% endblock %}
+
+{% block breadcrumb %}
+<span>Administration</span>
+<span>/</span>
+<span class="text-slate-600">Utilisateurs</span>
+{% endblock %}
+
+{% block page_title %}Gestion des Utilisateurs{% endblock %}
 
 {% block content %}
 
 <div x-data="pageUtilisateursData()" x-init="charger()">
-    <div class="mb-6 flex items-start justify-between gap-4">
+    <div class="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-        <h2 class="text-base font-semibold text-gray-900 mb-1">Utilisateurs</h2>
-        <p class="text-sm text-gray-500">
-            Comptes internes ayant accès à GTM —
-            <span x-text="utilisateursFiltres().length"></span> résultat<span x-text="utilisateursFiltres().length > 1 ? 's' : ''"></span>.
-        </p>
+            <h2 class="text-base font-bold text-slate-900 mb-0.5">Comptes & Accès Système</h2>
+            <p class="text-xs text-slate-500">
+                Gestion des comptes utilisateurs internes —
+                <span class="font-semibold text-slate-700" x-text="utilisateursFiltres().length"></span> résultat<span x-text="utilisateursFiltres().length > 1 ? 's' : ''"></span>.
+            </p>
         </div>
-        {% if current_user.role.nom == 'admin' %}
-        <button @click="ouvrirModaleCreation()" class="flex items-center gap-2 bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2.5 rounded-lg flex-shrink-0 transition-colors">
-            <i data-lucide="plus" class="w-4 h-4"></i>
-            Nouvel utilisateur
-        </button>
+        {% if current_user.is_authenticated %}
+            {% if current_user.role.nom == 'admin' %}
+            <button @click="ouvrirModaleCreation()" class="gtm-btn gtm-btn-primary text-xs flex-shrink-0">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                Nouvel utilisateur
+            </button>
+            {% endif %}
         {% endif %}
     </div>
 
     <template x-if="!accesRefuse">
         <div class="flex flex-col sm:flex-row gap-3 mb-5">
             <div class="relative flex-1">
-                <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
                 <input type="text"
-                       x-model="recherche"
-                       placeholder="Rechercher un utilisateur..."
-                       class="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-shadow">
+                       x-model.debounce.300ms="recherche"
+                       placeholder="Rechercher par nom ou email..."
+                       class="gtm-input pl-9">
             </div>
 
-            <select x-model="filtreRole"
-                    class="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white min-w-[160px] focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-shadow">
+            <select x-model="filtreRole" class="gtm-select sm:w-48">
                 <option value="">Tous les rôles</option>
                 <template x-for="role in rolesDisponibles()" :key="role">
                     <option :value="role" x-text="role"></option>
                 </template>
             </select>
+
+            <select x-model="tri" class="gtm-select sm:w-52">
+                <option value="">Trier par (A → Z)</option>
+                <option value="nom_asc">Nom (A → Z)</option>
+                <option value="nom_desc">Nom (Z → A)</option>
+                <option value="role_asc">Rôle (A → Z)</option>
+                <option value="date_desc">Date (Récent)</option>
+                <option value="date_asc">Date (Ancien)</option>
+            </select>
         </div>
     </template>
 
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <table class="w-full text-sm">
+    <div class="gtm-table-container">
+        <table class="gtm-table">
             <thead>
-                <tr class="border-b border-gray-200 text-left text-gray-500">
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Nom</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Email</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Rôle</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Statut</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Créé le</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Actions</th>
+                <tr>
+                    <th>Utilisateur</th>
+                    <th>Email</th>
+                    <th>Rôle</th>
+                    <th>Statut</th>
+                    <th>Créé le</th>
+                    <th class="text-right">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <template x-if="chargementEnCours">
-                    <tr><td colspan="6" class="px-5 py-10 text-center text-gray-400 text-sm">
-                        <i data-lucide="loader-2" class="w-5 h-5 mx-auto mb-2 animate-spin"></i>
-                        Chargement...
+                    <tr><td colspan="6" class="px-5 py-12 text-center text-slate-400 text-sm">
+                        <i data-lucide="loader-2" class="w-6 h-6 mx-auto mb-2 animate-spin text-slate-500"></i>
+                        Chargement des utilisateurs...
                     </td></tr>
                 </template>
 
                 <template x-if="accesRefuse">
-                    <tr><td colspan="6" class="px-5 py-10 text-center text-gray-400 text-sm">
-                        <i data-lucide="lock" class="w-5 h-5 mx-auto mb-2"></i>
-                        Accès réservé aux administrateurs.
+                    <tr><td colspan="6" class="px-5 py-12 text-center text-slate-400 text-sm">
+                        <i data-lucide="lock" class="w-6 h-6 mx-auto mb-2 text-slate-400"></i>
+                        Accès réservé exclusivement aux administrateurs.
                     </td></tr>
                 </template>
 
                 <template x-if="erreur && !accesRefuse">
-                    <tr><td colspan="6" class="px-5 py-10 text-center text-red-500 text-sm">
-                        <i data-lucide="alert-circle" class="w-5 h-5 mx-auto mb-2"></i>
+                    <tr><td colspan="6" class="px-5 py-12 text-center text-red-600 text-sm">
+                        <i data-lucide="alert-circle" class="w-6 h-6 mx-auto mb-2"></i>
                         <span x-text="erreur"></span>
                     </td></tr>
                 </template>
 
                 <template x-if="!chargementEnCours && !erreur && !accesRefuse && utilisateursFiltres().length === 0">
-                    <tr><td colspan="6" class="px-5 py-10 text-center text-gray-400 text-sm">
-                        <i data-lucide="search-x" class="w-5 h-5 mx-auto mb-2"></i>
-                        Aucun utilisateur ne correspond à votre recherche.
-                    </td></tr>
+                    <tr>
+                        <td colspan="6" class="px-5 py-12 text-center">
+                            <div class="gtm-empty-state border-none p-0 bg-transparent">
+                                <div class="gtm-empty-state-icon">
+                                    <i data-lucide="search-x" class="w-5 h-5"></i>
+                                </div>
+                                <h4 class="text-sm font-semibold text-slate-900">Aucun utilisateur trouvé</h4>
+                                <p class="text-xs text-slate-500 mt-1 max-w-xs">
+                                    Ajustez vos filtres de recherche pour afficher d'autres résultats.
+                                </p>
+                                <template x-if="recherche || filtreRole">
+                                    <button @click="recherche = ''; filtreRole = ''"
+                                            class="gtm-btn gtm-btn-ghost text-xs mt-3 text-blue-600 hover:text-blue-800">
+                                        Réinitialiser les filtres
+                                    </button>
+                                </template>
+                            </div>
+                        </td>
+                    </tr>
                 </template>
 
                 <template x-for="u in utilisateursFiltres()" :key="u.id">
-                    <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
-                        <td class="px-5 py-4">
-                            <p class="font-medium text-gray-900" x-text="u.nom"></p>
-                        </td>
-                        <td class="px-5 py-4 text-gray-500 text-xs" x-text="u.email"></td>
-                        <td class="px-5 py-4">
-                            <span class="text-xs font-medium px-2.5 py-1 rounded-full"
-                                  :class="couleurRole(u.role.nom)"
-                                  x-text="u.role.nom"></span>
-                        </td>
-                        <td class="px-5 py-4">
-                            <span class="text-xs font-medium px-2.5 py-1 rounded-full"
-                                  :class="u.actif ? 'bg-success/10 text-success' : 'bg-gray-100 text-gray-600'"
-                                  x-text="u.actif ? 'Actif' : 'Inactif'"></span>
-                        </td>
-                        <td class="px-5 py-4 text-gray-500 text-xs" x-text="formaterDate(u.date_creation)"></td>
-                        <td class="px-5 py-4">
+                    <tr>
+                        <td class="font-medium text-slate-900">
                             <div class="flex items-center gap-3">
-                                {% if current_user.role.nom == 'admin' %}
-                                <a :href="`/utilisateurs/${u.id}`"
-                                   class="text-xs font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1">
-                                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                                    Voir
-                                </a>
-                                <button @click="ouvrirModaleEdition(u)"
-                                        class="text-xs font-medium text-primary hover:text-primary-hover flex items-center gap-1">
-                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                    Modifier
-                                </button>
+                                <div class="w-7 h-7 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-xs font-bold">
+                                    <span x-text="u.nom ? u.nom.substring(0, 2).toUpperCase() : 'U'"></span>
+                                </div>
+                                <span x-text="u.nom"></span>
+                            </div>
+                        </td>
+                        <td class="text-slate-600 text-xs font-tabular" x-text="u.email"></td>
+                        <td>
+                            <span class="gtm-badge"
+                                  :class="{
+                                      'gtm-badge-analytics': u.role.nom === 'admin',
+                                      'gtm-badge-info': u.role.nom === 'gestionnaire',
+                                      'gtm-badge-neutral': u.role.nom === 'formateur'
+                                  }">
+                                <span class="gtm-badge-dot"></span>
+                                <span x-text="u.role.nom"></span>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="gtm-badge"
+                                  :class="u.actif ? 'gtm-badge-success' : 'gtm-badge-neutral'">
+                                <span class="gtm-badge-dot"></span>
+                                <span x-text="u.actif ? 'Actif' : 'Inactif'"></span>
+                            </span>
+                        </td>
+                        <td class="text-slate-500 text-xs font-tabular" x-text="formaterDate(u.date_creation)"></td>
+                        <td class="text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                {% if current_user.is_authenticated %}
+                                    {% if current_user.role.nom == 'admin' %}
+                                    <a :href="`/utilisateurs/${u.id}`"
+                                       class="gtm-btn gtm-btn-ghost py-1 px-2 text-xs">
+                                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                        Voir
+                                    </a>
+                                    <button @click="ouvrirModaleEdition(u)"
+                                            class="gtm-btn gtm-btn-outline py-1 px-2.5 text-xs">
+                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                        Modifier
+                                    </button>
+                                    {% endif %}
                                 {% endif %}
                             </div>
                         </td>
@@ -121,116 +169,162 @@
         </table>
     </div>
 
-    {% if current_user.role.nom == 'admin' %}
+    {% if current_user.is_authenticated %}
+        {% if current_user.role.nom == 'admin' %}
+    <!-- Modale de Création Utilisateur -->
     <div x-show="modaleOuverte" x-cloak @click.self="fermerModaleCreation()" @keydown.escape.window="fermerModaleCreation()"
-         class="fixed inset-0 bg-gray-900/50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl w-full max-w-md p-6" @click.stop>
-            <div class="flex items-center justify-between mb-4"><h3 class="text-base font-semibold text-gray-900">Nouvel utilisateur</h3><button type="button" @click="fermerModaleCreation()" class="text-gray-400 hover:text-gray-600" aria-label="Fermer la modale"><i data-lucide="x" class="w-5 h-5"></i></button></div>
-            <template x-if="erreurFormulaire"><p class="text-sm text-red-500 bg-danger/5 rounded-lg px-3 py-2 mb-4" x-text="erreurFormulaire"></p></template>
+         class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl border border-slate-200" @click.stop>
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                <h3 class="text-base font-bold text-slate-900">Nouvel Utilisateur</h3>
+                <button type="button" @click="fermerModaleCreation()" class="text-slate-400 hover:text-slate-600 transition-colors" aria-label="Fermer la modale">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <template x-if="erreurFormulaire">
+                <div class="gtm-error-state text-xs mb-4">
+                    <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
+                    <span x-text="erreurFormulaire"></span>
+                </div>
+            </template>
+
             <form @submit.prevent="soumettreCreation()" class="space-y-4">
-                <div><label for="utilisateur-nom" class="block text-sm text-gray-700 mb-1">Nom</label><input id="utilisateur-nom" type="text" x-model.trim="formulaire.nom" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></div>
-                <div><label for="utilisateur-email" class="block text-sm text-gray-700 mb-1">Email</label><input id="utilisateur-email" type="email" x-model.trim="formulaire.email" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></div>
-                <div><label for="utilisateur-mot-de-passe" class="block text-sm text-gray-700 mb-1">Mot de passe</label><div class="relative"><input id="utilisateur-mot-de-passe" :type="motDePasseVisible ? 'text' : 'password'" x-model="formulaire.mot_de_passe" required class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"><button type="button" @click="motDePasseVisible = !motDePasseVisible" :aria-label="motDePasseVisible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'" :aria-pressed="motDePasseVisible" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"><svg x-show="!motDePasseVisible" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><svg x-show="motDePasseVisible" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 4.2A10.9 10.9 0 0 1 12 4c6.5 0 10 8 10 8a18.4 18.4 0 0 1-3.2 4.3M6.6 6.6C3.6 8.7 2 12 2 12s3.5 8 10 8a9.8 9.8 0 0 0 3.4-.6"/></svg></button></div></div>
-                <div><label for="utilisateur-role" class="block text-sm text-gray-700 mb-1">Rôle</label><select id="utilisateur-role" x-model.number="formulaire.role_id" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"><option value="" disabled>Sélectionner un rôle</option><template x-for="role in rolesPourFormulaire()" :key="role.id"><option :value="role.id" x-text="role.nom"></option></template></select></div>
-                <div class="flex justify-end gap-2 pt-2"><button type="button" @click="fermerModaleCreation()" class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">Annuler</button><button type="submit" :disabled="envoiEnCours" class="bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg"><span x-show="!envoiEnCours">Créer l'utilisateur</span><span x-show="envoiEnCours">Création...</span></button></div>
+                <div>
+                    <label for="utilisateur-nom" class="gtm-label">Nom complet</label>
+                    <input id="utilisateur-nom" type="text" x-model.trim="formulaire.nom" required class="gtm-input" placeholder="Ex: Jean Dupont">
+                </div>
+                <div>
+                    <label for="utilisateur-email" class="gtm-label">Adresse email</label>
+                    <input id="utilisateur-email" type="email" x-model.trim="formulaire.email" required class="gtm-input" placeholder="j.dupont@entreprise.com">
+                </div>
+                <div>
+                    <label for="utilisateur-mot-de-passe" class="gtm-label">Mot de passe initial</label>
+                    <div class="relative">
+                        <input id="utilisateur-mot-de-passe" :type="motDePasseVisible ? 'text' : 'password'" x-model="formulaire.mot_de_passe" required class="gtm-input pr-10" placeholder="••••••••">
+                        <button type="button" @click="motDePasseVisible = !motDePasseVisible"
+                                :aria-label="motDePasseVisible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+                                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+                            <i :data-lucide="motDePasseVisible ? 'eye-off' : 'eye'" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label for="utilisateur-role" class="gtm-label">Rôle système</label>
+                    <select id="utilisateur-role" x-model.number="formulaire.role_id" required class="gtm-select">
+                        <option value="" disabled>Sélectionner un rôle</option>
+                        <template x-for="role in rolesPourFormulaire()" :key="role.id">
+                            <option :value="role.id" x-text="role.nom"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 mt-6">
+                    <button type="button" @click="fermerModaleCreation()" class="gtm-btn gtm-btn-secondary">
+                        Annuler
+                    </button>
+                    <button type="submit" :disabled="envoiEnCours" class="gtm-btn gtm-btn-primary">
+                        <span x-show="!envoiEnCours">Créer l'utilisateur</span>
+                        <span x-show="envoiEnCours" class="flex items-center gap-2">
+                            <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Création...
+                        </span>
+                    </button>
+                </div>
             </form>
         </div>
     </div>
 
-    <!-- Modale d'édition -->
+    <!-- Modale d'Édition Utilisateur -->
     <div x-show="modaleEditionOuverte"
          x-cloak
          @click.self="fermerModaleEdition()"
          @keydown.escape.window="fermerModaleEdition()"
-         class="fixed inset-0 bg-gray-900/50 z-50 flex items-center justify-center p-4">
+         class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
 
-        <div class="bg-white rounded-xl w-full max-w-md p-6" @click.stop>
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-base font-semibold text-gray-900">Modifier l'utilisateur</h3>
-                <button type="button" @click="fermerModaleEdition()" class="text-gray-400 hover:text-gray-600">
+        <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl border border-slate-200" @click.stop>
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                <h3 class="text-base font-bold text-slate-900">Modifier l'Utilisateur</h3>
+                <button type="button" @click="fermerModaleEdition()" class="text-slate-400 hover:text-slate-600 transition-colors">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
 
             <template x-if="erreurEdition">
-                <p class="text-sm text-red-500 bg-danger/5 rounded-lg px-3 py-2 mb-4" x-text="erreurEdition"></p>
+                <div class="gtm-error-state text-xs mb-4">
+                    <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
+                    <span x-text="erreurEdition"></span>
+                </div>
             </template>
 
             <form @submit.prevent="soumettreEdition()" class="space-y-4">
                 <div>
-                    <label class="block text-sm text-gray-700 mb-1">Nom</label>
-                    <input type="text" x-model="edition.nom" required
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-                                  focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                    <label class="gtm-label">Nom complet</label>
+                    <input type="text" x-model="edition.nom" required class="gtm-input">
                 </div>
 
                 <div>
-                    <label class="block text-sm text-gray-700 mb-1">Email</label>
-                    <input type="email" x-model="edition.email" required
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-                                  focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                    <label class="gtm-label">Adresse email</label>
+                    <input type="email" x-model="edition.email" required class="gtm-input">
                 </div>
 
                 <div>
-                    <label class="block text-sm text-gray-700 mb-1">
-                        Nouveau mot de passe <span class="text-gray-400">(laisser vide pour ne pas changer)</span>
+                    <label class="gtm-label">
+                        Nouveau mot de passe <span class="text-slate-400 font-normal">(laisser vide pour conserver)</span>
                     </label>
                     <div class="relative">
                         <input :type="motDePasseVisibleEdition ? 'text' : 'password'"
                                x-model="edition.mot_de_passe"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm
-                                      focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                               class="gtm-input pr-10" placeholder="••••••••">
                         <button type="button"
                                 @click="motDePasseVisibleEdition = !motDePasseVisibleEdition"
-                                :aria-label="motDePasseVisibleEdition ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
-                                :aria-pressed="motDePasseVisibleEdition"
-                                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1">
+                                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
                             <i :data-lucide="motDePasseVisibleEdition ? 'eye-off' : 'eye'" class="w-4 h-4"></i>
                         </button>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm text-gray-700 mb-1">Rôle</label>
-                    <select x-model.number="edition.role_id" required
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white
-                                   focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                    <label class="gtm-label">Rôle système</label>
+                    <select x-model.number="edition.role_id" required class="gtm-select">
                         <template x-for="r in rolesPourFormulaire()" :key="r.id">
                             <option :value="r.id" x-text="r.nom" :selected="r.id === edition.role_id"></option>
                         </template>
                     </select>
                 </div>
 
-                <!-- Toggle actif, désactivé si l'admin édite son propre compte -->
-                <div class="flex items-center justify-between">
-                    <label class="text-sm text-gray-700">Compte actif</label>
+                <!-- Toggle Statut Actif/Inactif -->
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-900">Statut du compte</p>
+                        <p class="text-[11px] text-slate-500" x-text="edition.actif ? 'Le compte peut se connecter' : 'Accès désactivé'"></p>
+                    </div>
                     <button type="button"
                             @click="if (edition.id !== utilisateurConnecteId) edition.actif = !edition.actif"
                             :disabled="edition.id === utilisateurConnecteId"
-                            :class="edition.actif ? 'bg-primary' : 'bg-gray-300'"
+                            :class="edition.actif ? 'bg-blue-600' : 'bg-slate-300'"
                             class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         <span :class="edition.actif ? 'translate-x-6' : 'translate-x-1'"
-                              class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"></span>
+                              class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-xs"></span>
                     </button>
                 </div>
                 <template x-if="edition.id === utilisateurConnecteId">
-                    <p class="text-xs text-gray-400 -mt-2">Vous ne pouvez pas désactiver votre propre compte.</p>
+                    <p class="text-[11px] text-slate-500">Vous ne pouvez pas désactiver votre propre compte administrateur.</p>
                 </template>
 
-                <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" @click="fermerModaleEdition()"
-                            class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
+                <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 mt-6">
+                    <button type="button" @click="fermerModaleEdition()" class="gtm-btn gtm-btn-secondary">
                         Annuler
                     </button>
-                    <button type="submit" :disabled="editionEnCours"
-                            class="bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg">
+                    <button type="submit" :disabled="editionEnCours" class="gtm-btn gtm-btn-primary">
                         <span x-show="!editionEnCours">Enregistrer</span>
-                        <span x-show="editionEnCours">Enregistrement...</span>
+                        <span x-show="editionEnCours" class="flex items-center gap-2">
+                            <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Enregistrement...
+                        </span>
                     </button>
                 </div>
             </form>
         </div>
     </div>
+    {% endif %}
     {% endif %}
 </div>
 
@@ -243,3 +337,4 @@
 </script>
 <script src="{{ url_for('static', filename='js/utilisateurs.js') }}"></script>
 {% endblock %}
+

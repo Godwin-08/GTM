@@ -1,308 +1,304 @@
 // ============================================================
-// Ce script charge les vraies données de GTM et remplit
-// le dashboard : KPI, graphiques, tableau formateurs.
-// Toutes les URLs viennent de variables déclarées dans
-// dashboard.html (générées par Jinja2 via url_for).
+// Composant Alpine.js pour le Dashboard de pilotage (PageDashboardData)
+// Gère l'état des filtres (Année, Domaine, Client, Formateur),
+// la réactivité des KPIs, des graphiques Chart.js, des alertes
+// et la synchronisation complète avec l'URL (deep linking / popstate).
 // ============================================================
 
-function afficherErreur(elementId, message = "Erreur de chargement") {
-    const el = document.getElementById(elementId);
-    if (el) {
-        el.textContent = message;
-        el.classList.add('text-red-500', 'text-sm', 'font-normal');
-    }
-}
+let chartDomaineInstance = null;
+let chartEvolutionInstance = null;
 
-// Table de correspondance mois -> abréviation française
 const MOIS_ABREGES = [
     'Jan.', 'Fév.', 'Mars', 'Avril', 'Mai', 'Juin',
     'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'
 ];
 
-// Transforme {annee: 2026, mois: 1} en "Jan. 2026"
 function formaterMoisAnnee(annee, mois) {
-    // mois arrive en 1-12, le tableau est indexé 0-11 -> on soustrait 1
     return `${MOIS_ABREGES[mois - 1]} ${annee}`;
 }
 
-// Calcule la variation en % entre le dernier mois et le mois précédent,
-// à partir des données déjà récupérées pour le graphique d'évolution.
-function afficherTendanceParticipants(data) {
-    // data est le tableau brut de evolution-inscriptions, trié chronologiquement
-    if (data.length < 2) return; // pas assez de données pour comparer
+function pageDashboardData() {
+    return {
+        filtres: {
+            annee: '',
+            domaine_id: '',
+            client_id: '',
+            formateur_id: '',
+        },
+        kpi: {},
+        pointsAttention: { total: 0, items: [] },
+        tableFormateurs: [],
+        sessionsAVenir: [],
+        optionDomaines: [],
+        optionClients: [],
+        optionFormateurs: [],
+        anneesDisponibles: [2024, 2025, 2026, 2027],
+        chargementEnCours: true,
+        erreur: null,
 
-    const dernierMois = data[data.length - 1].nb_inscriptions;
-    const moisPrecedent = data[data.length - 2].nb_inscriptions;
+        obtenirSalutation(nom) {
+            const h = new Date().getHours();
+            let prefix = 'Bonjour';
+            if (h >= 12 && h < 18) {
+                prefix = 'Bon après-midi';
+            } else if (h >= 18 || h < 5) {
+                prefix = 'Bonsoir';
+            }
+            return nom ? `${prefix} ${nom}` : prefix;
+        },
 
-    const el = document.getElementById('kpi-participants-tendance');
-    if (!el) return;
+        libelleDomaine() {
+            if (!this.filtres.domaine_id) return 'Tous les domaines';
+            const d = this.optionDomaines.find(item => String(item.id) === String(this.filtres.domaine_id));
+            return d ? d.nom : `Domaine #${this.filtres.domaine_id}`;
+        },
 
-    // Évite une division par zéro si le mois précédent était à 0 inscription
-    if (moisPrecedent === 0) {
-        el.textContent = '';
-        return;
-    }
+        libelleClient() {
+            if (!this.filtres.client_id) return 'Toutes les entreprises';
+            const c = this.optionClients.find(item => String(item.id) === String(this.filtres.client_id));
+            return c ? c.nom_entreprise : `Client #${this.filtres.client_id}`;
+        },
 
-    const variation = ((dernierMois - moisPrecedent) / moisPrecedent) * 100;
-    const signe = variation >= 0 ? '+' : '';
-    const couleur = variation >= 0 ? 'text-success' : 'text-danger';
+        libelleFormateur() {
+            if (!this.filtres.formateur_id) return 'Tous les formateurs';
+            const f = this.optionFormateurs.find(item => String(item.id) === String(this.filtres.formateur_id));
+            return f ? f.nom : `Formateur #${this.filtres.formateur_id}`;
+        },
 
-    el.textContent = `${signe}${variation.toFixed(0)}% vs mois précédent`;
-    el.classList.add(couleur);
-}
+        aDesFiltresActifs() {
+            return !!(this.filtres.annee || this.filtres.domaine_id || this.filtres.client_id || this.filtres.formateur_id);
+        },
 
-// --- 1. KPI : Sessions + Taux de remplissage ---
-async function chargerKpiRemplissage() {
-    try {
-        const res = await fetch(urlRemplissage);
-        if (!res.ok) throw new Error('Réponse serveur invalide');
-        const data = await res.json();
+        init() {
+            window.addEventListener('popstate', () => {
+                this.lireFiltresDepuisUrl();
+                this.appliquerFiltres(true, false);
+            });
+        },
 
-        document.getElementById('kpi-sessions').textContent = data.nb_sessions;
+        lireFiltresDepuisUrl() {
+            const params = new URLSearchParams(window.location.search);
+            this.filtres.annee = params.get('annee') || '';
+            this.filtres.domaine_id = params.get('domaine_id') || '';
+            this.filtres.client_id = params.get('client_id') || '';
+            this.filtres.formateur_id = params.get('formateur_id') || '';
+        },
 
-        const tauxPourcent = (data.taux_moyen * 100).toFixed(1);
-        document.getElementById('kpi-remplissage').textContent = tauxPourcent + '%';
+        synchroniserUrlNavigateur(reinitialiser = false) {
+            if (reinitialiser) {
+                if (window.location.search) {
+                    window.history.pushState(null, '', window.location.pathname);
+                }
+                return;
+            }
+            const params = new URLSearchParams();
+            if (this.filtres.annee) params.set('annee', this.filtres.annee);
+            if (this.filtres.domaine_id) params.set('domaine_id', this.filtres.domaine_id);
+            if (this.filtres.client_id) params.set('client_id', this.filtres.client_id);
+            if (this.filtres.formateur_id) params.set('formateur_id', this.filtres.formateur_id);
 
-    } catch (err) {
-        console.error('Erreur chargement remplissage :', err);
-        afficherErreur('kpi-sessions');
-        afficherErreur('kpi-remplissage');
-    }
-}
+            const query = params.toString();
+            const cible = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+            if (window.location.pathname + window.location.search !== cible) {
+                window.history.pushState(null, '', cible);
+            }
+        },
 
-// --- 2. KPI : Clients actifs + Participants ---
-// Les deux se calculent à partir de la même route activite-client,
-// donc on ne fait qu'un seul fetch pour les deux.
-async function chargerKpiClients() {
-    try {
-        const res = await fetch(urlClient);
-        if (!res.ok) throw new Error('Réponse serveur invalide');
-        const data = await res.json(); // [{client, nb_inscriptions_confirmees, nb_participants_actifs}, ...]
+        construireQueryString() {
+            const params = new URLSearchParams();
+            if (this.filtres.annee) params.set('annee', this.filtres.annee);
+            if (this.filtres.domaine_id) params.set('domaine_id', this.filtres.domaine_id);
+            if (this.filtres.client_id) params.set('client_id', this.filtres.client_id);
+            if (this.filtres.formateur_id) params.set('formateur_id', this.filtres.formateur_id);
+            const query = params.toString();
+            return query ? `?${query}` : '';
+        },
 
-        // Clients actifs = ceux qui ont au moins une inscription confirmée
-        const clientsActifs = data.filter(c => c.nb_inscriptions_confirmees > 0).length;
-        document.getElementById('kpi-clients').textContent = clientsActifs;
+        async chargerOptions() {
+            try {
+                const [resD, resC, resF] = await Promise.all([
+                    fetch(typeof urlDomaines !== 'undefined' ? urlDomaines : '/api/domaines'),
+                    fetch(typeof urlClients !== 'undefined' ? urlClients : '/api/clients'),
+                    fetch(typeof urlFormateurs !== 'undefined' ? urlFormateurs : '/api/formateurs'),
+                ]);
+                if (resD.ok) this.optionDomaines = await resD.json();
+                if (resC.ok) this.optionClients = await resC.json();
+                if (resF.ok) this.optionFormateurs = await resF.json();
+            } catch (err) {
+                console.error('Erreur chargement options filtres :', err);
+            }
+        },
 
-        // Participants = somme des participants actifs de chaque client
-        const totalParticipants = data.reduce((total, c) => total + c.nb_participants_actifs, 0);
-        document.getElementById('kpi-participants').textContent = totalParticipants;
+        async charger() {
+            this.chargementEnCours = true;
+            this.erreur = null;
+            try {
+                await this.chargerOptions();
+                this.lireFiltresDepuisUrl();
+                await this.appliquerFiltres(false, false);
+            } catch (err) {
+                console.error('Erreur chargement dashboard :', err);
+                this.erreur = 'Impossible de charger le tableau de bord.';
+            } finally {
+                this.chargementEnCours = false;
+                this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
+            }
+        },
 
-    } catch (err) {
-        console.error('Erreur chargement clients :', err);
-        afficherErreur('kpi-clients');
-        afficherErreur('kpi-participants');
-    }
-}
+        async appliquerFiltres(gererChargement = true, majHistorique = true) {
+            if (gererChargement) this.chargementEnCours = true;
+            this.erreur = null;
 
-// --- 3. Graphique : sessions par domaine ---
-async function chargerChartDomaine() {
-    try {
-        const res = await fetch(urlDomaine);
-        if (!res.ok) throw new Error('Réponse serveur invalide');
-        const data = await res.json();
+            if (majHistorique) {
+                this.synchroniserUrlNavigateur(false);
+            }
 
-        const labels = data.map(d => d.domaine);
-        const valeurs = data.map(d => d.nb_sessions);
+            const qs = this.construireQueryString();
 
-        new Chart(document.getElementById('chartDomaine'), {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Sessions',
-                    data: valeurs,
-                    backgroundColor: '#F26B1F',
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { precision: 0 },
-                        grid: { color: '#F3F4F6' }
-                    },
-                    x: {
-                        grid: { display: false }
+            try {
+                const [resKpi, resDom, resEvol, resFmt, resSess, resPts] = await Promise.all([
+                    fetch(`${urlKpiGlobaux}${qs}`),
+                    fetch(`${urlDomaine}${qs}`),
+                    fetch(`${urlEvolution}${qs}`),
+                    fetch(`${urlFormateur}${qs}`),
+                    fetch(`${urlSessions}${qs}`),
+                    fetch(`${urlPointsAttention}${qs}`),
+                ]);
+
+                if (!resKpi.ok) {
+                    const errJson = await resKpi.json().catch(() => ({}));
+                    throw new Error(errJson.erreur || 'Erreur lors de la récupération des métriques');
+                }
+
+                this.kpi = await resKpi.json();
+                const dataDomaine = resDom.ok ? await resDom.json() : [];
+                const dataEvolution = resEvol.ok ? await resEvol.json() : [];
+                this.tableFormateurs = resFmt.ok ? await resFmt.json() : [];
+                const rawSessions = resSess.ok ? await resSess.json() : [];
+                this.pointsAttention = resPts.ok ? await resPts.json() : { total: 0, items: [] };
+
+                // Filtrage sessions à venir (futures)
+                const aujourdHui = new Date();
+                aujourdHui.setHours(0, 0, 0, 0);
+                this.sessionsAVenir = rawSessions
+                    .filter(s => new Date(s.date_debut) >= aujourdHui)
+                    .sort((a, b) => new Date(a.date_debut) - new Date(b.date_debut))
+                    .slice(0, 5);
+
+                // Rendu des graphiques
+                this.rendreChartDomaine(dataDomaine);
+                this.rendreChartEvolution(dataEvolution);
+
+            } catch (err) {
+                console.error('Erreur application filtres :', err);
+                this.erreur = err.message || 'Impossible de charger les données du tableau de bord.';
+            } finally {
+                if (gererChargement) this.chargementEnCours = false;
+                this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
+            }
+        },
+
+        reinitialiserFiltres() {
+            this.filtres = { annee: '', domaine_id: '', client_id: '', formateur_id: '' };
+            this.synchroniserUrlNavigateur(true);
+            this.appliquerFiltres(true, false);
+        },
+
+        rendreChartDomaine(data) {
+            const canvas = document.getElementById('chartDomaine');
+            if (!canvas) return;
+
+            if (chartDomaineInstance) {
+                chartDomaineInstance.destroy();
+                chartDomaineInstance = null;
+            }
+
+            const labels = data.map(d => d.domaine);
+            const valeurs = data.map(d => d.nb_sessions);
+
+            chartDomaineInstance = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Sessions',
+                        data: valeurs,
+                        backgroundColor: '#047857',
+                        hoverBackgroundColor: '#065F46',
+                        borderRadius: 8,
+                        maxBarThickness: 36,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#F1F5F9' } },
+                        x: { grid: { display: false }, ticks: { maxRotation: 0, minRotation: 0 } }
                     }
                 }
+            });
+        },
+
+        rendreChartEvolution(data) {
+            const canvas = document.getElementById('chartEvolution');
+            if (!canvas) return;
+
+            if (chartEvolutionInstance) {
+                chartEvolutionInstance.destroy();
+                chartEvolutionInstance = null;
             }
-        });
 
-    } catch (err) {
-        console.error('Erreur chargement domaine :', err);
-        const canvas = document.getElementById('chartDomaine');
-        canvas.insertAdjacentHTML('afterend',
-            '<p class="text-sm text-red-500">Impossible de charger ce graphique.</p>');
-    }
-}
-
-// --- 4. Graphique : évolution des inscriptions ---
-async function chargerChartEvolution() {
-    try {
-        const res = await fetch(urlEvolution);
-        if (!res.ok) throw new Error('Réponse serveur invalide');
-        const data = await res.json();
-
-        // Calcule et affiche la tendance sur la carte Participants
-        afficherTendanceParticipants(data);
-
-        const labels = data.map(d => formaterMoisAnnee(d.annee, d.mois));
-        const valeurs = data.map(d => d.nb_inscriptions);
-
-        new Chart(document.getElementById('chartEvolution'), {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Inscriptions',
-                    data: valeurs,
-                    borderColor: '#F26B1F',
-                    backgroundColor: 'rgba(242, 107, 31, 0.1)',
-                    fill: true,
-                    tension: 0.3
-                }]
-            },
-            options: {
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { precision: 0 },
-                        grid: { color: '#F3F4F6' }
-                    },
-                    x: {
-                        grid: { display: false }
+            // Calcul tendance si données suffisantes
+            const elTendance = document.getElementById('kpi-participants-tendance');
+            if (elTendance) {
+                if (data.length >= 2) {
+                    const dernier = data[data.length - 1].nb_inscriptions;
+                    const prec = data[data.length - 2].nb_inscriptions;
+                    if (prec > 0) {
+                        const variation = ((dernier - prec) / prec) * 100;
+                        const signe = variation >= 0 ? '+' : '';
+                        elTendance.textContent = `${signe}${variation.toFixed(0)}% vs mois précédent`;
+                        elTendance.className = `text-xs mt-1 font-semibold ${variation >= 0 ? 'text-emerald-700' : 'text-red-600'}`;
+                    } else {
+                        elTendance.textContent = '';
                     }
+                } else {
+                    elTendance.textContent = '';
                 }
             }
-        });
 
-    } catch (err) {
-        console.error('Erreur chargement évolution :', err);
-        const canvas = document.getElementById('chartEvolution');
-        canvas.insertAdjacentHTML('afterend',
-            '<p class="text-sm text-red-500">Impossible de charger ce graphique.</p>');
-    }
+            const labels = data.map(d => formaterMoisAnnee(d.annee, d.mois));
+            const valeurs = data.map(d => d.nb_inscriptions);
+
+            chartEvolutionInstance = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Inscriptions',
+                        data: valeurs,
+                        borderColor: '#7C3AED',
+                        backgroundColor: 'rgba(124, 58, 237, 0.08)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#7C3AED',
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#F26B1F',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#F1F5F9' } },
+                        x: { grid: { display: false }, ticks: { maxRotation: 0, minRotation: 0 } }
+                    }
+                }
+            });
+        },
+    };
 }
-
-// --- 5. Tableau : performance des formateurs ---
-async function chargerTableFormateurs() {
-    const tbody = document.getElementById('tableFormateurs');
-
-    tbody.innerHTML = `
-        <tr><td colspan="3" class="px-5 py-4 text-center text-gray-400 text-sm">Chargement...</td></tr>
-    `;
-
-    try {
-        const res = await fetch(urlFormateur);
-        if (!res.ok) throw new Error('Réponse serveur invalide');
-        const data = await res.json();
-
-        if (data.length === 0) {
-            tbody.innerHTML = `
-                <tr><td colspan="3" class="px-5 py-4 text-center text-gray-400 text-sm">Aucune donnée disponible</td></tr>
-            `;
-            return;
-        }
-
-        tbody.innerHTML = data.map(f => `
-            <tr class="border-b border-gray-100 last:border-0">
-                <td class="px-5 py-3">${f.formateur}</td>
-                <td class="px-5 py-3">${f.nb_sessions}</td>
-                <td class="px-5 py-3">${(f.taux_remplissage_moyen * 100).toFixed(0)}%</td>
-            </tr>
-        `).join('');
-
-    } catch (err) {
-        console.error('Erreur chargement formateurs :', err);
-        tbody.innerHTML = `
-            <tr><td colspan="3" class="px-5 py-4 text-center text-red-500 text-sm">Impossible de charger les données.</td></tr>
-        `;
-    }
-}
-
-// --- 6. Sessions à venir ---
-async function chargerSessionsAVenir() {
-    const conteneur = document.getElementById('listeSessionsAVenir');
-    conteneur.innerHTML = `<p class="px-5 py-4 text-sm text-gray-400 text-center">Chargement...</p>`;
-
-    try {
-        const res = await fetch(urlSessions);
-        if (!res.ok) throw new Error('Réponse serveur invalide');
-        const sessions = await res.json();
-
-        // On compare avec la date du jour pour ne garder que les sessions futures.
-        // On met l'heure à minuit pour comparer uniquement les dates, sans les heures.
-        const aujourdHui = new Date();
-        aujourdHui.setHours(0, 0, 0, 0);
-
-        const sessionsAVenir = sessions
-            .filter(s => new Date(s.date_debut) >= aujourdHui)
-            .sort((a, b) => new Date(a.date_debut) - new Date(b.date_debut))
-            .slice(0, 5);
-
-        if (sessionsAVenir.length === 0) {
-            conteneur.innerHTML = `<p class="px-5 py-4 text-sm text-gray-400 text-center">Aucune session à venir</p>`;
-            return;
-        }
-
-        conteneur.innerHTML = sessionsAVenir.map(s => {
-            // On détermine la couleur du badge selon le taux de remplissage.
-            // Seuils choisis arbitrairement pour l'instant : à ajuster plus tard
-            // une fois qu'on aura vu tourner davantage de vraies données.
-            let badgeCouleur, badgeTexte;
-            if (s.est_complete) {
-                badgeCouleur = 'bg-gray-100 text-gray-600';
-                badgeTexte = 'Complète';
-            } else if (s.taux_remplissage >= 0.7) {
-                badgeCouleur = 'bg-success/10 text-success';
-                badgeTexte = 'Bon remplissage';
-            } else if (s.taux_remplissage >= 0.4) {
-                badgeCouleur = 'bg-warning/10 text-warning';
-                badgeTexte = 'À surveiller';
-            } else {
-                badgeCouleur = 'bg-danger/10 text-danger';
-                badgeTexte = 'Sous-remplie';
-            }
-
-            // Formatage simple de la date en français (jour/mois abrégé)
-            const date = new Date(s.date_debut);
-            const jour = date.getDate();
-            const mois = MOIS_ABREGES[date.getMonth()];
-
-            return `
-                <div class="flex items-center justify-between px-5 py-3">
-                    <div class="min-w-0">
-                        <p class="text-sm font-medium text-gray-900 truncate">${s.formation.titre}</p>
-                        <p class="text-xs text-gray-500">
-                            ${jour} ${mois} · ${s.formateur.nom} · ${s.lieu}
-                        </p>
-                    </div>
-                    <div class="flex items-center gap-3 flex-shrink-0 ml-4">
-                        <span class="text-xs text-gray-500">${s.nb_inscrits_confirmes}/${s.capacite_max}</span>
-                        <span class="text-xs font-medium px-2 py-1 rounded-full ${badgeCouleur}">
-                            ${badgeTexte}
-                        </span>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-    } catch (err) {
-        console.error('Erreur chargement sessions à venir :', err);
-        conteneur.innerHTML = `<p class="px-5 py-4 text-sm text-red-500 text-center">Impossible de charger les sessions.</p>`;
-    }
-}
-
-// ============================================================
-// Lancement de tous les chargements en parallèle.
-// Chaque fonction gère son propre état d'erreur indépendamment.
-// ============================================================
-chargerKpiRemplissage();
-chargerKpiClients();
-chargerChartDomaine();
-chargerChartEvolution();
-chargerTableFormateurs();
-chargerSessionsAVenir();

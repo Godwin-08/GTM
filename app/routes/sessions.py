@@ -1,8 +1,15 @@
+from datetime import date
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy import or_, func
 from app.extensions import db
 from app.models import Session, Formation, Formateur, Inscription
 from app.services.permissions import gestionnaire_ou_admin_required
+from app.services.access_service import sessions_visibles, exiger_acces
+from app.services.session_validation_service import (
+    ErreurValidationSession,
+    valeurs_session_validees,
+)
 
 sessions_bp = Blueprint("sessions", __name__, url_prefix="/api/sessions")
 
@@ -31,59 +38,132 @@ def session_vers_dict(session):
         "est_complete": session.est_complete(),
     }
 
+def obtenir_sessions_filtrees(user, args):
+    query = sessions_visibles(user)
+
+    formateur_id = args.get("formateur_id", type=int)
+    if formateur_id:
+        query = query.filter(Session.formateur_id == formateur_id)
+
+    formation_id = args.get("formation_id", type=int)
+    if formation_id:
+        query = query.filter(Session.formation_id == formation_id)
+
+    domaine_id = args.get("domaine_id", type=int)
+    if domaine_id:
+        query = query.join(Session.formation).filter(Formation.domaine_id == domaine_id)
+
+    type_session = args.get("type")
+    if type_session in TYPES_VALIDES:
+        query = query.filter(Session.type == type_session)
+
+    statut = args.get("statut")
+    if statut in STATUTS_VALIDES:
+        query = query.filter(Session.statut == statut)
+
+    date_debut_min = args.get("date_debut_min")
+    if date_debut_min:
+        try:
+            query = query.filter(Session.date_debut >= date.fromisoformat(date_debut_min))
+        except ValueError:
+            pass
+
+    date_debut_max = args.get("date_debut_max")
+    if date_debut_max:
+        try:
+            query = query.filter(Session.date_debut <= date.fromisoformat(date_debut_max))
+        except ValueError:
+            pass
+
+    q = args.get("q", "").strip()
+    if q:
+        pattern = f"%{q}%"
+        query = query.join(Session.formation).join(Session.formateur).filter(
+            or_(
+                Formation.titre.ilike(pattern),
+                Formateur.nom.ilike(pattern),
+                Session.lieu.ilike(pattern)
+            )
+        )
+
+    remplissage = args.get("remplissage")
+    if remplissage in ["sous_remplie", "nominale", "complete"]:
+        subq_confirmes = (
+            db.session.query(
+                Inscription.session_id,
+                func.count(Inscription.id).label("nb_confirmes")
+            )
+            .filter(Inscription.statut == "confirmee")
+            .group_by(Inscription.session_id)
+            .subquery()
+        )
+        query = query.outerjoin(subq_confirmes, Session.id == subq_confirmes.c.session_id)
+        taux_expr = (func.coalesce(subq_confirmes.c.nb_confirmes, 0) * 100.0) / Session.capacite_max
+
+        if remplissage == "sous_remplie":
+            query = query.filter(taux_expr < 50.0)
+        elif remplissage == "nominale":
+            query = query.filter(taux_expr >= 50.0, taux_expr < 90.0)
+        elif remplissage == "complete":
+            query = query.filter(taux_expr >= 90.0)
+
+    return query.distinct().all()
+
 @sessions_bp.route("", methods=["GET"])
 @login_required
 def liste_sessions():
     """
-    Liste les sessions, avec filtres optionnels :
-    /api/sessions?statut=planifiee
-    /api/sessions?formateur_id=3
-    /api/sessions?formation_id=2
-
-    Si l'utilisateur connecté est un formateur, la liste est
-    automatiquement restreinte à ses propres sessions.
+    Liste les sessions avec filtres SQL combinables (AND).
     """
-    query = Session.query
-
-    # Restriction RBAC pour le rôle Formateur
-    if current_user.a_role("formateur"):
-        formateur_lie = current_user.formateur
-        if not formateur_lie:
-            return jsonify([]), 200
-        query = query.filter_by(formateur_id=formateur_lie.id)
-
-    statut = request.args.get("statut")
-    if statut:
-        query = query.filter_by(statut=statut)
-
-    formateur_id = request.args.get("formateur_id", type=int)
-    if formateur_id and not current_user.a_role("formateur"):
-        query = query.filter_by(formateur_id=formateur_id)
-
-    formation_id = request.args.get("formation_id", type=int)
-    if formation_id:
-        query = query.filter_by(formation_id=formation_id)
-
-    sessions = query.all()
+    sessions = obtenir_sessions_filtrees(current_user, request.args)
     return jsonify([session_vers_dict(s) for s in sessions]), 200
+
+@sessions_bp.route("/export/csv", methods=["GET"])
+@login_required
+def export_sessions_csv():
+    from app.services.export_service import generer_csv_response
+    sessions = obtenir_sessions_filtrees(current_user, request.args)
+    en_tetes = {
+        "id": "ID Session",
+        "formation_titre": "Formation",
+        "formateur_nom": "Formateur",
+        "type": "Type",
+        "date_debut": "Date Début",
+        "date_fin": "Date Fin",
+        "lieu": "Lieu",
+        "statut": "Statut",
+        "nb_inscrits_confirmes": "Inscrits Confirmés",
+        "capacite_max": "Capacité Max",
+        "taux_remplissage": "Taux Remplissage (%)",
+    }
+    lignes = []
+    for s in sessions:
+        lignes.append({
+            "id": s.id,
+            "formation_titre": s.formation.titre if s.formation else "",
+            "formateur_nom": s.formateur.nom if s.formateur else "",
+            "type": s.type,
+            "date_debut": s.date_debut.isoformat() if s.date_debut else "",
+            "date_fin": s.date_fin.isoformat() if s.date_fin else "",
+            "lieu": s.lieu,
+            "statut": s.statut,
+            "nb_inscrits_confirmes": s.nb_inscrits_confirmes(),
+            "capacite_max": s.capacite_max,
+            "taux_remplissage": round(s.taux_remplissage(), 1),
+        })
+    date_str = date.today().isoformat()
+    return generer_csv_response(f"sessions_export_{date_str}.csv", en_tetes, lignes)
 
 @sessions_bp.route("/<int:session_id>", methods=["GET"])
 @login_required
 def detail_session(session_id):
-    session = Session.query.get_or_404(session_id)
-
-    # Restriction RBAC : si l'utilisateur est un formateur, il ne peut voir que sa propre session
-    if current_user.a_role("formateur"):
-        formateur_lie = current_user.formateur
-        if not formateur_lie or session.formateur_id != formateur_lie.id:
-            return jsonify({"erreur": "Accès interdit : vous ne pouvez consulter que vos propres sessions"}), 403
-
+    session = exiger_acces(sessions_visibles(current_user), session_id, current_user)
     return jsonify(session_vers_dict(session)), 200
 
 @sessions_bp.route("", methods=["POST"])
 @gestionnaire_ou_admin_required
 def creer_session():
-    donnees = request.get_json()
+    donnees = request.get_json(silent=True) or {}
 
     formation_id = donnees.get("formation_id")
     formateur_id = donnees.get("formateur_id")
@@ -103,14 +183,16 @@ def creer_session():
     if capacite_max <= 0:
         return jsonify({"erreur": "capacite_max doit être positif"}), 400
 
-    if date_fin < date_debut:
-        return jsonify({"erreur": "date_fin doit être postérieure ou égale à date_debut"}), 400
+    try:
+        date_debut, date_fin, statut = valeurs_session_validees(donnees)
+    except ErreurValidationSession as erreur:
+        return jsonify({"erreur": str(erreur)}), 400
 
-    formation = Formation.query.get(formation_id)
+    formation = db.session.get(Formation, formation_id)
     if not formation:
         return jsonify({"erreur": "formation_id invalide"}), 400
 
-    if not Formateur.query.get(formateur_id):
+    if not db.session.get(Formateur, formateur_id):
         return jsonify({"erreur": "formateur_id invalide"}), 400
 
     session = Session(
@@ -121,7 +203,7 @@ def creer_session():
         type=type_session,
         capacite_max=capacite_max,
         lieu=donnees.get("lieu"),
-        statut=donnees.get("statut", "planifiee"),
+        statut=statut,
     )
     db.session.add(session)
     db.session.commit()
@@ -130,18 +212,17 @@ def creer_session():
 @sessions_bp.route("/<int:session_id>", methods=["PUT"])
 @gestionnaire_ou_admin_required
 def modifier_session(session_id):
-    session = Session.query.get_or_404(session_id)
-    donnees = request.get_json()
+    session = db.get_or_404(Session, session_id)
+    donnees = request.get_json(silent=True) or {}
 
-    if "statut" in donnees:
-        if donnees["statut"] not in STATUTS_VALIDES:
-            return jsonify({"erreur": f"statut doit être parmi {STATUTS_VALIDES}"}), 400
-        session.statut = donnees["statut"]
+    try:
+        date_debut, date_fin, statut = valeurs_session_validees(donnees, session)
+    except ErreurValidationSession as erreur:
+        return jsonify({"erreur": str(erreur)}), 400
 
-    if "date_debut" in donnees:
-        session.date_debut = donnees["date_debut"]
-    if "date_fin" in donnees:
-        session.date_fin = donnees["date_fin"]
+    session.date_debut = date_debut
+    session.date_fin = date_fin
+    session.statut = statut
     if "lieu" in donnees:
         session.lieu = donnees["lieu"]
     if "capacite_max" in donnees:
@@ -155,7 +236,7 @@ def modifier_session(session_id):
 @sessions_bp.route("/<int:session_id>", methods=["DELETE"])
 @gestionnaire_ou_admin_required
 def supprimer_session(session_id):
-    session_obj = Session.query.get_or_404(session_id)
+    session_obj = db.get_or_404(Session, session_id)
 
     inscription_existante = Inscription.query.filter_by(session_id=session_id).first()
 

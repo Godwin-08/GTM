@@ -6,71 +6,88 @@
 
 <div x-data="pageUtilisateurDetailData({{ utilisateur_id }})" x-init="charger()">
 
-    <a href="{{ url_for('pages.utilisateurs') }}" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i>
-        Retour aux utilisateurs
-    </a>
+    <div class="mb-6 flex items-center justify-between">
+        <a href="{{ url_for('pages.utilisateurs') }}" class="text-sm font-medium text-gray-500 hover:text-gray-900 flex items-center gap-1.5 transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            Retour à la liste des utilisateurs
+        </a>
+    </div>
 
     <template x-if="chargementEnCours">
-        <div class="bg-white rounded-xl border border-gray-200 px-5 py-10 text-center text-gray-400 text-sm">
-            <i data-lucide="loader-2" class="w-5 h-5 mx-auto mb-2 animate-spin"></i>
-            Chargement...
+        <div class="bg-white rounded-xl border border-gray-200 px-5 py-12 text-center text-gray-400 text-sm">
+            <i data-lucide="loader-2" class="w-6 h-6 mx-auto mb-2 animate-spin"></i>
+            Chargement du compte utilisateur...
         </div>
     </template>
 
     <template x-if="erreur">
-        <div class="bg-white rounded-xl border border-gray-200 px-5 py-10 text-center text-red-500 text-sm">
-            <i data-lucide="alert-circle" class="w-5 h-5 mx-auto mb-2"></i>
+        <div class="bg-white rounded-xl border border-gray-200 px-5 py-12 text-center text-red-500 text-sm">
+            <i data-lucide="alert-circle" class="w-6 h-6 mx-auto mb-2"></i>
             <span x-text="erreur"></span>
         </div>
     </template>
 
     <template x-if="!chargementEnCours && !erreur && utilisateur">
-        <div>
-            <!-- ============ EN-TÊTE UTILISATEUR ============ -->
-            <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6 shadow-sm">
+        <div class="space-y-6">
+
+            <!-- ============ 1. EN-TÊTE UTILISATEUR ============ -->
+            <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                 <div class="flex items-start gap-4">
                     <div class="w-14 h-14 rounded-full bg-primary/10 text-primary font-bold text-lg flex items-center justify-center flex-shrink-0">
                         <span x-text="initiales(utilisateur.nom)"></span>
                     </div>
                     <div class="flex-1">
-                        <div class="flex items-start justify-between">
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
                             <div>
-                                <h2 class="text-lg font-semibold text-gray-900" x-text="utilisateur.nom"></h2>
-                                <p class="text-sm text-gray-500 mt-0.5" x-text="utilisateur.email"></p>
+                                <h1 class="text-xl font-bold text-gray-900" x-text="utilisateur.nom"></h1>
+                                <p class="text-sm text-gray-500 mt-0.5 flex items-center gap-1.5">
+                                    <i data-lucide="mail" class="w-3.5 h-3.5 text-gray-400"></i>
+                                    <span x-text="utilisateur.email"></span>
+                                </p>
                             </div>
                             <div class="flex items-center gap-2">
                                 <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary"
                                       x-text="labelRole(utilisateur.role.nom)"></span>
-                                <span class="text-xs font-medium px-2.5 py-1 rounded-full"
-                                      :class="utilisateur.actif ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'"
-                                      x-text="utilisateur.actif ? 'Actif' : 'Inactif'"></span>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4 mt-4 border-t border-gray-100">
-                            <div>
-                                <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Date de création</p>
-                                <p class="text-sm text-gray-900" x-text="formaterDate(utilisateur.date_creation)"></p>
-                            </div>
-                            <div>
-                                <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Rôle système</p>
-                                <p class="text-sm text-gray-900 capitalize" x-text="utilisateur.role.nom"></p>
+                                <span class="text-xs font-medium px-2.5 py-1 rounded-full inline-flex items-center gap-1"
+                                      :class="utilisateur.actif ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                    <span x-text="utilisateur.actif ? 'Actif' : 'Inactif'"></span>
+                                </span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- ============ FICHE FORMATEUR ASSOCIÉE (SI FORMATEUR) ============ -->
+            <!-- ============ 2. CARTES KPI / INFOS COMPTE ============ -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Rôle système</p>
+                    <p class="text-sm font-semibold text-gray-900 capitalize" x-text="labelRole(utilisateur.role.nom)"></p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Statut du compte</p>
+                    <p class="text-sm font-semibold" :class="utilisateur.actif ? 'text-success' : 'text-danger'" x-text="utilisateur.actif ? 'Compte actif' : 'Compte désactivé'"></p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Date de création</p>
+                    <p class="text-sm font-semibold text-gray-900" x-text="formaterDate(utilisateur.date_creation)"></p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Fiche formateur</p>
+                    <p class="text-sm font-semibold text-gray-900" x-text="utilisateur.formateur ? 'Liée' : 'Non rattachée'"></p>
+                </div>
+            </div>
+
+            <!-- ============ 3. FICHE FORMATEUR ASSOCIÉE (SI FORMATEUR) ============ -->
             <template x-if="utilisateur.formateur">
-                <div class="bg-white rounded-xl border border-gray-200 p-6">
+                <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                     <div class="flex items-center gap-2 mb-4">
                         <i data-lucide="user-check" class="w-5 h-5 text-primary"></i>
                         <h3 class="text-base font-semibold text-gray-900">Fiche Formateur associée</h3>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-gray-100">
                         <div>
                             <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Nom formateur</p>
                             <p class="text-sm font-medium text-gray-900" x-text="utilisateur.formateur.nom"></p>
@@ -86,6 +103,7 @@
                     </div>
                 </div>
             </template>
+
         </div>
     </template>
 
@@ -96,4 +114,3 @@
 {% block extra_scripts %}
 <script src="{{ url_for('static', filename='js/utilisateur_detail.js') }}"></script>
 {% endblock %}
-

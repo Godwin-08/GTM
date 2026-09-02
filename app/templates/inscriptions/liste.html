@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block page_title %}Inscriptions{% endblock %}
+
+{% block content_container %}max-w-[1600px] mx-auto px-2 sm:px-4{% endblock %}
+
+{% block content %}
+<div x-data=pageInscriptionsData() x-init=charger()>
+    <div class=mb-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4>
+        <div>
+            <h2 class=text-xl sm:text-2xl font-extrabold text-slate-900 mb-1 tracking-tight>Inscriptions aux sessions</h2>
+            <p class=text-xs sm:text-sm text-slate-500 font-medium>Suivi des inscriptions participants — confirmées, en attente et annulées.</p>
+        </div>
+    </div>
+
+    <form @submit.prevent=appliquerFiltres() class=gtm-card p-4 sm:p-5 mb-4 shadow-xs x-data={ filtresAvancesOuverts: false }>
+        <div class=flex items-center justify-between mb-3 pb-2 border-b border-slate-100>
+            <div class=flex items-center gap-2>
+                <i data-lucide=sliders-horizontal class=w-4 h-4 text-emerald-700></i>
+                <h3 class=text-sm font-bold text-slate-900>Filtres de recherche</h3>
+            </div>
+            <button type=button @click=filtresAvancesOuverts = !filtresAvancesOuverts class=text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1>
+                <span x-text=filtresAvancesOuverts ? 'Masquer les filtres avancés' : 'Filtres avancés'></span>
+                <i data-lucide=chevron-down class=w-3.5 h-3.5 transition-transform duration-200 :class={ 'rotate-180': filtresAvancesOuverts }></i>
+            </button>
+        </div>
+        <div class=grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3>
+            <div>
+                <label class=gtm-label text-[11px] text-slate-500>Statut</label>
+                <select x-model=filtres.statut class=gtm-select text-xs sm:text-sm>
+                    <option value=">Tous les statuts</option>
+ <option value=confirmee>Confirmée</option>
+ <option value=annulee>Annulée</option>
+ <option value=liste_attente>Liste d'attente</option>
+ </select>
+ </div>
+ <div>
+ <label class=gtm-label text-[11px] text-slate-500>Formation</label>
+ <select x-model=filtres.formation_id @change=changerFormation() class=gtm-select text-xs sm:text-sm>
+ <option value=>Toutes les formations</option>
+ <template x-for=formation in formations :key=formation.id><option :value=formation.id x-text=formation.titre></option></template>
+ </select>
+ </div>
+ <div>
+ <label class=gtm-label text-[11px] text-slate-500>Entreprise cliente</label>
+ <select x-model=filtres.client_id @change=changerClient() class=gtm-select text-xs sm:text-sm>
+ <option value=>Tous les clients</option>
+ <template x-for=client in clients :key=client.id><option :value=client.id x-text=client.nom_entreprise></option></template>
+ </select>
+ </div>
+ <div>
+ <label class=gtm-label text-[11px] text-slate-500>Session</label>
+ <select x-model=filtres.session_id class=gtm-select text-xs sm:text-sm>
+ <option value=>Toutes les sessions</option>
+ <template x-for=session in sessionsFiltreesParFormation() :key=session.id><option :value=session.id x-text=libelleSession(session)></option></template>
+ </select>
+ </div>
+ </div>
+ <div x-show=filtresAvancesOuverts x-collapse class=grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3 pt-3 border-t border-slate-100>
+ <div>
+ <label class=gtm-label text-[11px] text-slate-500>Participant</label>
+ <select x-model=filtres.participant_id class=gtm-select text-xs sm:text-sm>
+ <option value=>Tous les participants</option>
+ <template x-for=participant in participantsFiltresParClient() :key=participant.id><option :value=participant.id x-text=participant.nom></option></template>
+ </select>
+ </div>
+ <div>
+ <label class=gtm-label text-[11px] text-slate-500>Session à partir du</label>
+ <input type=date x-model=filtres.date_debut_min class=gtm-input text-xs sm:text-sm>
+ </div>
+ <div>
+ <label class=gtm-label text-[11px] text-slate-500>Session jusqu'au</label>
+ <input type=date x-model=filtres.date_debut_max class=gtm-input text-xs sm:text-sm>
+ </div>
+ </div>
+ <div class=flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-3 border-t border-slate-100>
+ <div class=text-xs text-slate-600 font-medium flex items-center gap-2>
+ <span class=font-bold text-slate-900 x-text=inscriptions.length></span>
+ <span>résultat<span x-text=inscriptions.length > 1 ? 's' : ''></span></span>
+ <template x-if=aDesFiltresActifs()><span class=px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px]>Filtres actifs</span></template>
+ </div>
+ <div class=flex items-center gap-2 w-full sm:w-auto justify-end>
+ <a :href='/api/inscriptions/export/csv' + (window.location.search || '') download class=gtm-btn gtm-btn-outline text-xs flex items-center gap-1.5 border-slate-300 hover:bg-slate-50>
+ <i data-lucide=download class=w-3.5 h-3.5 text-slate-600></i>
+ Exporter CSV (Périmètre)
+ </a>
+ <button type=button @click=reinitialiserFiltres() class=gtm-btn gtm-btn-ghost text-xs>Réinitialiser</button>
+ <button type=submit class=gtm-btn gtm-btn-primary text-xs>
+ <i data-lucide=filter class=w-3.5 h-3.5></i>
+ Appliquer
+ </button>
+ </div>
+ </div>
+ </form>
+
+ <div class=gtm-card overflow-hidden shadow-xs mb-6>
+ <div class=gtm-table-container border-none rounded-none>
+ <table class=gtm-table>
+ <thead>
+ <tr>
+ <th class=text-xs font-bold uppercase tracking-wider>Participant</th>
+ <th class=text-xs font-bold uppercase tracking-wider>Entreprise</th>
+ <th class=text-xs font-bold uppercase tracking-wider>Formation / Session</th>
+ <th class=text-xs font-bold uppercase tracking-wider>Statut</th>
+ </tr>
+ </thead>
+ <tbody>
+ <template x-if=chargementEnCours>
+ <tr><td colspan=4 class=px-5 py-10 text-center text-slate-400 text-sm>
+ <i data-lucide=loader-2 class=w-6 h-6 mx-auto mb-2 animate-spin text-emerald-700></i>
+ Chargement des inscriptions...
+ </td></tr>
+ </template>
+ <template x-if=erreur>
+ <tr><td colspan=4 class=px-5 py-10 text-center text-red-600 text-sm>
+ <i data-lucide=alert-circle class=w-6 h-6 mx-auto mb-2></i>
+ Impossible de charger les données. <span x-text=erreur></span>
+ </td></tr>
+ </template>
+ <template x-if=!chargementEnCours && !erreur && inscriptions.length === 0>
+ <tr><td colspan=4 class=px-5 py-12 text-center>
+ <i data-lucide=search-x class=w-9 h-9 mx-auto mb-2 text-slate-300></i>
+ <p class=text-sm font-bold text-slate-900 mb-1>Aucune inscription trouvée</p>
+ <p class=text-xs text-slate-500 mb-4>Aucune inscription ne correspond aux filtres appliqués.</p>
+ <template x-if=aDesFiltresActifs()>
+ <button @click=reinitialiserFiltres() class=gtm-btn gtm-btn-ghost text-xs text-emerald-700>Réinitialiser les filtres</button>
+ </template>
+ </td></tr>
+ </template>
+ <template x-for=inscription in inscriptions :key=inscription.id>
+ <tr class=hover:bg-slate-50 transition-colors>
+ <td>
+ <p class=font-bold text-slate-900 text-sm x-text=inscription.participant?.nom></p>
+ <p class=text-xs text-slate-500 mt-0.5 x-text=inscription.participant?.email></p>
+ </td>
+ <td class=text-slate-700 text-xs sm:text-sm font-medium x-text=inscription.participant?.client?.nom_entreprise || '—'></td>
+ <td>
+ <p class=font-bold text-slate-900 text-sm x-text=inscription.session?.formation?.titre></p>
+ <p class=text-xs text-slate-500 mt-0.5 font-tabular x-text=inscription.session?.date_debut + ' → ' + inscription.session?.date_fin></p>
+ </td>
+ <td>
+ <span class=gtm-badge text-xs :class={ 'gtm-badge-success': inscription.statut === 'confirmee', 'gtm-badge-danger': inscription.statut === 'annulee', 'gtm-badge-warning': inscription.statut === 'liste_attente' }>
+ <span class=gtm-badge-dot></span>
+ <span x-text=libelleStatut(inscription.statut)></span>
+ </span>
+ </td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+ </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const urlInscriptions = {{ url_for('inscriptions.liste_inscriptions') }};
+const urlSessions = {{ url_for('sessions.liste_sessions') }};
+const urlFormations = {{ url_for('formations.liste_formations') }};
+const urlClients = {{ url_for('clients.liste_clients') }};
+const urlParticipants = {{ url_for('participants.liste_participants') }};
+</script>
+<script src={{ url_for('static', filename='js/inscriptions.js') }}></script>
+{% endblock %}
+

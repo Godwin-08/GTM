@@ -2,9 +2,14 @@ const COULEURS_ROLE = { admin: 'bg-primary/10 text-primary', gestionnaire: 'bg-i
 
 function pageUtilisateursData() {
     return {
-        utilisateurs: [], recherche: '', filtreRole: '', chargementEnCours: true, erreur: null, accesRefuse: false,
+        utilisateurs: [], recherche: '', filtreRole: '', tri: '', chargementEnCours: true, erreur: null, accesRefuse: false,
         modaleOuverte: false, envoiEnCours: false, erreurFormulaire: null, motDePasseVisible: false,
         formulaire: { nom: '', email: '', mot_de_passe: '', role_id: '' },
+
+        init() {
+            this.$watch('recherche', () => this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons()));
+            this.$watch('filtreRole', () => this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons()));
+        },
 
         utilisateurConnecteId: typeof utilisateurConnecteId !== 'undefined' ? utilisateurConnecteId : null,
         modaleEditionOuverte: false,
@@ -63,6 +68,7 @@ function pageUtilisateursData() {
 
                 if (!res.ok) {
                     this.erreurEdition = data.erreur || 'Une erreur est survenue.';
+                    if (typeof window.afficherToast === 'function') window.afficherToast('erreur', this.erreurEdition);
                     return;
                 }
 
@@ -70,6 +76,7 @@ function pageUtilisateursData() {
                 if (index !== -1) this.utilisateurs[index] = data;
 
                 this.modaleEditionOuverte = false;
+                if (typeof window.afficherToast === 'function') window.afficherToast('succes', 'Utilisateur modifié avec succès.');
 
             } catch (err) {
                 console.error('Erreur modification utilisateur :', err);
@@ -100,12 +107,28 @@ function pageUtilisateursData() {
         nomRole(utilisateur) { return utilisateur.role?.nom || ''; },
         utilisateursFiltres() {
             const rechercheMin = this.recherche.toLocaleLowerCase().trim();
-            return this.utilisateurs.filter(utilisateur => {
+            const filtres = this.utilisateurs.filter(utilisateur => {
                 const role = this.nomRole(utilisateur);
                 const nom = (utilisateur.nom || '').toLocaleLowerCase();
                 const email = (utilisateur.email || '').toLocaleLowerCase();
                 return (!this.filtreRole || role === this.filtreRole) && (!rechercheMin || nom.includes(rechercheMin) || email.includes(rechercheMin));
             });
+            const copie = [...filtres];
+            const t = this.tri;
+            if (t === 'nom_desc') {
+                return copie.sort((a, b) => (b.nom || '').localeCompare(a.nom || '', 'fr'));
+            }
+            if (t === 'role_asc') {
+                return copie.sort((a, b) => (a.role?.nom || '').localeCompare(b.role?.nom || '', 'fr'));
+            }
+            if (t === 'date_desc') {
+                return copie.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+            }
+            if (t === 'date_asc') {
+                return copie.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+            }
+            // Par défaut (nom_asc) : nom A → Z
+            return copie.sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'));
         },
         rolesDisponibles() { return [...new Set(this.utilisateurs.map(utilisateur => this.nomRole(utilisateur)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr')); },
         rolesPourFormulaire() {
@@ -133,9 +156,14 @@ function pageUtilisateursData() {
                     body: JSON.stringify({ nom: this.formulaire.nom, email: this.formulaire.email, mot_de_passe: this.formulaire.mot_de_passe, role_id: this.formulaire.role_id }),
                 });
                 const data = await res.json();
-                if (!res.ok) { this.erreurFormulaire = data.erreur || 'Une erreur est survenue.'; return; }
+                if (!res.ok) {
+                    this.erreurFormulaire = data.erreur || 'Une erreur est survenue.';
+                    if (typeof window.afficherToast === 'function') window.afficherToast('erreur', this.erreurFormulaire);
+                    return;
+                }
                 this.utilisateurs.push(data);
                 this.modaleOuverte = false;
+                if (typeof window.afficherToast === 'function') window.afficherToast('succes', 'Utilisateur créé avec succès.');
             } catch (err) {
                 console.error('Erreur création utilisateur :', err);
                 this.erreurFormulaire = 'Impossible de contacter le serveur.';

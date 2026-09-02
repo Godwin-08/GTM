@@ -4,112 +4,308 @@
 
 {% block content %}
 
-<div x-data="pageSessionDetailData({{ session_id }})" x-init="charger()">
+<div x-data="pageSessionDetailData({{ session_id }}, {{ 'true' if current_user.role.nom in ['admin', 'gestionnaire'] else 'false' }})" x-init="charger()">
 
-    <!-- Fil d'ariane simple pour revenir à la liste -->
-    <a href="{{ url_for('pages.sessions') }}" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i>
-        Retour aux sessions
-    </a>
+    <div class="mb-6 flex items-center justify-between">
+        <a href="{{ url_for('pages.sessions') }}" class="text-sm font-medium text-gray-500 hover:text-gray-900 flex items-center gap-1.5 transition-colors duration-150">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            Retour à la liste des sessions
+        </a>
+    </div>
 
     <template x-if="chargementEnCours">
-        <div class="bg-white rounded-xl border border-gray-200 px-5 py-10 text-center text-gray-400 text-sm">
-            <i data-lucide="loader-2" class="w-5 h-5 mx-auto mb-2 animate-spin"></i>
-            Chargement...
+        <div class="bg-white rounded-xl border border-gray-200 px-5 py-12 text-center text-gray-400 text-sm shadow-xs">
+            <i data-lucide="loader-2" class="w-6 h-6 mx-auto mb-2 animate-spin text-primary"></i>
+            Chargement de la session...
         </div>
     </template>
 
     <template x-if="erreur">
-        <div class="bg-white rounded-xl border border-gray-200 px-5 py-10 text-center text-red-500 text-sm">
-            <i data-lucide="alert-circle" class="w-5 h-5 mx-auto mb-2"></i>
+        <div class="bg-white rounded-xl border border-gray-200 px-5 py-12 text-center text-red-500 text-sm shadow-xs">
+            <i data-lucide="alert-circle" class="w-6 h-6 mx-auto mb-2"></i>
             <span x-text="erreur"></span>
         </div>
     </template>
 
-    <!-- Contenu principal, affiché uniquement une fois la session chargée -->
     <template x-if="!chargementEnCours && !erreur && session">
+        <div class="space-y-6">
 
-        <div>
-            <!-- ============ EN-TÊTE SESSION ============ -->
-            <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                <div class="flex items-start justify-between mb-4">
+            <!-- ============ 1. EN-TÊTE SESSION ============ -->
+            <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-xs hover:shadow-sm transition-all duration-200">
+                <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div>
-                        <h2 class="text-lg font-semibold text-gray-900" x-text="session.formation.titre"></h2>
-                        <p class="text-sm text-gray-500 mt-1" x-text="session.type === 'intra' ? 'Intra-entreprise' : 'Inter-entreprises'"></p>
-                    </div>
-                    <span class="text-xs font-medium px-2.5 py-1 rounded-full"
-                          :class="classeBadgeStatut(session.statut)"
-                          x-text="labelStatut(session.statut)"></span>
-                </div>
-
-                <!-- Grille d'infos clés, 4 colonnes sur desktop -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Dates</p>
-                        <p class="text-sm text-gray-900" x-text="formaterDate(session.date_debut) + ' → ' + formaterDate(session.date_fin)"></p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Formateur</p>
-                        <p class="text-sm text-gray-900" x-text="session.formateur.nom"></p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Lieu</p>
-                        <p class="text-sm text-gray-900" x-text="session.lieu || '—'"></p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Remplissage</p>
-                        <p class="text-sm text-gray-900">
-                            <span x-text="session.nb_inscrits_confirmes"></span>/<span x-text="session.capacite_max"></span>
-                            (<span x-text="Math.round(session.taux_remplissage * 100)"></span>%)
-                        </p>
+                        <div class="flex items-center gap-3">
+                            <a :href="`/formations/${session.formation.id}`" class="text-xl font-bold text-gray-900 hover:text-primary transition-colors duration-150" x-text="session.formation.titre"></a>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors duration-150"
+                                  :class="classeBadgeStatut(session.statut)">
+                                <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                <span x-text="labelStatut(session.statut)"></span>
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2 mt-1.5">
+                            <span class="text-xs font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-700"
+                                  x-text="session.type === 'intra' ? 'Intra-entreprise' : 'Inter-entreprises'"></span>
+                            <span class="text-xs text-gray-400">•</span>
+                            <span class="text-xs text-gray-500" x-text="session.formation.domaine ? session.formation.domaine.nom : ''"></span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- ============ TABLEAU DES INSCRITS ============ -->
-            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <!-- ============ 2. CARTES KPI DE LA SESSION ============ -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-xs hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Dates de session</p>
+                    <p class="text-sm font-semibold text-gray-900" x-text="formaterDate(session.date_debut) + ' → ' + formaterDate(session.date_fin)"></p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-xs hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Formateur référent</p>
+                    <p class="text-sm font-semibold text-gray-900" x-text="session.formateur ? session.formateur.nom : '—'"></p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-xs hover:shadow-md hover:border-gray-300 transition-all duration-200">
+                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Lieu</p>
+                    <p class="text-sm font-semibold text-gray-900" x-text="session.lieu || 'Non précisé'"></p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-xs hover:shadow-md hover:border-gray-300 transition-all duration-200 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <p class="text-xs font-medium text-gray-400 uppercase tracking-wide">Remplissage</p>
+                            <template x-if="session.est_complete">
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded bg-warning/10 text-warning">Session complète</span>
+                            </template>
+                        </div>
+                        <div class="flex items-baseline gap-1.5 mb-2">
+                            <span class="text-2xl font-bold text-gray-900" x-text="(session.nb_inscrits_confirmes || 0) + ' / ' + (session.capacite_max || 0)"></span>
+                            <span class="text-xs font-semibold text-gray-500" x-text="'(' + Math.round((session.taux_remplissage || 0) * 100) + '%)'"></span>
+                        </div>
+                    </div>
+                    <!-- Barre de progression visuelle bornée entre 0% et 100% -->
+                    <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                        <div class="h-1.5 rounded-full transition-all duration-300"
+                             :class="session.est_complete ? 'bg-warning' : (session.taux_remplissage >= 0.7 ? 'bg-success' : 'bg-primary')"
+                             :style="'width: ' + Math.min(100, Math.max(0, Math.round(((session.nb_inscrits_confirmes || 0) / (session.capacite_max || 1)) * 100))) + '%'">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ 3. TABLEAU DES PARTICIPANTS INSCRITS ============ -->
+            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs">
                 <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-                    <p class="text-sm font-medium text-gray-900">
-                        Participants inscrits — <span x-text="inscriptions.length"></span>
-                    </p>
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900">Salariés / Participants inscrits</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">Liste des personnes inscrites et statut de leur inscription à cette session.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary"
+                              x-text="inscriptions.length + ' inscrit' + (inscriptions.length > 1 ? 's' : '')"></span>
+                        
+                        {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
+                        <button @click="ouvrirModaleAjout()"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-white hover:bg-primary/90 active:scale-[0.98] transition-all duration-150 shadow-xs">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            Ajouter un participant
+                        </button>
+                        {% endif %}
+                    </div>
                 </div>
 
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-gray-200 text-left text-gray-500">
                             <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Participant</th>
-                            <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Entreprise</th>
-                            <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Date d'inscription</th>
+                            <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Entreprise / Client</th>
+                            <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Inscrit le</th>
                             <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Statut</th>
+                            <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <template x-if="inscriptions.length === 0">
-                            <tr><td colspan="4" class="px-5 py-10 text-center text-gray-400 text-sm">
-                                Aucun participant inscrit pour l'instant.
-                            </td></tr>
+                            <tr>
+                                <td colspan="5" class="px-5 py-12 text-center text-gray-400 text-sm">
+                                    <i data-lucide="users" class="w-8 h-8 mx-auto mb-2 text-gray-300"></i>
+                                    <p class="font-medium text-gray-700 mb-0.5">Aucun participant inscrit</p>
+                                    <p class="text-xs text-gray-400">Aucune inscription n'a encore été enregistrée pour cette session.</p>
+                                </td>
+                            </tr>
                         </template>
 
                         <template x-for="i in inscriptions" :key="i.id">
-                            <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                            <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50/80 transition-colors duration-150">
                                 <td class="px-5 py-4">
-                                    <p class="font-medium text-gray-900" x-text="i.participant.nom"></p>
-                                    <p class="text-xs text-gray-500" x-text="i.participant.email"></p>
+                                    <p class="font-medium text-gray-900" x-text="i.participant ? i.participant.nom : ''"></p>
+                                    <p class="text-xs text-gray-500" x-text="i.participant ? i.participant.email : ''"></p>
                                 </td>
-                                <td class="px-5 py-4 text-gray-700" x-text="i.participant.client.nom_entreprise"></td>
-                                <td class="px-5 py-4 text-gray-500 text-xs" x-text="formaterDate(i.date_inscription)"></td>
                                 <td class="px-5 py-4">
-                                    <span class="text-xs font-medium px-2.5 py-1 rounded-full"
+                                    <template x-if="i.participant && i.participant.client">
+                                        <a :href="`/clients/${i.participant.client.id}`"
+                                           class="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors duration-150"
+                                           x-text="i.participant.client.nom_entreprise"></a>
+                                    </template>
+                                </td>
+                                <td class="px-5 py-4 text-right text-xs text-gray-600" x-text="formaterDate(i.date_inscription)"></td>
+                                <td class="px-5 py-4">
+                                    <span class="text-xs font-medium px-2.5 py-1 rounded-full transition-colors duration-150"
                                           :class="classeBadgeInscription(i.statut)"
                                           x-text="labelInscription(i.statut)"></span>
+                                </td>
+                                <td class="px-5 py-4 text-right">
+                                    <div class="flex items-center justify-end gap-2">
+                                        {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
+                                        <div class="flex items-center gap-1.5">
+                                            <select x-model="statutsCandidats[i.id]"
+                                                    class="text-xs rounded-lg border-gray-300 py-1 pl-2 pr-7 focus:ring-primary focus:border-primary text-gray-700 transition-all duration-150">
+                                                <option value="confirmee">Confirmée</option>
+                                                <option value="liste_attente">Liste d'attente</option>
+                                                <option value="annulee">Annulée</option>
+                                            </select>
+
+                                            <!-- Bouton de confirmation conditionnel avec état loading, anti-double-clic et transition -->
+                                            <button @click="confirmerChangementStatut(i)"
+                                                    x-show="statutsCandidats[i.id] !== i.statut"
+                                                    :disabled="enCoursDeChargementStatut[i.id]"
+                                                    title="Confirmer la modification du statut"
+                                                    class="p-1 rounded-md bg-success/10 text-success hover:bg-success/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150">
+                                                <template x-if="!enCoursDeChargementStatut[i.id]">
+                                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                                </template>
+                                                <template x-if="enCoursDeChargementStatut[i.id]">
+                                                    <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+                                                </template>
+                                            </button>
+                                        </div>
+                                        {% endif %}
+
+                                        <template x-if="i.participant">
+                                            <a :href="`/participants/${i.participant.id}`" class="text-xs font-medium text-gray-600 hover:text-gray-900 inline-flex items-center gap-1 transition-colors duration-150">
+                                                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                                Fiche
+                                            </a>
+                                        </template>
+                                    </div>
                                 </td>
                             </tr>
                         </template>
                     </tbody>
                 </table>
             </div>
+
         </div>
     </template>
+
+    <!-- ============ 4. MODALE D'AJOUT D'UNE INSCRIPTION ============ -->
+    {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
+    <div x-show="modaleAjoutOuverte"
+         x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto"
+         aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        
+        <!-- Backdrop avec transition fluide -->
+        <div class="fixed inset-0 bg-gray-500/75 transition-opacity duration-200"
+             x-show="modaleAjoutOuverte"
+             x-transition:enter="ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="ease-in duration-150"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click="fermerModaleAjout()"></div>
+
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all duration-200 sm:my-8 sm:w-full sm:max-w-lg"
+                 x-show="modaleAjoutOuverte"
+                 x-transition:enter="ease-out duration-200"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-150"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+                
+                <div class="bg-white px-6 py-5 border-b border-gray-200 flex items-center justify-between">
+                    <h3 class="text-base font-semibold text-gray-900" id="modal-title">Inscrire un participant</h3>
+                    <button @click="fermerModaleAjout()" class="text-gray-400 hover:text-gray-500 transition-colors duration-150">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <div class="p-6 space-y-4">
+                    <!-- Indicateur si la session est complète -->
+                    <template x-if="session && session.est_complete">
+                        <div class="p-3 bg-warning/10 border border-warning/20 rounded-lg text-xs text-warning flex items-center gap-2">
+                            <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0"></i>
+                            <span>Cette session a atteint sa capacité maximale. L'inscription sera placée en liste d'attente par défaut.</span>
+                        </div>
+                    </template>
+
+                    <!-- Étape 1 : Sélection Client -->
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">1. Entreprise / Client *</label>
+                        <select x-model="formulaire.client_id"
+                                @change="changerClient()"
+                                class="w-full rounded-lg border-gray-300 text-sm focus:ring-primary focus:border-primary transition-all duration-150">
+                            <option value="">-- Sélectionner un client --</option>
+                            <template x-for="c in clients" :key="c.id">
+                                <option :value="c.id" x-text="c.nom_entreprise"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Étape 2 : Sélection Participant filtré -->
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">2. Participant *</label>
+                        <div class="relative">
+                            <select x-model="formulaire.participant_id"
+                                    :disabled="!formulaire.client_id || chargementParticipants"
+                                    class="w-full rounded-lg border-gray-300 text-sm focus:ring-primary focus:border-primary disabled:bg-gray-100 disabled:text-gray-400 transition-all duration-150">
+                                <option value="">
+                                    <span x-text="!formulaire.client_id ? '-- Choisissez d\'abord un client --' : (chargementParticipants ? 'Chargement des participants...' : (participants.length === 0 ? 'Aucun participant disponible pour ce client' : '-- Sélectionner un participant --'))"></span>
+                                </option>
+                                <template x-for="p in participants" :key="p.id">
+                                    <option :value="p.id" x-text="p.nom + ' (' + p.email + ')'"></option>
+                                </template>
+                            </select>
+
+                            <template x-if="chargementParticipants">
+                                <div class="absolute right-3 top-2.5">
+                                    <i data-lucide="loader-2" class="w-4 h-4 text-gray-400 animate-spin"></i>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Étape 3 : Statut d'inscription -->
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">3. Statut initial *</label>
+                        <select x-model="formulaire.statut"
+                                class="w-full rounded-lg border-gray-300 text-sm focus:ring-primary focus:border-primary transition-all duration-150">
+                            <option value="confirmee">Confirmée</option>
+                            <option value="liste_attente">Liste d'attente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 px-6 py-4 flex items-center justify-end gap-3 rounded-b-xl border-t border-gray-100">
+                    <button @click="fermerModaleAjout()"
+                            type="button"
+                            class="px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 active:scale-[0.98] rounded-lg transition-all duration-150">
+                        Annuler
+                    </button>
+                    <button @click="ajouterInscription()"
+                            type="button"
+                            :disabled="!formulaire.participant_id || ajoutEnCours"
+                            class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-primary text-white hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm transition-all duration-150">
+                        <template x-if="ajoutEnCours">
+                            <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+                        </template>
+                        <span x-text="ajoutEnCours ? 'Inscription...' : 'Confirmer l\'inscription'"></span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
 </div>
 
@@ -118,4 +314,3 @@
 {% block extra_scripts %}
 <script src="{{ url_for('static', filename='js/session_detail.js') }}"></script>
 {% endblock %}
-

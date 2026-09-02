@@ -35,6 +35,26 @@ function pageClientDetailData(clientId) {
                 this.$nextTick(() => lucide.createIcons());
             }
         },
+
+        couleurStatutSession(statut) {
+            const COULEURS = {
+                planifiee: 'bg-info/10 text-info',
+                en_cours: 'bg-warning/10 text-warning',
+                terminee: 'bg-success/10 text-success',
+                annulee: 'bg-gray-100 text-gray-600',
+            };
+            return COULEURS[statut] || 'bg-gray-100 text-gray-600';
+        },
+
+        labelStatutSession(statut) {
+            const LABELS = {
+                planifiee: 'Planifiée',
+                en_cours: 'En cours',
+                terminee: 'Terminée',
+                annulee: 'Annulée',
+            };
+            return LABELS[statut] || statut;
+        },
     };
 }
 

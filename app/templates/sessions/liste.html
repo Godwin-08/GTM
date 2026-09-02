@@ -2,225 +2,408 @@
 
 {% block page_title %}Sessions{% endblock %}
 
+{% block content_container %}max-w-[1600px] mx-auto px-2 sm:px-4{% endblock %}
+
 {% block content %}
 
 <div x-data="pageSessionsData()" x-init="charger()">
-    <!-- Titre, sous-titre et compteur suivent le même rythme visuel que le dashboard. -->
-    <div class="mb-6 flex items-start justify-between gap-4">
+    
+    <!-- En-tête & Action Principale -->
+    <div class="mb-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-        <h2 class="text-base font-semibold text-gray-900 mb-1">Sessions de formation</h2>
-        <p class="text-sm text-gray-500">
-            Ensemble des sessions planifiées, en cours et terminées —
-            <span x-text="sessionsFiltrees().length"></span>
-            résultat<span x-text="sessionsFiltrees().length > 1 ? 's' : ''"></span>.
-        </p>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mb-1 tracking-tight">Sessions de formation</h2>
+            <p class="text-xs sm:text-sm text-slate-500 font-medium">
+                Gestion et suivi opérationnel des sessions planifiées, en cours et terminées.
+            </p>
         </div>
         {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
-        <button @click="ouvrirModaleCreation()" class="flex items-center gap-2 bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2.5 rounded-lg flex-shrink-0 transition-colors">
+        <button @click="ouvrirModaleCreation()" class="gtm-btn gtm-btn-primary text-xs sm:text-sm font-semibold flex-shrink-0">
             <i data-lucide="plus" class="w-4 h-4"></i>
             Nouvelle session
         </button>
         {% endif %}
     </div>
 
-    <!-- Recherche textuelle et filtre de statut, avec une hauteur et un focus uniformes. -->
-    <div class="flex flex-col gap-3 mb-5 sm:flex-row">
-        <div class="relative flex-1">
-            <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-            <input type="search"
-                   x-model="recherche"
-                   placeholder="Rechercher une formation ou un formateur..."
-                   class="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-shadow">
+    <!-- Barre de Filtres Ergonomique (Compacte + Filtres Avancés) -->
+    <form @submit.prevent="appliquerFiltres()" class="gtm-card p-4 sm:p-5 mb-4 shadow-xs" x-data="{ filtresAvancesOuverts: false }">
+        <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+            <div class="flex items-center gap-2">
+                <i data-lucide="sliders-horizontal" class="w-4 h-4 text-emerald-700"></i>
+                <h3 class="text-sm font-bold text-slate-900">Filtres de recherche</h3>
+            </div>
+            <button type="button" @click="filtresAvancesOuverts = !filtresAvancesOuverts" class="text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1">
+                <span x-text="filtresAvancesOuverts ? 'Masquer les filtres avancés' : 'Filtres avancés'"></span>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5 transition-transform duration-200" :class="{ 'rotate-180': filtresAvancesOuverts }"></i>
+            </button>
         </div>
 
-        <select x-model="filtreStatut"
-                class="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white min-w-[160px] focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-shadow">
-            <option value="">Tous les statuts</option>
-            <option value="planifiee">Planifiée</option>
-            <option value="en_cours">En cours</option>
-            <option value="terminee">Terminée</option>
-            <option value="annulee">Annulée</option>
-        </select>
+        <!-- Ligne 1 : Filtres Principaux -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="relative sm:col-span-2">
+                <label class="gtm-label text-[11px] text-slate-500">Recherche textuelle</label>
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                    <input type="search" x-model.trim="filtres.q" placeholder="Formation, formateur ou lieu..." class="gtm-input pl-9 text-xs sm:text-sm">
+                </div>
+            </div>
+
+            <div>
+                <label class="gtm-label text-[11px] text-slate-500">Domaine d'activité</label>
+                <select x-model="filtres.domaine_id" @change="changerDomaine()" class="gtm-select text-xs sm:text-sm">
+                    <option value="">Tous les domaines</option>
+                    <template x-for="domaine in domainesDisponibles()" :key="domaine.id">
+                        <option :value="domaine.id" x-text="domaine.nom"></option>
+                    </template>
+                </select>
+            </div>
+
+            <div>
+                <label class="gtm-label text-[11px] text-slate-500">Statut de session</label>
+                <select x-model="filtres.statut" class="gtm-select text-xs sm:text-sm">
+                    <option value="">Tous les statuts</option>
+                    <option value="planifiee">Planifiée</option>
+                    <option value="en_cours">En cours</option>
+                    <option value="terminee">Terminée</option>
+                    <option value="annulee">Annulée</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Ligne 2 : Filtres Avancés (Dépliable) -->
+        <div x-show="filtresAvancesOuverts" x-collapse class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3 pt-3 border-t border-slate-100">
+            <div>
+                <label class="gtm-label text-[11px] text-slate-500">Formation spécifique</label>
+                <select x-model="filtres.formation_id" class="gtm-select text-xs sm:text-sm">
+                    <option value="">Toutes les formations</option>
+                    <template x-for="formation in formationsFiltreesParDomaine()" :key="formation.id">
+                        <option :value="formation.id" x-text="formation.titre"></option>
+                    </template>
+                </select>
+            </div>
+
+            <div>
+                <label class="gtm-label text-[11px] text-slate-500">Formateur référent</label>
+                <select x-model="filtres.formateur_id" class="gtm-select text-xs sm:text-sm">
+                    <option value="">Tous les formateurs</option>
+                    <template x-for="formateur in formateurs" :key="formateur.id">
+                        <option :value="formateur.id" x-text="formateur.nom"></option>
+                    </template>
+                </select>
+            </div>
+
+            <div>
+                <label class="gtm-label text-[11px] text-slate-500">Type de session</label>
+                <select x-model="filtres.type" class="gtm-select text-xs sm:text-sm">
+                    <option value="">Tous les types</option>
+                    <option value="intra">Intra-entreprise</option>
+                    <option value="inter">Inter-entreprises</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="gtm-label text-[11px] text-slate-500">Niveau de remplissage</label>
+                <select x-model="filtres.remplissage" class="gtm-select text-xs sm:text-sm">
+                    <option value="">Tout remplissage</option>
+                    <option value="sous_remplie">Moins de 50 %</option>
+                    <option value="nominale">De 50 % à 89 %</option>
+                    <option value="complete">90 % ou plus</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="gtm-label text-[11px] text-slate-500">Tri par défaut</label>
+                <select x-model="filtres.tri" class="gtm-select text-xs sm:text-sm">
+                    <option value="">Date de début (Récent)</option>
+                    <option value="date_desc">Date de début (Plus récente)</option>
+                    <option value="date_asc">Date de début (Plus ancienne)</option>
+                    <option value="remplissage_desc">Taux de remplissage (Élevé → Faible)</option>
+                    <option value="remplissage_asc">Taux de remplissage (Faible → Élevé)</option>
+                    <option value="titre_asc">Titre de formation (A - Z)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="gtm-label text-[11px] text-slate-500">Début à partir du</label>
+                <input type="date" x-model="filtres.date_debut_min" class="gtm-input text-xs sm:text-sm">
+            </div>
+
+            <div>
+                <label class="gtm-label text-[11px] text-slate-500">Début jusqu'au</label>
+                <input type="date" x-model="filtres.date_debut_max" class="gtm-input text-xs sm:text-sm">
+            </div>
+        </div>
+
+        <!-- Boutons d'Action & Synthèse Contexte -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-3 border-t border-slate-100">
+            <div class="text-xs text-slate-600 font-medium flex items-center gap-2">
+                <span class="font-bold text-slate-900" x-text="sessionsFiltrees().length"></span>
+                <span>résultat<span x-text="sessionsFiltrees().length > 1 ? 's' : ''"></span></span>
+                <template x-if="aDesFiltresActifs()">
+                    <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px]">
+                        Filtres actifs
+                    </span>
+                </template>
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <a :href="'/api/sessions/export/csv' + (window.location.search || '')"
+                   download
+                   class="gtm-btn gtm-btn-outline text-xs flex items-center gap-1.5 border-slate-300 hover:bg-slate-50">
+                    <i data-lucide="download" class="w-3.5 h-3.5 text-slate-600"></i>
+                    Exporter CSV (Périmètre)
+                </a>
+                <button type="button" @click="reinitialiserFiltres()" class="gtm-btn gtm-btn-ghost text-xs">
+                    Réinitialiser
+                </button>
+                <button type="submit" class="gtm-btn gtm-btn-primary text-xs">
+                    <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+                    Appliquer
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Tableau de Données Haute Densité (.gtm-table) -->
+    <div class="gtm-card overflow-hidden shadow-xs mb-6">
+        <div class="gtm-table-container border-none rounded-none">
+            <table class="gtm-table">
+                <thead>
+                    <tr>
+                        <th class="text-xs font-bold uppercase tracking-wider">Formation</th>
+                        <th class="text-xs font-bold uppercase tracking-wider">Dates</th>
+                        <th class="text-xs font-bold uppercase tracking-wider">Formateur</th>
+                        <th class="text-xs font-bold uppercase tracking-wider">Lieu</th>
+                        <th class="text-right text-xs font-bold uppercase tracking-wider">Remplissage</th>
+                        <th class="text-xs font-bold uppercase tracking-wider">Statut</th>
+                        <th class="text-right text-xs font-bold uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Chargement -->
+                    <template x-if="chargementEnCours">
+                        <tr>
+                            <td colspan="7" class="px-5 py-10 text-center text-slate-400 text-sm">
+                                <i data-lucide="loader-2" class="w-6 h-6 mx-auto mb-2 animate-spin text-emerald-700"></i>
+                                Chargement des sessions...
+                            </td>
+                        </tr>
+                    </template>
+
+                    <!-- Erreur -->
+                    <template x-if="erreur">
+                        <tr>
+                            <td colspan="7" class="px-5 py-10 text-center text-red-600 text-sm">
+                                <i data-lucide="alert-circle" class="w-6 h-6 mx-auto mb-2"></i>
+                                <span x-text="erreur"></span>
+                            </td>
+                        </tr>
+                    </template>
+
+                    <!-- Aucune donnée -->
+                    <template x-if="!chargementEnCours && !erreur && sessionsFiltrees().length === 0">
+                        <tr>
+                            <td colspan="7" class="px-5 py-12 text-center">
+                                <i data-lucide="search-x" class="w-9 h-9 mx-auto mb-2 text-slate-300"></i>
+                                <p class="text-sm font-bold text-slate-900 mb-1">Aucune session trouvée</p>
+                                <p class="text-xs text-slate-500 mb-4">Aucune session ne correspond aux filtres appliqués.</p>
+                                <template x-if="aDesFiltresActifs()">
+                                    <button @click="reinitialiserFiltres()" class="gtm-btn gtm-btn-ghost text-xs text-emerald-700 hover:text-emerald-800">
+                                        Réinitialiser les filtres
+                                    </button>
+                                </template>
+                            </td>
+                        </tr>
+                    </template>
+
+                    <!-- Lignes des Sessions -->
+                    <template x-for="session in sessionsFiltrees()" :key="session.id">
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td>
+                                <p class="font-bold text-slate-900 text-sm" x-text="titreFormation(session)"></p>
+                                <p class="text-xs text-slate-500 mt-0.5" x-text="session.type === 'intra' ? 'Intra-entreprise' : 'Inter-entreprises'"></p>
+                            </td>
+                            <td class="font-tabular text-slate-700 text-xs sm:text-sm" x-text="formaterDate(session.date_debut) + ' → ' + formaterDate(session.date_fin)"></td>
+                            <td class="text-slate-800 text-xs sm:text-sm font-medium" x-text="nomFormateur(session)"></td>
+                            <td class="text-slate-500 text-xs" x-text="session.lieu || '—'"></td>
+                            <td class="text-right font-tabular">
+                                <div class="flex items-center justify-end gap-2">
+                                    <span class="font-bold text-xs" x-text="(session.nb_inscrits_confirmes || 0) + ' / ' + (session.capacite_max || 0)"></span>
+                                    <span class="font-bold text-xs" :class="couleurTexteRemplissage(session)" x-text="Math.round((Number(session.taux_remplissage) || 0) * 100) + '%'"></span>
+                                    <div class="w-12 bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200">
+                                        <div class="h-full rounded-full transition-all duration-300"
+                                             :class="couleurBarreRemplissage(session)"
+                                             :style="`width: ${Math.min(100, Math.round((Number(session.taux_remplissage) || 0) * 100))}%`"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="gtm-badge text-xs"
+                                      :class="{
+                                          'gtm-badge-neutral': session.statut === 'terminee' || session.statut === 'annulee',
+                                          'gtm-badge-success': session.statut === 'en_cours',
+                                          'gtm-badge-info': session.statut === 'planifiee'
+                                      }">
+                                    <span class="gtm-badge-dot"></span>
+                                    <span x-text="labelStatut(session.statut)"></span>
+                                </span>
+                            </td>
+                            <td class="text-right">
+                                <div class="flex items-center justify-end gap-2.5">
+                                    <a :href="`/sessions/${session.id}`" class="text-xs font-semibold text-slate-700 hover:text-slate-900 flex items-center gap-1">
+                                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                        Voir
+                                    </a>
+                                    {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
+                                    <button @click="ouvrirModaleEdition(session)" class="text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1">
+                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                        Modifier
+                                    </button>
+                                    <button @click="ouvrirModaleSuppression(session)" class="text-xs font-semibold text-red-600 hover:text-red-700 flex items-center gap-1">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <table class="w-full text-sm">
-            <thead>
-                <!-- En-têtes discrets en petites capitales, plus lisibles dans un tableau dense. -->
-                <tr class="border-b border-gray-200 text-left text-gray-500">
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Formation</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Dates</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Formateur</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Lieu</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Remplissage</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Statut</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- État de chargement, erreur et liste vide utilisent chacun un repère visuel. -->
-                <template x-if="chargementEnCours">
-                    <tr>
-                        <td colspan="7" class="px-5 py-10 text-center text-gray-400 text-sm">
-                            <i data-lucide="loader-2" class="w-5 h-5 mx-auto mb-2 animate-spin"></i>
-                            Chargement...
-                        </td>
-                    </tr>
-                </template>
-
-                <template x-if="erreur">
-                    <tr>
-                        <td colspan="7" class="px-5 py-10 text-center text-red-500 text-sm">
-                            <i data-lucide="alert-circle" class="w-5 h-5 mx-auto mb-2"></i>
-                            <span x-text="erreur"></span>
-                        </td>
-                    </tr>
-                </template>
-
-                <template x-if="!chargementEnCours && !erreur && sessionsFiltrees().length === 0">
-                    <tr>
-                        <td colspan="7" class="px-5 py-10 text-center text-gray-400 text-sm">
-                            <i data-lucide="search-x" class="w-5 h-5 mx-auto mb-2"></i>
-                            Aucune session ne correspond à votre recherche.
-                        </td>
-                    </tr>
-                </template>
-
-                <!-- Lignes plus aérées et transition douce au survol. -->
-                <template x-for="session in sessionsFiltrees()" :key="session.id">
-                    <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
-                        <td class="px-5 py-4">
-                            <p class="font-medium text-gray-900" x-text="titreFormation(session)"></p>
-                            <p class="text-xs text-gray-500 mt-0.5"
-                               x-text="session.type === 'intra' ? 'Intra-entreprise' : 'Inter-entreprises'"></p>
-                        </td>
-                        <td class="px-5 py-4 text-gray-700"
-                            x-text="formaterDate(session.date_debut) + ' → ' + formaterDate(session.date_fin)"></td>
-                        <td class="px-5 py-4 text-gray-700" x-text="nomFormateur(session)"></td>
-                        <td class="px-5 py-4 text-gray-500 text-xs" x-text="session.lieu || '—'"></td>
-                        <td class="px-5 py-4 text-right">
-                            <div class="flex flex-col items-end gap-1">
-                                <div class="flex items-center gap-2 text-xs">
-                                    <span class="font-medium text-gray-900" x-text="(session.nb_inscrits_confirmes || 0) + ' / ' + (session.capacite_max || 0)"></span>
-                                    <span class="font-bold" :class="couleurTexteRemplissage(session)" x-text="Math.round((Number(session.taux_remplissage) || 0) * 100) + '%'"></span>
-                                </div>
-                                <div class="w-24 bg-gray-100 h-1.5 rounded-full overflow-hidden">
-                                    <div class="h-full rounded-full transition-all duration-300"
-                                         :class="couleurBarreRemplissage(session)"
-                                         :style="`width: ${Math.min(100, Math.round((Number(session.taux_remplissage) || 0) * 100))}%`"></div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="px-5 py-4">
-                            <span class="text-xs font-medium px-2.5 py-1 rounded-full"
-                                  :class="classeBadgeStatut(session.statut)"
-                                  x-text="labelStatut(session.statut)"></span>
-                        </td>
-                        <td class="px-5 py-4 text-right">
-                            <div class="flex items-center justify-end gap-3">
-                                <a :href="`/sessions/${session.id}`"
-                                   class="text-xs font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1">
-                                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                                    Voir
-                                </a>
-                                {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
-                                <button @click="ouvrirModaleEdition(session)"
-                                        class="text-xs font-medium text-primary hover:text-primary-hover flex items-center gap-1">
-                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                    Modifier
-                                </button>
-                                <button @click="ouvrirModaleSuppression(session)"
-                                        class="text-xs font-medium text-danger hover:opacity-70 flex items-center gap-1">
-                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                    Supprimer
-                                </button>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                </template>
-            </tbody>
-        </table>
-    </div>
-
+    <!-- Modale de Création -->
     <div x-show="modaleOuverte" x-cloak @click.self="fermerModaleCreation()" @keydown.escape.window="fermerModaleCreation()"
-         class="fixed inset-0 bg-gray-900/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-        <div class="bg-white rounded-xl w-full max-w-md p-6 my-8 max-h-[90vh] overflow-y-auto" @click.stop>
-            <div class="flex items-center justify-between mb-4"><h3 class="text-base font-semibold text-gray-900">Nouvelle session</h3><button type="button" @click="fermerModaleCreation()" class="text-gray-400 hover:text-gray-600" aria-label="Fermer la modale"><i data-lucide="x" class="w-5 h-5"></i></button></div>
-            <template x-if="erreurFormulaire"><p class="text-sm text-red-500 bg-danger/5 rounded-lg px-3 py-2 mb-4" x-text="erreurFormulaire"></p></template>
-            <form @submit.prevent="soumettreCreation()" class="space-y-4">
-                <div><label for="session-formation" class="block text-sm text-gray-700 mb-1">Formation</label><select id="session-formation" x-model.number="formulaire.formation_id" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"><option value="" disabled>Sélectionner une formation</option><template x-for="formation in formations" :key="formation.id"><option :value="formation.id" x-text="formation.titre"></option></template></select></div>
-                <div><label for="session-formateur" class="block text-sm text-gray-700 mb-1">Formateur</label><select id="session-formateur" x-model.number="formulaire.formateur_id" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"><option value="" disabled>Sélectionner un formateur</option><template x-for="formateur in formateurs" :key="formateur.id"><option :value="formateur.id" x-text="formateur.nom"></option></template></select></div>
-                <div class="grid grid-cols-2 gap-3"><div><label for="session-debut" class="block text-sm text-gray-700 mb-1">Date de début</label><input id="session-debut" type="date" x-model="formulaire.date_debut" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></div><div><label for="session-fin" class="block text-sm text-gray-700 mb-1">Date de fin</label><input id="session-fin" type="date" x-model="formulaire.date_fin" :min="formulaire.date_debut" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></div></div>
-                <div class="grid grid-cols-2 gap-3"><div><label for="session-type" class="block text-sm text-gray-700 mb-1">Type</label><select id="session-type" x-model="formulaire.type" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"><option value="intra">Intra-entreprise</option><option value="inter">Inter-entreprises</option></select></div><div><label for="session-capacite" class="block text-sm text-gray-700 mb-1">Capacité max</label><input id="session-capacite" type="number" x-model.number="formulaire.capacite_max" min="1" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></div></div>
-                <div><label for="session-lieu" class="block text-sm text-gray-700 mb-1">Lieu <span class="text-gray-400">(optionnel)</span></label><input id="session-lieu" type="text" x-model.trim="formulaire.lieu" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></div>
-                <div><label for="session-statut" class="block text-sm text-gray-700 mb-1">Statut</label><select id="session-statut" x-model="formulaire.statut" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"><option value="planifiee">Planifiée</option><option value="en_cours">En cours</option><option value="terminee">Terminée</option><option value="annulee">Annulée</option></select></div>
-                <div class="flex justify-end gap-2 pt-2"><button type="button" @click="fermerModaleCreation()" class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">Annuler</button><button type="submit" :disabled="envoiEnCours" class="bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg"><span x-show="!envoiEnCours">Créer la session</span><span x-show="envoiEnCours">Création...</span></button></div>
+         class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="gtm-card w-full max-w-md p-6 my-8 max-h-[90vh] overflow-y-auto" @click.stop>
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+                <h3 class="text-base font-bold text-slate-900">Nouvelle session de formation</h3>
+                <button type="button" @click="fermerModaleCreation()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <template x-if="erreurFormulaire">
+                <div class="gtm-error-state text-xs mb-4">
+                    <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+                    <span x-text="erreurFormulaire"></span>
+                </div>
+            </template>
+
+            <form @submit.prevent="soumettreCreation()" class="space-y-4 text-xs sm:text-sm">
+                <div>
+                    <label for="session-formation" class="gtm-label">Formation</label>
+                    <select id="session-formation" x-model.number="formulaire.formation_id" required class="gtm-select">
+                        <option value="" disabled>Sélectionner une formation</option>
+                        <template x-for="formation in formations" :key="formation.id">
+                            <option :value="formation.id" x-text="formation.titre"></option>
+                        </template>
+                    </select>
+                </div>
+                <div>
+                    <label for="session-formateur" class="gtm-label">Formateur référent</label>
+                    <select id="session-formateur" x-model.number="formulaire.formateur_id" required class="gtm-select">
+                        <option value="" disabled>Sélectionner un formateur</option>
+                        <template x-for="formateur in formateurs" :key="formateur.id">
+                            <option :value="formateur.id" x-text="formateur.nom"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="session-debut" class="gtm-label">Date de début</label>
+                        <input id="session-debut" type="date" x-model="formulaire.date_debut" required class="gtm-input">
+                    </div>
+                    <div>
+                        <label for="session-fin" class="gtm-label">Date de fin</label>
+                        <input id="session-fin" type="date" x-model="formulaire.date_fin" :min="formulaire.date_debut" required class="gtm-input">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="session-type" class="gtm-label">Type</label>
+                        <select id="session-type" x-model="formulaire.type" required class="gtm-select">
+                            <option value="intra">Intra-entreprise</option>
+                            <option value="inter">Inter-entreprises</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="session-capacite" class="gtm-label">Capacité max</label>
+                        <input id="session-capacite" type="number" x-model.number="formulaire.capacite_max" min="1" required class="gtm-input">
+                    </div>
+                </div>
+                <div>
+                    <label for="session-lieu" class="gtm-label">Lieu <span class="text-slate-400">(optionnel)</span></label>
+                    <input id="session-lieu" type="text" x-model.trim="formulaire.lieu" class="gtm-input">
+                </div>
+                <div>
+                    <label for="session-statut" class="gtm-label">Statut</label>
+                    <select id="session-statut" x-model="formulaire.statut" class="gtm-select">
+                        <option value="planifiee">Planifiée</option>
+                        <option value="en_cours">En cours</option>
+                        <option value="terminee">Terminée</option>
+                        <option value="annulee">Annulée</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" @click="fermerModaleCreation()" class="gtm-btn gtm-btn-ghost text-xs">Annuler</button>
+                    <button type="submit" :disabled="envoiEnCours" class="gtm-btn gtm-btn-primary text-xs">
+                        <span x-show="!envoiEnCours">Créer la session</span>
+                        <span x-show="envoiEnCours">Création...</span>
+                    </button>
+                </div>
             </form>
         </div>
     </div>
 
     <!-- Modale d'édition -->
     {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
-    <div x-show="modaleEditionOuverte"
-         x-cloak
-         @click.self="fermerModaleEdition()"
-         @keydown.escape.window="fermerModaleEdition()"
-         class="fixed inset-0 bg-gray-900/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-
-        <div class="bg-white rounded-xl w-full max-w-md p-6 my-8" @click.stop>
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-base font-semibold text-gray-900">Modifier la session</h3>
-                <button type="button" @click="fermerModaleEdition()" class="text-gray-400 hover:text-gray-600">
+    <div x-show="modaleEditionOuverte" x-cloak @click.self="fermerModaleEdition()" @keydown.escape.window="fermerModaleEdition()"
+         class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="gtm-card w-full max-w-md p-6 my-8" @click.stop>
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+                <h3 class="text-base font-bold text-slate-900">Modifier la session</h3>
+                <button type="button" @click="fermerModaleEdition()" class="text-slate-400 hover:text-slate-600">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
 
-            <!-- Rappel de la formation/formateur, en lecture seule car non modifiables via ce PUT -->
-            <div class="bg-gray-50 rounded-lg px-3 py-2 mb-4 text-sm text-gray-600">
-                <p class="font-medium text-gray-900" x-text="edition.formation_titre"></p>
-                <p class="text-xs text-gray-500" x-text="'Formateur : ' + edition.formateur_nom + ' — non modifiables ici'"></p>
+            <div class="bg-slate-50 rounded-lg p-3 mb-4 text-xs text-slate-600 border border-slate-200">
+                <p class="font-bold text-slate-900" x-text="edition.formation_titre"></p>
+                <p class="text-slate-500 mt-0.5" x-text="'Formateur : ' + edition.formateur_nom"></p>
             </div>
 
             <template x-if="erreurEdition">
-                <p class="text-sm text-red-500 bg-danger/5 rounded-lg px-3 py-2 mb-4" x-text="erreurEdition"></p>
+                <div class="gtm-error-state text-xs mb-4">
+                    <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+                    <span x-text="erreurEdition"></span>
+                </div>
             </template>
 
-            <form @submit.prevent="soumettreEdition()" class="space-y-4">
+            <form @submit.prevent="soumettreEdition()" class="space-y-4 text-xs sm:text-sm">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-sm text-gray-700 mb-1">Date de début</label>
-                        <input type="date" x-model="edition.date_debut" required
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-                                      focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <label class="gtm-label">Date de début</label>
+                        <input type="date" x-model="edition.date_debut" required class="gtm-input">
                     </div>
                     <div>
-                        <label class="block text-sm text-gray-700 mb-1">Date de fin</label>
-                        <input type="date" x-model="edition.date_fin" required
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-                                      focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <label class="gtm-label">Date de fin</label>
+                        <input type="date" x-model="edition.date_fin" required class="gtm-input">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm text-gray-700 mb-1">Capacité max</label>
-                    <input type="number" x-model.number="edition.capacite_max" min="1" required
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-                                  focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                    <label class="gtm-label">Capacité max</label>
+                    <input type="number" x-model.number="edition.capacite_max" min="1" required class="gtm-input">
                 </div>
 
                 <div>
-                    <label class="block text-sm text-gray-700 mb-1">Lieu <span class="text-gray-400">(optionnel)</span></label>
-                    <input type="text" x-model="edition.lieu"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-                                  focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                    <label class="gtm-label">Lieu <span class="text-slate-400">(optionnel)</span></label>
+                    <input type="text" x-model="edition.lieu" class="gtm-input">
                 </div>
 
                 <div>
-                    <label class="block text-sm text-gray-700 mb-1">Statut</label>
-                    <select x-model="edition.statut"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white
-                                   focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                    <label class="gtm-label">Statut</label>
+                    <select x-model="edition.statut" class="gtm-select">
                         <option value="planifiee">Planifiée</option>
                         <option value="en_cours">En cours</option>
                         <option value="terminee">Terminée</option>
@@ -228,13 +411,9 @@
                     </select>
                 </div>
 
-                <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" @click="fermerModaleEdition()"
-                            class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
-                        Annuler
-                    </button>
-                    <button type="submit" :disabled="editionEnCours"
-                            class="bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg">
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" @click="fermerModaleEdition()" class="gtm-btn gtm-btn-ghost text-xs">Annuler</button>
+                    <button type="submit" :disabled="editionEnCours" class="gtm-btn gtm-btn-primary text-xs">
                         <span x-show="!editionEnCours">Enregistrer</span>
                         <span x-show="editionEnCours">Enregistrement...</span>
                     </button>
@@ -244,36 +423,31 @@
     </div>
     {% endif %}
 
-    <!-- Modale de confirmation de suppression -->
+    <!-- Modale de Suppression -->
     {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
-    <div x-show="modaleSuppressionOuverte"
-         x-cloak
-         @click.self="fermerModaleSuppression()"
-         @keydown.escape.window="fermerModaleSuppression()"
-         class="fixed inset-0 bg-gray-900/50 z-50 flex items-center justify-center p-4">
-
-        <div class="bg-white rounded-xl w-full max-w-sm p-6" @click.stop>
+    <div x-show="modaleSuppressionOuverte" x-cloak @click.self="fermerModaleSuppression()" @keydown.escape.window="fermerModaleSuppression()"
+         class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+        <div class="gtm-card w-full max-w-sm p-6" @click.stop>
             <div class="flex items-start gap-3 mb-4">
-                <div class="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center flex-shrink-0">
-                    <i data-lucide="alert-triangle" class="w-5 h-5 text-danger"></i>
+                <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0 border border-red-100">
+                    <i data-lucide="alert-triangle" class="w-5 h-5 text-red-600"></i>
                 </div>
                 <div>
-                    <h3 class="text-base font-semibold text-gray-900">Supprimer cette session ?</h3>
-                    <p class="text-sm text-gray-500 mt-1" x-text="'La session « ' + (aSupprimer?.formation?.titre || '') + ' » sera définitivement supprimée.'"></p>
+                    <h3 class="text-base font-bold text-slate-900">Supprimer cette session ?</h3>
+                    <p class="text-xs text-slate-500 mt-1" x-text="'La session « ' + (aSupprimer?.formation?.titre || '') + ' » sera définitivement supprimée.'"></p>
                 </div>
             </div>
 
             <template x-if="erreurSuppression">
-                <p class="text-sm text-red-500 bg-danger/5 rounded-lg px-3 py-2 mb-4" x-text="erreurSuppression"></p>
+                <div class="gtm-error-state text-xs mb-4">
+                    <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+                    <span x-text="erreurSuppression"></span>
+                </div>
             </template>
 
-            <div class="flex justify-end gap-2">
-                <button type="button" @click="fermerModaleSuppression()"
-                        class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
-                    Annuler
-                </button>
-                <button type="button" @click="confirmerSuppression()" :disabled="suppressionEnCours"
-                        class="bg-danger hover:opacity-90 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg">
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button type="button" @click="fermerModaleSuppression()" class="gtm-btn gtm-btn-ghost text-xs">Annuler</button>
+                <button type="button" @click="confirmerSuppression()" :disabled="suppressionEnCours" class="gtm-btn bg-red-600 hover:bg-red-700 text-white text-xs font-semibold">
                     <span x-show="!suppressionEnCours">Supprimer définitivement</span>
                     <span x-show="suppressionEnCours">Suppression...</span>
                 </button>
@@ -293,3 +467,4 @@
 </script>
 <script src="{{ url_for('static', filename='js/sessions.js') }}"></script>
 {% endblock %}
+

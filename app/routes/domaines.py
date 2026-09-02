@@ -19,7 +19,7 @@ def liste_domaines():
 @domaines_bp.route("/<int:domaine_id>", methods=["GET"])
 @login_required
 def detail_domaine(domaine_id):
-    domaine = Domaine.query.get_or_404(domaine_id)
+    domaine = db.get_or_404(Domaine, domaine_id)
     return jsonify(domaine_vers_dict(domaine)), 200
 
 @domaines_bp.route("", methods=["POST"])
@@ -47,7 +47,7 @@ def creer_domaine():
 @domaines_bp.route("/<int:domaine_id>", methods=["PUT"])
 @gestionnaire_ou_admin_required
 def modifier_domaine(domaine_id):
-    domaine = Domaine.query.get_or_404(domaine_id)
+    domaine = db.get_or_404(Domaine, domaine_id)
     donnees = request.get_json()
 
     if "nom" in donnees:

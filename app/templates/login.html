@@ -3,76 +3,201 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion | GTM</title>
+    <title>Connexion | Galaxy Solutions — GTM</title>
+    
+    <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Config Tailwind : palette Galaxy Solutions & Tokens GTM -->
     <script>
         tailwind.config = {
-            theme: { extend: { colors: { primary: { DEFAULT: '#F26B1F', hover: '#D95A10' } } } }
+            theme: {
+                extend: {
+                    colors: {
+                        gtm: {
+                            brand: 'var(--gtm-brand)',
+                            primary: 'var(--gtm-primary)',
+                            interactive: 'var(--gtm-primary-interactive)',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
         }
     </script>
+
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23F26B1F'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold' font-size='18'>G</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
-<body class="bg-gray-50 flex items-center justify-center h-screen">
+<body class="bg-slate-900 font-sans text-slate-900 min-h-screen flex items-center justify-center p-4 sm:p-6">
 
-    <div class="bg-white rounded-xl border border-gray-200 p-8 w-full max-w-sm">
-        <h1 class="text-lg font-semibold text-gray-900 mb-1">GTM</h1>
-        <p class="text-sm text-gray-500 mb-6">Connectez-vous à votre espace.</p>
+    <div class="w-full max-w-4xl bg-white rounded-2xl border border-slate-800 shadow-2xl overflow-hidden grid grid-cols-1 md:grid-cols-2">
+        
+        <!-- Panneau de Branding (Gauche sur Desktop / Haut sur Mobile) -->
+        <div class="bg-slate-900 p-8 md:p-12 text-white flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-800 relative overflow-hidden">
+            <!-- Halo subtil de fond -->
+            <div class="absolute -top-24 -left-24 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        <!-- Zone où on affichera un message d'erreur si les identifiants sont mauvais -->
-        <p id="erreurLogin" class="text-sm text-red-500 mb-4 hidden"></p>
+            <div class="relative z-10 space-y-6">
+                <!-- Logo Galaxy -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-[#F26B1F] flex items-center justify-center flex-shrink-0 shadow-md">
+                        <span class="text-white text-base font-bold">G</span>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-white leading-tight">GTM</h1>
+                        <p class="text-xs text-slate-400 font-medium">Galaxy Solutions</p>
+                    </div>
+                </div>
 
-        <form id="formLogin" class="space-y-4">
-            <div>
-                <label class="block text-sm text-gray-700 mb-1">Email</label>
-                <input type="email" id="email" required
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary">
+                <div class="pt-6 space-y-3">
+                    <h2 class="text-2xl font-bold text-white leading-tight">
+                        Plateforme de Pilotage & Gestion des Formations
+                    </h2>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        Centralisez vos sessions, suivez vos participants et pilotez vos indicateurs clés dans une interface unifiée.
+                    </p>
+                </div>
             </div>
-            <div>
-                <label class="block text-sm text-gray-700 mb-1">Mot de passe</label>
-                <input type="password" id="password" required
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary">
+
+            <div class="pt-8 relative z-10 hidden md:block border-t border-slate-800/80">
+                <div class="space-y-2 text-xs text-slate-400">
+                    <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        <span>Environnement sécurisé SSL / RBAC</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                        <span>Analytique & Rapports en temps réel</span>
+                    </div>
+                </div>
             </div>
-            <button type="submit"
-                    class="w-full bg-primary hover:bg-primary-hover text-white text-sm font-medium py-2 rounded-lg">
-                Se connecter
-            </button>
-        </form>
+        </div>
+
+        <!-- Formulaire de Connexion (Droite) -->
+        <div class="p-8 md:p-12 flex flex-col justify-center bg-white">
+            <div class="mb-6 space-y-1">
+                <h3 class="text-xl font-bold text-slate-900">Connexion</h3>
+                <p class="text-xs text-slate-500">Accédez à votre compte professionnel GTM</p>
+            </div>
+
+            <!-- Erreur de connexion -->
+            <div id="erreurLoginContainer" class="hidden mb-5">
+                <div class="gtm-error-state text-xs">
+                    <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
+                    <span id="erreurLoginTexte">Adresse e-mail ou mot de passe incorrect.</span>
+                </div>
+            </div>
+
+            <form id="formLogin" class="space-y-4">
+                <div>
+                    <label for="email" class="gtm-label">Adresse E-mail</label>
+                    <input type="email" id="email" required autocomplete="email"
+                           class="gtm-input" placeholder="nom@entreprise.com">
+                </div>
+
+                <div>
+                    <label for="password" class="gtm-label">Mot de passe</label>
+                    <div class="relative">
+                        <input type="password" id="password" required autocomplete="current-password"
+                               class="gtm-input pr-10" placeholder="••••••••">
+                        <button type="button" id="btnTogglePassword"
+                                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 transition-colors"
+                                aria-label="Afficher ou masquer le mot de passe">
+                            <i data-lucide="eye" id="iconEye" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" id="btnSubmit"
+                            class="gtm-btn gtm-btn-primary w-full py-2.5 text-sm font-medium">
+                        <span id="btnSubmitTexte" class="flex items-center gap-2">
+                            <span>Se connecter</span>
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </span>
+                        <span id="btnSubmitSpinner" class="hidden items-center gap-2">
+                            <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+                            <span>Connexion en cours...</span>
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script>
-        // On intercepte la soumission du formulaire pour appeler l'API en JS
-        // plutôt que de laisser le navigateur faire un POST classique,
-        // ce qui permet de récupérer une erreur propre sans recharger la page.
-        document.getElementById('formLogin').addEventListener('submit', async (e) => {
-            e.preventDefault(); // empêche le rechargement de page par défaut
+        lucide.createIcons();
 
-            const email = document.getElementById('email').value;
+        // Afficher / Masquer le mot de passe
+        const inputPassword = document.getElementById('password');
+        const btnTogglePassword = document.getElementById('btnTogglePassword');
+        let passwordVisible = false;
+
+        btnTogglePassword.addEventListener('click', () => {
+            passwordVisible = !passwordVisible;
+            inputPassword.type = passwordVisible ? 'text' : 'password';
+            
+            // Re-render icon
+            const btnIcon = document.getElementById('iconEye');
+            if (passwordVisible) {
+                btnIcon.setAttribute('data-lucide', 'eye-off');
+            } else {
+                btnIcon.setAttribute('data-lucide', 'eye');
+            }
+            lucide.createIcons();
+        });
+
+        // Soumission asynchrone du formulaire
+        document.getElementById('formLogin').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            const erreurEl = document.getElementById('erreurLogin');
-            erreurEl.classList.add('hidden');
+            const errContainer = document.getElementById('erreurLoginContainer');
+            const errTexte = document.getElementById('erreurLoginTexte');
+            const btnSubmit = document.getElementById('btnSubmit');
+            const btnSubmitTexte = document.getElementById('btnSubmitTexte');
+            const btnSubmitSpinner = document.getElementById('btnSubmitSpinner');
+
+            errContainer.classList.add('hidden');
+            btnSubmit.disabled = true;
+            btnSubmitTexte.classList.add('hidden');
+            btnSubmitSpinner.classList.remove('hidden');
+            btnSubmitSpinner.classList.add('flex');
 
             try {
                 const res = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    // credentials: 'include' garantit que le cookie de session
-                    // renvoyé par Flask est bien stocké par le navigateur
                     credentials: 'include',
                     body: JSON.stringify({ email, mot_de_passe: password })
                 });
 
+                const data = await res.json();
+
                 if (!res.ok) {
-                    throw new Error('Identifiants incorrects');
+                    throw new Error(data.erreur || 'Identifiants invalides');
                 }
 
-                // Connexion réussie -> on redirige vers le dashboard
+                // Redirection vers le dashboard
                 window.location.href = '/dashboard';
 
             } catch (err) {
-                erreurEl.textContent = 'Email ou mot de passe incorrect.';
-                erreurEl.classList.remove('hidden');
+                errTexte.textContent = err.message || 'Adresse e-mail ou mot de passe incorrect.';
+                errContainer.classList.remove('hidden');
+                btnSubmit.disabled = false;
+                btnSubmitTexte.classList.remove('hidden');
+                btnSubmitSpinner.classList.add('hidden');
+                btnSubmitSpinner.classList.remove('flex');
             }
         });
     </script>
-
 </body>
 </html>
+

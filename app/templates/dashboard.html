@@ -2,91 +2,396 @@
 
 {% block page_title %}Vue d'ensemble{% endblock %}
 
+{% block content_container %}max-w-[1600px] mx-auto px-2 sm:px-4{% endblock %}
+
 {% block content %}
 
-<!-- ============ EN-TÊTE DE PAGE ============ -->
-<div class="mb-6">
-    <p class="text-sm text-gray-500">Pilotez l'activité de formation de Galaxy Solutions.</p>
-</div>
-
-<!-- ============ CARTES KPI ============ -->
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-        <p class="text-sm text-gray-500 mb-1">Sessions</p>
-        <p class="text-2xl font-semibold text-gray-900" id="kpi-sessions">–</p>
+<div x-data="pageDashboardData()" x-init="charger()">
+    
+    <!-- 1. En-tête de page & Salutation -->
+    <div class="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mb-0.5 tracking-tight" x-text="obtenirSalutation('{{ current_user.nom }}') + ' 👋'"></h2>
+            <p class="text-xs sm:text-sm text-slate-500 font-medium">
+                Voici le suivi d'activité et le pilotage analytique de votre périmètre de formation.
+            </p>
+        </div>
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-        <p class="text-sm text-gray-500 mb-1">Clients actifs</p>
-        <p class="text-2xl font-semibold text-gray-900" id="kpi-clients">–</p>
+    <!-- 2. Formulaire de filtres harmonisé (Direction D - Ergonomique & Compact) -->
+    <form @submit.prevent="appliquerFiltres()" class="gtm-card p-4 sm:p-5 mb-4 shadow-xs">
+        <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+            <div class="flex items-center gap-2">
+                <i data-lucide="sliders-horizontal" class="w-4 h-4 text-emerald-700"></i>
+                <h3 class="text-sm sm:text-base font-bold text-slate-900">Filtres du tableau de bord</h3>
+            </div>
+            <span class="text-xs text-slate-400 font-medium">Filtres décisionnels réactifs</span>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+                <label class="gtm-label text-xs font-semibold text-slate-600 mb-1">Année d'exercice</label>
+                <select x-model="filtres.annee" class="gtm-select text-xs sm:text-sm py-1.5">
+                    <option value="">Toutes les années</option>
+                    <template x-for="an in anneesDisponibles" :key="an">
+                        <option :value="an" x-text="an"></option>
+                    </template>
+                </select>
+            </div>
+
+            <div>
+                <label class="gtm-label text-xs font-semibold text-slate-600 mb-1">Domaine d'activité</label>
+                <select x-model="filtres.domaine_id" class="gtm-select text-xs sm:text-sm py-1.5">
+                    <option value="">Tous les domaines</option>
+                    <template x-for="d in optionDomaines" :key="d.id">
+                        <option :value="d.id" x-text="d.nom"></option>
+                    </template>
+                </select>
+            </div>
+
+            <div>
+                <label class="gtm-label text-xs font-semibold text-slate-600 mb-1">Entreprise Cliente</label>
+                <select x-model="filtres.client_id" class="gtm-select text-xs sm:text-sm py-1.5">
+                    <option value="">Toutes les entreprises clientes</option>
+                    <template x-for="c in optionClients" :key="c.id">
+                        <option :value="c.id" x-text="c.nom_entreprise"></option>
+                    </template>
+                </select>
+            </div>
+
+            <div>
+                <label class="gtm-label text-xs font-semibold text-slate-600 mb-1">Formateur référent</label>
+                <select x-model="filtres.formateur_id" class="gtm-select text-xs sm:text-sm py-1.5">
+                    <option value="">Tous les formateurs</option>
+                    <template x-for="f in optionFormateurs" :key="f.id">
+                        <option :value="f.id" x-text="f.nom"></option>
+                    </template>
+                </select>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 mt-3.5 pt-3 border-t border-slate-100">
+            <button type="button" @click="reinitialiserFiltres()" class="gtm-btn gtm-btn-ghost text-xs sm:text-sm font-medium">
+                Réinitialiser les filtres
+            </button>
+            <button type="submit" class="gtm-btn gtm-btn-primary text-xs sm:text-sm font-semibold px-4 py-2">
+                <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+                Appliquer le périmètre
+            </button>
+        </div>
+    </form>
+
+    <!-- 3. Périmètre actuel compact (Résumé décisionnel) -->
+    <div class="gtm-card p-3 mb-4 flex flex-wrap items-center justify-between gap-2.5 text-xs sm:text-sm bg-slate-50 border-slate-200">
+        <div class="flex items-center gap-2 font-bold text-slate-700 uppercase tracking-wider text-xs">
+            <i data-lucide="layers" class="w-4 h-4 text-emerald-700"></i>
+            <span>Périmètre actuel :</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+            <span class="px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-600 shadow-2xs">
+                Année : <strong class="text-slate-900 font-bold" x-text="filtres.annee || 'Toutes'"></strong>
+            </span>
+            <span class="px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-600 shadow-2xs">
+                Domaine : <strong class="text-slate-900 font-bold" x-text="libelleDomaine()"></strong>
+            </span>
+            <span class="px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-600 shadow-2xs">
+                Client : <strong class="text-slate-900 font-bold" x-text="libelleClient()"></strong>
+            </span>
+            <span class="px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-600 shadow-2xs">
+                Formateur : <strong class="text-slate-900 font-bold" x-text="libelleFormateur()"></strong>
+            </span>
+        </div>
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-        <p class="text-sm text-gray-500 mb-1">Participants</p>
-        <p class="text-2xl font-semibold text-gray-900" id="kpi-participants">–</p>
-        <!-- Nouvelle ligne pour la tendance, vide par défaut -->
-        <p class="text-xs text-gray-400 mt-1" id="kpi-participants-tendance"></p>
+    <!-- Indicateurs d'état global (Loading / Error) -->
+    <template x-if="chargementEnCours">
+        <div class="gtm-card p-6 text-center text-slate-400 text-sm mb-4">
+            <i data-lucide="loader-2" class="w-6 h-6 mx-auto mb-2 animate-spin text-emerald-700"></i>
+            Actualisation des données du tableau de bord en cours...
+        </div>
+    </template>
+
+    <template x-if="erreur">
+        <div class="gtm-error-state text-sm p-3.5 mb-4">
+            <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+            <span x-text="erreur"></span>
+        </div>
+    </template>
+
+    <!-- 4. Cartes KPI (Grille 3x2 Ordre Priorité Métier - Densité optimale) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
+        
+        <!-- Ligne 1 : Activité Principale -->
+        <!-- KPI 1 : Sessions actives -->
+        <div class="gtm-kpi-card p-4 sm:p-5">
+            <div>
+                <span class="gtm-kpi-label text-xs sm:text-sm text-slate-500 font-medium">Sessions actives</span>
+                <p class="gtm-kpi-valeur text-2xl sm:text-3xl font-extrabold font-tabular text-slate-900 mt-1" x-text="kpi.sessions_actives !== undefined ? kpi.sessions_actives : '–'"></p>
+                <span class="text-xs text-slate-400 mt-1 block">Sessions non annulées au périmètre</span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-900 text-white shadow-xs">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+            </div>
+        </div>
+
+        <!-- KPI 2 : Taux de remplissage (avec micro-barre 0-100%) -->
+        <div class="gtm-kpi-card p-4 sm:p-5">
+            <div class="flex-1 min-w-0">
+                <span class="gtm-kpi-label text-xs sm:text-sm text-slate-500 font-medium">Taux de remplissage</span>
+                <p class="gtm-kpi-valeur text-2xl sm:text-3xl font-extrabold font-tabular text-slate-900 mt-1" x-text="kpi.taux_moyen_remplissage !== undefined ? kpi.taux_moyen_remplissage.toFixed(1) + '%' : '–'"></p>
+                
+                <!-- Micro-barre visuelle 0-100% -->
+                <div class="w-full bg-slate-100 h-2 rounded-full mt-2 overflow-hidden border border-slate-200">
+                    <div class="h-full bg-[#047857] transition-all duration-300"
+                         :style="`width: ${Math.min(100, Math.max(0, kpi.taux_moyen_remplissage || 0))}%`"></div>
+                </div>
+                <span class="text-xs text-slate-400 mt-1 block">Moyenne globale des capacités</span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <i data-lucide="percent" class="w-5 h-5"></i>
+            </div>
+        </div>
+
+        <!-- KPI 3 : Participants distincts -->
+        <div class="gtm-kpi-card p-4 sm:p-5">
+            <div>
+                <span class="gtm-kpi-label text-xs sm:text-sm text-slate-500 font-medium">Participants distincts</span>
+                <p class="gtm-kpi-valeur text-2xl sm:text-3xl font-extrabold font-tabular text-slate-900 mt-1" x-text="kpi.participants_distincts !== undefined ? kpi.participants_distincts : '–'"></p>
+                <span class="text-xs font-semibold mt-1 block font-tabular" id="kpi-participants-tendance"></span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+                <i data-lucide="users" class="w-5 h-5"></i>
+            </div>
+        </div>
+
+        <!-- Ligne 2 : Couverture Opérationnelle -->
+        <!-- KPI 4 : Clients actifs -->
+        <div class="gtm-kpi-card p-4 sm:p-5">
+            <div>
+                <span class="gtm-kpi-label text-xs sm:text-sm text-slate-500 font-medium">Clients actifs</span>
+                <p class="gtm-kpi-valeur text-2xl sm:text-3xl font-extrabold font-tabular text-slate-900 mt-1" x-text="kpi.clients_actifs !== undefined ? kpi.clients_actifs : '–'"></p>
+                <span class="text-xs text-slate-400 mt-1 block">Entreprises actives (&lt; 6 mois)</span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+                <i data-lucide="building-2" class="w-5 h-5"></i>
+            </div>
+        </div>
+
+        <!-- KPI 5 : Formations dispensées -->
+        <div class="gtm-kpi-card p-4 sm:p-5">
+            <div>
+                <span class="gtm-kpi-label text-xs sm:text-sm text-slate-500 font-medium" x-text="filtres.client_id || filtres.formateur_id || filtres.annee ? 'Formations dispensées' : 'Formations au catalogue'"></span>
+                <p class="gtm-kpi-valeur text-2xl sm:text-3xl font-extrabold font-tabular text-slate-900 mt-1" x-text="kpi.formations_catalogue !== undefined ? kpi.formations_catalogue : '–'"></p>
+                <span class="text-xs text-slate-400 mt-1 block" x-text="filtres.client_id || filtres.formateur_id || filtres.annee ? 'Sujets dispensés au périmètre' : 'Catalogue global'"></span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+                <i data-lucide="book-open" class="w-5 h-5"></i>
+            </div>
+        </div>
+
+        <!-- KPI 6 : Formateurs mobilisés -->
+        <div class="gtm-kpi-card p-4 sm:p-5">
+            <div>
+                <span class="gtm-kpi-label text-xs sm:text-sm text-slate-500 font-medium">Formateurs mobilisés</span>
+                <p class="gtm-kpi-valeur text-2xl sm:text-3xl font-extrabold font-tabular text-slate-900 mt-1" x-text="kpi.formateurs_mobilises !== undefined ? kpi.formateurs_mobilises : '–'"></p>
+                <span class="text-xs text-slate-400 mt-1 block">Intervenants actifs</span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+                <i data-lucide="user-check" class="w-5 h-5"></i>
+            </div>
+        </div>
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-        <p class="text-sm text-gray-500 mb-1">Taux de remplissage</p>
-        <p class="text-2xl font-semibold text-gray-900" id="kpi-remplissage">–</p>
+    <!-- 5. Points d'attention (Alertes hiérarchisées) -->
+    <template x-if="pointsAttention.items && pointsAttention.items.length > 0">
+        <div class="gtm-card p-4 sm:p-5 mb-5">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-3.5">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i>
+                    <h3 class="text-sm sm:text-base font-bold text-slate-900">
+                        Points d'attention (<span x-text="pointsAttention.total"></span>)
+                    </h3>
+                </div>
+                <span class="text-xs text-slate-400 font-medium">Détectés sur le périmètre actuel</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <template x-for="item in pointsAttention.items" :key="item.message">
+                    <div class="p-3.5 rounded-xl border text-xs sm:text-sm flex items-start gap-3 transition-all duration-150"
+                         :class="{
+                             'bg-red-50/90 border-red-200 text-red-900': item.niveau === 'danger',
+                             'bg-amber-50/90 border-amber-200 text-amber-900': item.niveau === 'warning',
+                             'bg-blue-50/90 border-blue-200 text-blue-900': item.niveau === 'info'
+                         }">
+                        <div class="flex-shrink-0 mt-0.5">
+                            <template x-if="item.niveau === 'danger'">
+                                <i data-lucide="alert-circle" class="w-4 h-4 text-red-600"></i>
+                            </template>
+                            <template x-if="item.niveau === 'warning'">
+                                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i>
+                            </template>
+                            <template x-if="item.niveau === 'info'">
+                                <i data-lucide="info" class="w-4 h-4 text-blue-600"></i>
+                            </template>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="font-bold text-xs sm:text-sm mb-0.5" x-text="item.titre"></p>
+                            <p class="text-xs opacity-90 leading-relaxed" x-text="item.message"></p>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </template>
+
+    <!-- 6. Zone Analytique (2 Colonnes Graphiques Chart.js — Hauteur équilibrée 256-288px) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+        <div class="gtm-card p-5">
+            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+                <h3 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4 text-slate-600"></i>
+                    Sessions par domaine
+                </h3>
+                <span class="text-xs text-slate-400 font-mono">Volume de sessions</span>
+            </div>
+            <div class="relative h-64 sm:h-72">
+                <canvas id="chartDomaine"></canvas>
+            </div>
+        </div>
+
+        <div class="gtm-card p-5">
+            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+                <h3 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="trending-up" class="w-4 h-4 text-purple-600"></i>
+                    Évolution des inscriptions
+                </h3>
+                <span class="text-xs text-slate-400 font-mono">Tendance mensuelle</span>
+            </div>
+            <div class="relative h-64 sm:h-72">
+                <canvas id="chartEvolution"></canvas>
+            </div>
+        </div>
     </div>
 
-</div>
+    <!-- 7. Performance & Activité Proche (2 Colonnes : Formateurs & Sessions à Venir) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        
+        <!-- Tableau Formateurs (.gtm-table) -->
+        <div class="gtm-card overflow-hidden flex flex-col justify-between">
+            <div>
+                <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+                    <h3 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                        <i data-lucide="user-check" class="w-4 h-4 text-slate-600"></i>
+                        Performance des formateurs
+                    </h3>
+                    <span class="text-xs text-slate-400 font-medium" x-text="tableFormateurs.length + ' intervenant' + (tableFormateurs.length > 1 ? 's' : '')"></span>
+                </div>
+                
+                <div class="gtm-table-container border-none rounded-none">
+                    <table class="gtm-table">
+                        <thead>
+                            <tr>
+                                <th class="text-xs font-bold uppercase tracking-wider">Formateur</th>
+                                <th class="text-xs font-bold uppercase tracking-wider">Domaine</th>
+                                <th class="text-right text-xs font-bold uppercase tracking-wider">Sessions</th>
+                                <th class="text-right text-xs font-bold uppercase tracking-wider">Remplissage moyen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-if="tableFormateurs.length === 0">
+                                <tr>
+                                    <td colspan="4" class="px-5 py-6 text-center text-slate-400 text-sm">
+                                        Aucune donnée disponible pour ce périmètre.
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-for="f in tableFormateurs" :key="f.formateur">
+                                <tr>
+                                    <td class="font-bold text-slate-900 text-sm" x-text="f.formateur"></td>
+                                    <td class="text-slate-500 text-xs" x-text="f.domaine"></td>
+                                    <td class="text-right font-tabular font-bold text-slate-800 text-sm" x-text="f.nb_sessions"></td>
+                                    <td class="text-right font-tabular">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <span class="font-bold text-xs sm:text-sm" x-text="f.taux_remplissage_moyen !== null ? (f.taux_remplissage_moyen * 100).toFixed(0) + '%' : '—'"></span>
+                                            <div class="w-14 bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200">
+                                                <div class="h-full bg-[#047857]" :style="`width: ${(f.taux_remplissage_moyen || 0) * 100}%`"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
-<!-- ============ GRAPHIQUES ============ -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <!-- Sessions à Venir -->
+        <div class="gtm-card overflow-hidden flex flex-col justify-between">
+            <div>
+                <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+                    <h3 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                        <i data-lucide="calendar" class="w-4 h-4 text-slate-600"></i>
+                        Sessions à venir
+                    </h3>
+                    <span class="text-xs text-slate-400 font-medium" x-text="sessionsAVenir.length + ' prochaines'"></span>
+                </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-        <p class="text-sm font-medium text-gray-900 mb-4">Sessions par domaine</p>
-        <canvas id="chartDomaine"></canvas>
+                <div class="divide-y divide-slate-100 text-xs sm:text-sm">
+                    <template x-if="sessionsAVenir.length === 0">
+                        <p class="px-5 py-6 text-slate-400 text-center">Aucune session à venir programmée.</p>
+                    </template>
+                    <template x-for="s in sessionsAVenir" :key="s.id">
+                        <div class="p-3.5 sm:p-4 hover:bg-slate-50 transition-colors duration-150 flex items-center justify-between gap-3">
+                            <div class="min-w-0 flex-1 space-y-0.5">
+                                <p class="font-bold text-slate-900 truncate text-sm" x-text="s.formation.titre"></p>
+                                <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500 font-tabular">
+                                    <span class="flex items-center gap-1 font-semibold"><i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i><span x-text="s.date_debut"></span></span>
+                                    <span>•</span>
+                                    <span><span x-text="s.formateur.nom"></span></span>
+                                    <span>•</span>
+                                    <span><span x-text="s.lieu"></span></span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <span class="font-tabular font-extrabold text-slate-800 text-sm" x-text="`${s.nb_inscrits_confirmes}/${s.capacite_max}`"></span>
+                                <span class="gtm-badge text-xs"
+                                      :class="{
+                                          'gtm-badge-neutral': s.est_complete,
+                                          'gtm-badge-success': !s.est_complete && s.taux_remplissage >= 0.7,
+                                          'gtm-badge-warning': !s.est_complete && s.taux_remplissage >= 0.4 && s.taux_remplissage < 0.7,
+                                          'gtm-badge-danger': !s.est_complete && s.taux_remplissage < 0.4
+                                      }">
+                                    <span class="gtm-badge-dot"></span>
+                                    <span x-text="s.est_complete ? 'Complète' : s.taux_remplissage >= 0.7 ? 'Bon remplissage' : s.taux_remplissage >= 0.4 ? 'À surveiller' : 'Sous-remplie'"></span>
+                                </span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-        <p class="text-sm font-medium text-gray-900 mb-4">Évolution des inscriptions</p>
-        <canvas id="chartEvolution"></canvas>
-    </div>
-
-</div>
-
-<!-- ============ TABLEAU FORMATEURS ============ -->
-<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-    <p class="text-sm font-medium text-gray-900 px-5 py-4 border-b border-gray-200">
-        Performance des formateurs
-    </p>
-    <table class="w-full text-sm">
-        <thead>
-            <tr class="border-b border-gray-200 text-left text-gray-500">
-                <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Formateur</th>
-                <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Sessions</th>
-                <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Remplissage moyen</th>
-            </tr>
-        </thead>
-        <tbody id="tableFormateurs"></tbody>
-    </table>
-</div>
-
-<!-- ============ SESSIONS À VENIR ============ -->
-<div class="bg-white rounded-xl border border-gray-200 overflow-hidden mt-6">
-    <p class="text-sm font-medium text-gray-900 px-5 py-4 border-b border-gray-200">
-        Sessions à venir
-    </p>
-    <!-- Rempli dynamiquement par le JS, une div par session -->
-    <div id="listeSessionsAVenir" class="divide-y divide-gray-100"></div>
 </div>
 
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-    const urlRemplissage = "{{ url_for('stats.remplissage') }}";
+    const urlKpiGlobaux = "{{ url_for('stats.kpi_globaux') }}";
     const urlDomaine = "{{ url_for('stats.activite_domaine') }}";
-    const urlClient = "{{ url_for('stats.activite_client') }}";
     const urlFormateur = "{{ url_for('stats.activite_formateur') }}";
     const urlEvolution = "{{ url_for('stats.evolution_inscriptions') }}";
     const urlSessions = "{{ url_for('sessions.liste_sessions') }}";
+    const urlPointsAttention = "{{ url_for('stats.points_attention') }}";
+    const urlDomaines = "{{ url_for('domaines.liste_domaines') }}";
+    const urlClients = "{{ url_for('clients.liste_clients') }}";
+    const urlFormateurs = "{{ url_for('formateurs.liste_formateurs') }}";
 </script>
 <script src="{{ url_for('static', filename='js/dashboard.js') }}?v={{ range(1, 10000) | random }}"></script>
 {% endblock %}
+
+

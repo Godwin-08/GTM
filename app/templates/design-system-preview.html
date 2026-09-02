@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}Comparaison des 4 Directions Artistiques | GTM Design System V2{% endblock %}
+
+{% block page_title %}GTM Design System V2 — Comparaison des 4 Directions Artistiques (A, B, C, D){% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8 pb-16">
+
+    <!-- En-tête de la Comparaison -->
+    <div class="gtm-card bg-slate-900 text-white border-none shadow-xl p-6 sm:p-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="gtm-badge gtm-badge-brand font-semibold">Direction Artistique</span>
+                    <span class="gtm-badge gtm-badge-info">4 Variantes de Palette</span>
+                </div>
+                <h2 class="text-2xl font-bold text-white">Comparaison de la Charte Visuelle GTM V2</h2>
+                <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-3xl leading-relaxed">
+                    Test comparatif sur des composants strictement identiques (Sidebar, Header, CTA, Formulaires, Selects, Badges, KPI, Tableaux, Erreurs).
+                    <strong>Nouvelle Variante D :</strong> GTM Emerald Graphite (Graphite `#0F172A` Structure, Émeraude Profond `#047857` CTA Interface, Orange `#F26B1F` Marque Galaxy).
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CARTE DE COMPARAISON DES 4 VARIANTES (GRID 4 COLONNES) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+
+        <!-- ================================================================================= -->
+        <!-- VARIANTE A : GRAPHITE PREMIUM + ORANGE GALAXY -->
+        <!-- ================================================================================= -->
+        <div class="bg-white rounded-2xl border-2 border-slate-300 shadow-md overflow-hidden flex flex-col">
+            <div class="bg-slate-900 text-white p-4 border-b border-slate-800">
+                <div class="flex items-center justify-between">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#F26B1F] text-white">VARIANTE A</span>
+                    <span class="text-[10px] text-slate-400 font-mono">Graphite + Orange</span>
+                </div>
+                <h3 class="text-base font-bold text-white mt-1.5">Graphite Premium</h3>
+                <p class="text-[11px] text-slate-300 mt-0.5">Primary Graphite (`#1E293B`), fond ivoire & Orange Galaxy signature.</p>
+            </div>
+
+            <div class="bg-slate-100 p-3 border-b border-slate-200 space-y-1">
+                <p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Shell & Navigation</p>
+                <div class="rounded overflow-hidden border border-slate-300 flex h-20 text-[9px]">
+                    <div class="w-1/3 bg-[#0F172A] p-1.5 text-white flex flex-col justify-between">
+                        <div class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-[#F26B1F] text-[8px] flex items-center justify-center font-bold">G</span><span class="font-bold">GTM</span></div>
+                        <div class="bg-[#1E293B] border-l-2 border-[#F26B1F] px-1 rounded-r">Dash</div>
+                    </div>
+                    <div class="w-2/3 bg-slate-50 p-1 flex flex-col justify-between text-slate-800">
+                        <div class="bg-white p-1 rounded border border-slate-200 font-semibold text-[8px]">Vue d'ensemble</div>
+                        <div class="bg-white p-1 rounded border border-slate-200 text-center text-[8px]">Fond Ivoire / Slate-50</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 space-y-4 flex-1 bg-white text-xs">
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Boutons & CTA</p>
+                    <div class="flex flex-col gap-1.5">
+                        <button class="px-3 py-1.5 rounded-md text-xs font-semibold bg-[#1E293B] text-white text-center">Primary (Graphite #1E293B)</button>
+                        <button class="px-3 py-1.5 rounded-md text-xs font-medium bg-[#F26B1F] text-white text-center">Brand (Orange #F26B1F)</button>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Formulaires</p>
+                    <input type="text" class="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300" value="Session Python">
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Badges</p>
+                    <div class="flex flex-wrap gap-1">
+                        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">● Actif</span>
+                        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#F26B1F]/10 text-[#F26B1F]">● Brand</span>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">KPI Card</p>
+                    <div class="p-2.5 rounded-lg border border-slate-200 bg-white flex justify-between items-center">
+                        <span class="font-bold text-slate-900">24 Sessions</span>
+                        <span class="w-6 h-6 rounded bg-slate-900 text-white text-[9px] flex items-center justify-center font-bold">G</span>
+                    </div>
+                </div>
+                <div class="p-2 rounded bg-red-50 text-red-700 text-[11px]">Identifiants incorrects (Erreur A)</div>
+            </div>
+        </div>
+
+
+        <!-- ================================================================================= -->
+        <!-- VARIANTE B : INDIGO PROFOND + TEAL / TURQUOISE + ORANGE GALAXY -->
+        <!-- ================================================================================= -->
+        <div class="bg-white rounded-2xl border-2 border-teal-400 shadow-md overflow-hidden flex flex-col">
+            <div class="bg-[#1E1B4B] text-white p-4 border-b border-indigo-900">
+                <div class="flex items-center justify-between">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0D9488] text-white">VARIANTE B</span>
+                    <span class="text-[10px] text-indigo-300 font-mono">Indigo + Teal</span>
+                </div>
+                <h3 class="text-base font-bold text-white mt-1.5">Indigo & Teal</h3>
+                <p class="text-[11px] text-indigo-200 mt-0.5">Structure Indigo (`#1E1B4B`), CTA Teal/Turquoise (`#0D9488`).</p>
+            </div>
+
+            <div class="bg-indigo-50/50 p-3 border-b border-indigo-100 space-y-1">
+                <p class="text-[9px] font-bold uppercase tracking-wider text-indigo-900">Shell & Navigation</p>
+                <div class="rounded overflow-hidden border border-indigo-200 flex h-20 text-[9px]">
+                    <div class="w-1/3 bg-[#1E1B4B] p-1.5 text-white flex flex-col justify-between">
+                        <div class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-[#F26B1F] text-[8px] flex items-center justify-center font-bold">G</span><span class="font-bold">GTM</span></div>
+                        <div class="bg-[#312E81] border-l-2 border-[#0D9488] px-1 rounded-r">Dash</div>
+                    </div>
+                    <div class="w-2/3 bg-slate-50 p-1 flex flex-col justify-between text-slate-800">
+                        <div class="bg-white p-1 rounded border border-indigo-100 font-semibold text-[8px]">Vue d'ensemble</div>
+                        <div class="bg-white p-1 rounded border border-indigo-100 text-center text-[8px] text-teal-800">Accent Teal / Cyan</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 space-y-4 flex-1 bg-white text-xs">
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Boutons & CTA</p>
+                    <div class="flex flex-col gap-1.5">
+                        <button class="px-3 py-1.5 rounded-md text-xs font-semibold bg-[#0D9488] text-white text-center">Primary (Teal #0D9488)</button>
+                        <button class="px-3 py-1.5 rounded-md text-xs font-medium bg-[#F26B1F] text-white text-center">Brand (Orange #F26B1F)</button>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Formulaires</p>
+                    <input type="text" class="w-full text-xs px-2.5 py-1.5 rounded border border-teal-200 focus:border-[#0D9488]" value="Session Python">
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Badges</p>
+                    <div class="flex flex-wrap gap-1">
+                        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-teal-50 text-teal-800 border border-teal-200">● Actif</span>
+                        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#F26B1F]/10 text-[#F26B1F]">● Brand</span>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">KPI Card</p>
+                    <div class="p-2.5 rounded-lg border border-teal-100 bg-teal-50/40 flex justify-between items-center">
+                        <span class="font-bold text-slate-900">24 Sessions</span>
+                        <span class="w-6 h-6 rounded bg-[#0D9488] text-white text-[9px] flex items-center justify-center font-bold">B</span>
+                    </div>
+                </div>
+                <div class="p-2 rounded bg-red-50 text-red-700 text-[11px]">Identifiants incorrects (Erreur B)</div>
+            </div>
+        </div>
+
+
+        <!-- ================================================================================= -->
+        <!-- VARIANTE C : GRAPHITE + VERT ÉMERAUDE PROFOND + ORANGE GALAXY -->
+        <!-- ================================================================================= -->
+        <div class="bg-white rounded-2xl border-2 border-emerald-400 shadow-md overflow-hidden flex flex-col">
+            <div class="bg-[#064E3B] text-white p-4 border-b border-emerald-900">
+                <div class="flex items-center justify-between">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#047857] text-white">VARIANTE C</span>
+                    <span class="text-[10px] text-emerald-200 font-mono">Émeraude Full</span>
+                </div>
+                <h3 class="text-base font-bold text-white mt-1.5">Émeraude & Finance</h3>
+                <p class="text-[11px] text-emerald-200 mt-0.5">Sidebar Émeraude Sombre (`#064E3B`), CTA Émeraude (`#047857`).</p>
+            </div>
+
+            <div class="bg-emerald-50/50 p-3 border-b border-emerald-100 space-y-1">
+                <p class="text-[9px] font-bold uppercase tracking-wider text-emerald-900">Shell & Navigation</p>
+                <div class="rounded overflow-hidden border border-emerald-200 flex h-20 text-[9px]">
+                    <div class="w-1/3 bg-[#064E3B] p-1.5 text-white flex flex-col justify-between">
+                        <div class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-[#F26B1F] text-[8px] flex items-center justify-center font-bold">G</span><span class="font-bold">GTM</span></div>
+                        <div class="bg-[#047857] border-l-2 border-[#F26B1F] px-1 rounded-r">Dash</div>
+                    </div>
+                    <div class="w-2/3 bg-slate-50 p-1 flex flex-col justify-between text-slate-800">
+                        <div class="bg-white p-1 rounded border border-emerald-100 font-semibold text-[8px]">Vue d'ensemble</div>
+                        <div class="bg-white p-1 rounded border border-emerald-100 text-center text-[8px] text-emerald-800">Accent Émeraude</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 space-y-4 flex-1 bg-white text-xs">
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Boutons & CTA</p>
+                    <div class="flex flex-col gap-1.5">
+                        <button class="px-3 py-1.5 rounded-md text-xs font-semibold bg-[#047857] text-white text-center">Primary (Émeraude #047857)</button>
+                        <button class="px-3 py-1.5 rounded-md text-xs font-medium bg-[#F26B1F] text-white text-center">Brand (Orange #F26B1F)</button>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Formulaires</p>
+                    <input type="text" class="w-full text-xs px-2.5 py-1.5 rounded border border-emerald-200 focus:border-[#047857]" value="Session Python">
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Badges</p>
+                    <div class="flex flex-wrap gap-1">
+                        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">● Actif</span>
+                        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#F26B1F]/10 text-[#F26B1F]">● Brand</span>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">KPI Card</p>
+                    <div class="p-2.5 rounded-lg border border-emerald-100 bg-emerald-50/30 flex justify-between items-center">
+                        <span class="font-bold text-slate-900">24 Sessions</span>
+                        <span class="w-6 h-6 rounded bg-[#047857] text-white text-[9px] flex items-center justify-center font-bold">C</span>
+                    </div>
+                </div>
+                <div class="p-2 rounded bg-red-50 text-red-700 text-[11px]">Identifiants incorrects (Erreur C)</div>
+            </div>
+        </div>
+
+
+        <!-- ================================================================================= -->
+        <!-- VARIANTE D (NOUVELLE) : GRAPHITE STRUCTURE + EMERALD INTERFACE + ORANGE GALAXY -->
+        <!-- ================================================================================= -->
+        <div class="bg-white rounded-2xl border-2 border-emerald-600 shadow-xl overflow-hidden flex flex-col ring-2 ring-emerald-500/20">
+            <div class="bg-[#0F172A] text-white p-4 border-b border-slate-800 relative">
+                <div class="flex items-center justify-between">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#047857] text-white">VARIANTE D</span>
+                    <span class="text-[10px] text-emerald-300 font-mono font-bold">Graphite + Emerald</span>
+                </div>
+                <h3 class="text-base font-bold text-white mt-1.5">GTM Emerald Graphite</h3>
+                <p class="text-[11px] text-slate-300 mt-0.5">Sidebar Graphite (`#0F172A`), CTA Émeraude Profond (`#047857`), Orange Galaxy Signature (`#F26B1F`).</p>
+            </div>
+
+            <!-- Mini Shell Preview D -->
+            <div class="bg-slate-100 p-3 border-b border-slate-200 space-y-1">
+                <p class="text-[9px] font-bold uppercase tracking-wider text-slate-600">Shell & Navigation</p>
+                <div class="rounded overflow-hidden border border-slate-300 flex h-20 text-[9px]">
+                    <!-- Sidebar Graphite -->
+                    <div class="w-1/3 bg-[#0F172A] p-1.5 text-white flex flex-col justify-between">
+                        <div class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-[#F26B1F] text-[8px] flex items-center justify-center font-bold">G</span><span class="font-bold">GTM</span></div>
+                        <div class="bg-[#047857] border-l-2 border-[#F26B1F] px-1 rounded-r font-semibold">Dash</div>
+                    </div>
+                    <!-- Main Content -->
+                    <div class="w-2/3 bg-slate-50 p-1 flex flex-col justify-between text-slate-800">
+                        <div class="bg-white p-1 rounded border border-slate-200 font-semibold text-[8px] flex justify-between items-center">
+                            <span>Vue d'ensemble</span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-[#047857]"></span>
+                        </div>
+                        <div class="bg-white p-1 rounded border border-slate-200 text-center text-[8px] text-emerald-800 font-medium">Interface Émeraude + Marque Orange</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Éléments UI Variante D -->
+            <div class="p-4 space-y-4 flex-1 bg-white text-xs">
+
+                <!-- 1. Boutons -->
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Boutons & CTA</p>
+                    <div class="flex flex-col gap-1.5">
+                        <button class="px-3 py-1.5 rounded-md text-xs font-semibold bg-[#047857] hover:bg-[#065f46] text-white text-center shadow-xs">
+                            Primary (GTM Emerald #047857)
+                        </button>
+                        <button class="px-3 py-1.5 rounded-md text-xs font-medium bg-[#F26B1F] hover:bg-[#d95a10] text-white text-center shadow-xs">
+                            Brand (Galaxy Orange #F26B1F)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. Inputs & Selects -->
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Formulaires & Focus</p>
+                    <input type="text" class="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 focus:outline-none focus:border-[#047857] focus:ring-2 focus:ring-[#047857]/20" value="Session Python">
+                </div>
+
+                <!-- 3. Badges -->
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Badges & Sémantique</p>
+                    <div class="flex flex-wrap gap-1">
+                        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">● Actif (#059669)</span>
+                        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#F26B1F]/10 text-[#F26B1F]">● Galaxy</span>
+                        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">● ACP</span>
+                    </div>
+                </div>
+
+                <!-- 4. KPI Card -->
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Carte KPI</p>
+                    <div class="p-2.5 rounded-lg border border-slate-200 bg-white flex justify-between items-center">
+                        <div>
+                            <span class="text-[10px] text-slate-500 block">Sessions Actives</span>
+                            <span class="font-bold text-slate-900 text-sm">24</span>
+                        </div>
+                        <div class="w-6 h-6 rounded bg-[#047857] text-white text-[9px] flex items-center justify-center font-bold">
+                            D
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. État Erreur -->
+                <div class="p-2 rounded bg-red-50 text-red-700 text-[11px] border border-red-200 flex items-center gap-1.5">
+                    <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+                    <span>Identifiants incorrects (Erreur D)</span>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+
+

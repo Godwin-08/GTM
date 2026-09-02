@@ -8,9 +8,52 @@ const COULEURS_STATUT = {
 
 function pageSessionsData() {
     return {
-        sessions: [], formations: [], formateurs: [], recherche: '', filtreStatut: '', chargementEnCours: true, erreur: null,
+        sessions: [], formations: [], formateurs: [], chargementEnCours: true, erreur: null,
+        filtres: {
+            q: '', date_debut_min: '', date_debut_max: '', domaine_id: '',
+            formation_id: '', type: '', statut: '', formateur_id: '', remplissage: '', tri: '',
+        },
         modaleOuverte: false, envoiEnCours: false, erreurFormulaire: null,
         formulaire: { formation_id: '', formateur_id: '', date_debut: '', date_fin: '', type: 'intra', capacite_max: 15, lieu: '', statut: 'planifiee' },
+
+        init() {
+            window.addEventListener('popstate', () => {
+                this.lireFiltresDepuisUrl();
+                this.appliquerFiltres(true, false);
+            });
+        },
+
+        lireFiltresDepuisUrl() {
+            const params = new URLSearchParams(window.location.search);
+            this.filtres.q = params.get('q') || '';
+            this.filtres.date_debut_min = params.get('date_debut_min') || '';
+            this.filtres.date_debut_max = params.get('date_debut_max') || '';
+            this.filtres.domaine_id = params.get('domaine_id') || '';
+            this.filtres.formation_id = params.get('formation_id') || '';
+            this.filtres.type = params.get('type') || '';
+            this.filtres.statut = params.get('statut') || '';
+            this.filtres.formateur_id = params.get('formateur_id') || '';
+            this.filtres.remplissage = params.get('remplissage') || '';
+            this.filtres.tri = params.get('tri') || '';
+        },
+
+        synchroniserUrlNavigateur(reinitialiser = false) {
+            if (reinitialiser) {
+                if (window.location.search) {
+                    window.history.pushState(null, '', window.location.pathname);
+                }
+                return;
+            }
+            const params = new URLSearchParams();
+            Object.entries(this.filtres).forEach(([cle, valeur]) => {
+                if (valeur !== '' && valeur !== null && valeur !== undefined) params.set(cle, valeur);
+            });
+            const query = params.toString();
+            const cible = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+            if (window.location.pathname + window.location.search !== cible) {
+                window.history.pushState(null, '', cible);
+            }
+        },
 
         modaleEditionOuverte: false,
         editionEnCours: false,
@@ -53,6 +96,7 @@ function pageSessionsData() {
                     this.sessions = this.sessions.filter(s => s.id !== this.aSupprimer.id);
                     this.modaleSuppressionOuverte = false;
                     this.aSupprimer = null;
+                    if (typeof window.afficherToast === 'function') window.afficherToast('succes', 'Session supprimée avec succès.');
                     return;
                 }
 
@@ -63,6 +107,7 @@ function pageSessionsData() {
                     data = { erreur: 'Erreur inattendue du serveur.' };
                 }
                 this.erreurSuppression = data.erreur || 'Impossible de supprimer cette session.';
+                if (typeof window.afficherToast === 'function') window.afficherToast('erreur', this.erreurSuppression);
 
             } catch (err) {
                 console.error('Erreur suppression session :', err);
@@ -119,13 +164,14 @@ function pageSessionsData() {
 
                 if (!res.ok) {
                     this.erreurEdition = data.erreur || 'Une erreur est survenue.';
+                    if (typeof window.afficherToast === 'function') window.afficherToast('erreur', this.erreurEdition);
                     return;
                 }
 
                 const index = this.sessions.findIndex(s => s.id === this.edition.id);
-                if (index !== -1) this.sessions[index] = data;
-
                 this.modaleEditionOuverte = false;
+                if (typeof window.afficherToast === 'function') window.afficherToast('succes', 'Session modifiée avec succès.');
+                await this.appliquerFiltres(false, false);
 
             } catch (err) {
                 console.error('Erreur modification session :', err);
@@ -135,7 +181,7 @@ function pageSessionsData() {
             }
         },
 
-        async charger() {
+        async chargerReferentielsLegacy() {
             this.chargementEnCours = true;
             this.erreur = null;
             try {
@@ -153,17 +199,111 @@ function pageSessionsData() {
             }
         },
 
+        // Les résultats viennent exclusivement du backend : aucun filtrage local.
+        async charger() {
+            this.chargementEnCours = true;
+            this.erreur = null;
+            try {
+                const [formationsRes, formateursRes] = await Promise.all([
+                    fetch(urlFormations), fetch(urlFormateurs),
+                ]);
+                if (formationsRes.ok) this.formations = await formationsRes.json();
+                if (formateursRes.ok) this.formateurs = await formateursRes.json();
+                this.lireFiltresDepuisUrl();
+                await this.appliquerFiltres(false, false);
+            } catch (err) {
+                console.error('Erreur chargement sessions :', err);
+                this.erreur = 'Impossible de charger les sessions.';
+            } finally {
+                this.chargementEnCours = false;
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+
+        construireUrlFiltree() {
+            const params = new URLSearchParams();
+            Object.entries(this.filtres).forEach(([cle, valeur]) => {
+                if (valeur !== '' && valeur !== null && valeur !== undefined) params.set(cle, valeur);
+            });
+            const query = params.toString();
+            return query ? `${urlSessions}?${query}` : urlSessions;
+        },
+
+        async appliquerFiltres(gererChargement = true, majHistorique = true) {
+            if (this.filtres.date_debut_min && this.filtres.date_debut_max
+                && this.filtres.date_debut_min > this.filtres.date_debut_max) {
+                this.erreur = 'La date de début minimale doit être antérieure ou égale à la date maximale.';
+                return;
+            }
+            if (gererChargement) this.chargementEnCours = true;
+            this.erreur = null;
+            if (majHistorique) {
+                this.synchroniserUrlNavigateur(false);
+            }
+            try {
+                const res = await fetch(this.construireUrlFiltree());
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.erreur || 'Réponse serveur invalide');
+                this.sessions = data;
+            } catch (err) {
+                console.error('Erreur filtrage sessions :', err);
+                this.erreur = err.message || 'Impossible de charger les sessions.';
+                this.sessions = [];
+            } finally {
+                if (gererChargement) this.chargementEnCours = false;
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+
+        reinitialiserFiltres() {
+            this.filtres = {
+                q: '', date_debut_min: '', date_debut_max: '', domaine_id: '',
+                formation_id: '', type: '', statut: '', formateur_id: '', remplissage: '', tri: '',
+            };
+            this.synchroniserUrlNavigateur(true);
+            this.appliquerFiltres(true, false);
+        },
+
+        domainesDisponibles() {
+            const domaines = new Map();
+            this.formations.forEach(formation => {
+                if (formation.domaine) domaines.set(formation.domaine.id, formation.domaine);
+            });
+            return [...domaines.values()].sort((a, b) => a.nom.localeCompare(b.nom));
+        },
+
+        formationsFiltreesParDomaine() {
+            if (!this.filtres.domaine_id) return this.formations;
+            return this.formations.filter(formation => String(formation.domaine?.id) === String(this.filtres.domaine_id));
+        },
+
+        changerDomaine() {
+            const formationValide = this.formationsFiltreesParDomaine()
+                .some(formation => String(formation.id) === String(this.filtres.formation_id));
+            if (!formationValide) this.filtres.formation_id = '';
+        },
+
         titreFormation(session) { return session.formation?.titre || ''; },
         nomFormateur(session) { return session.formateur?.nom || ''; },
         sessionsFiltrees() {
-            const rechercheMin = this.recherche.toLocaleLowerCase().trim();
-            return this.sessions.filter(session => {
-                const formation = this.titreFormation(session).toLocaleLowerCase();
-                const formateur = this.nomFormateur(session).toLocaleLowerCase();
-                return (!this.filtreStatut || session.statut === this.filtreStatut)
-                    && (!rechercheMin || formation.includes(rechercheMin) || formateur.includes(rechercheMin));
-            }).sort((a, b) => new Date(b.date_debut) - new Date(a.date_debut));
+            const copie = [...this.sessions];
+            const t = this.filtres.tri;
+            if (t === 'date_asc') {
+                return copie.sort((a, b) => new Date(a.date_debut) - new Date(b.date_debut));
+            }
+            if (t === 'remplissage_desc') {
+                return copie.sort((a, b) => (Number(b.taux_remplissage) || 0) - (Number(a.taux_remplissage) || 0));
+            }
+            if (t === 'remplissage_asc') {
+                return copie.sort((a, b) => (Number(a.taux_remplissage) || 0) - (Number(b.taux_remplissage) || 0));
+            }
+            if (t === 'titre_asc') {
+                return copie.sort((a, b) => (a.formation?.titre || '').localeCompare(b.formation?.titre || ''));
+            }
+            // Par défaut : date de début plus récente (date_desc)
+            return copie.sort((a, b) => new Date(b.date_debut) - new Date(a.date_debut));
         },
+        aDesFiltresActifs() { return Object.values(this.filtres).some(valeur => valeur !== ''); },
         formaterDate(dateStr) { const date = new Date(dateStr); return Number.isNaN(date.getTime()) ? '' : `${date.getDate()} ${MOIS_ABREGES[date.getMonth()]}`; },
         classeBadgeStatut(statut) { return COULEURS_STATUT[statut]?.classe || 'bg-gray-100 text-gray-600'; },
         labelStatut(statut) { return COULEURS_STATUT[statut]?.label || statut || ''; },
@@ -215,9 +355,14 @@ function pageSessionsData() {
                     }),
                 });
                 const data = await res.json();
-                if (!res.ok) { this.erreurFormulaire = data.erreur || 'Une erreur est survenue.'; return; }
-                this.sessions.push(data);
+                if (!res.ok) {
+                    this.erreurFormulaire = data.erreur || 'Une erreur est survenue.';
+                    if (typeof window.afficherToast === 'function') window.afficherToast('erreur', this.erreurFormulaire);
+                    return;
+                }
                 this.modaleOuverte = false;
+                if (typeof window.afficherToast === 'function') window.afficherToast('succes', 'Session créée avec succès.');
+                await this.appliquerFiltres();
             } catch (err) {
                 console.error('Erreur création session :', err);
                 this.erreurFormulaire = 'Impossible de contacter le serveur.';
