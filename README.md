@@ -258,7 +258,7 @@ Cette séparation nette des responsabilités garantit la maintenabilité du code
 - **Scikit-learn 1.9+** (inclus dans l'environnement pour extensions analytiques futures)
 
 ### Tests & Qualité
-- **Pytest 9.x** & **Python `unittest`** (suite de 118 tests automatisés)
+- **Pytest 9.x** & **Python `unittest`** (suite de 120 tests automatisés)
 
 ### Gestion de version
 - **Git** & **GitHub**
@@ -315,7 +315,7 @@ PFA_galaxy_solutions/
 ├── scripts/
 │   └── generate_seed_data.py        # Script Python de génération du Seed SQL
 │
-├── tests/                           # Suite de 118 tests unitaires et d'intégration
+├── tests/                           # Suite de 120 tests unitaires et d'intégration
 │   ├── test_auth.py, test_permissions.py, test_sessions.py, test_client_activity.py
 │   ├── test_api_errors.py, test_filters.py, test_acp.py, test_dashboard.py
 │   ├── test_onboarding.py, test_mail_service.py, test_e2e_onboarding_lifecycle.py
@@ -761,8 +761,8 @@ Lancer la suite de tests complète :
 
 Résultat du dernier lancement sur la version finale :
 ```text
-============================ 118 passed in 34.26s =============================
-OK (118 tests validés, 100% de réussite)
+============================ 120 passed in 34.65s =============================
+OK (120 tests validés, 100% de réussite)
 ```
 
 ---
@@ -828,7 +828,7 @@ Dashboard & KPI           ✅ Validé
 Points d'attention        ✅ Validé
 Exports Métier            ✅ Validé (Excel stylisé openpyxl, Rapports décisionnels PDF, Feuilles d'émargement PDF)
 Analyse ACP               ✅ Validé (Interprétation business en 1ère position, projection 2D et détails mathématiques)
-Suite de tests (pytest)   ✅ 118 / 118 tests réussis (100%)
+Suite de tests (pytest)   ✅ 120 / 120 tests réussis (100%)
 Documentation & Recette   ✅ Validé (Protocole RECETTE_SOUTENANCE.md & README)
 ```
 
