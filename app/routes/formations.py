@@ -1,3 +1,4 @@
+from datetime import date
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import or_
@@ -25,23 +26,17 @@ def formation_vers_dict(formation):
         } if formation.domaine else None,
     }
 
-@formations_bp.route("", methods=["GET"])
-@login_required
-def liste_formations():
-    """
-    Renvoie les formations avec filtres optionnels combinés (AND) :
-    /api/formations?domaine_id=1&q=python
-    """
-    query = formations_visibles(current_user)
+def obtenir_formations_filtrees(user, args):
+    query = formations_visibles(user)
 
     try:
-        domaine_id = entier_positif(request.args, "domaine_id")
+        domaine_id = entier_positif(args, "domaine_id")
     except ErreurFiltre as erreur:
-        return jsonify({"erreur": str(erreur)}), 400
+        return None, (jsonify({"erreur": str(erreur)}), 400)
     if domaine_id is not None:
         query = query.filter(Formation.domaine_id == domaine_id)
 
-    q = request.args.get("q", "").strip()
+    q = args.get("q", "").strip()
     if q:
         pattern = f"%{q}%"
         query = query.filter(
@@ -51,8 +46,71 @@ def liste_formations():
             )
         )
 
-    formations = query.all()
+    return query.all(), None
+
+@formations_bp.route("", methods=["GET"])
+@login_required
+def liste_formations():
+    """
+    Renvoie les formations avec filtres optionnels combinés (AND) :
+    /api/formations?domaine_id=1&q=python
+    """
+    formations, err = obtenir_formations_filtrees(current_user, request.args)
+    if err:
+        return err
     return jsonify([formation_vers_dict(f) for f in formations]), 200
+
+@formations_bp.route("/export/csv", methods=["GET"])
+@login_required
+def export_formations_csv():
+    from app.services.export_service import generer_csv_response
+    formations, err = obtenir_formations_filtrees(current_user, request.args)
+    if err:
+        return err
+    en_tetes = {
+        "id": "ID Formation",
+        "titre": "Titre",
+        "domaine": "Domaine",
+        "duree_jours": "Durée (jours)",
+        "description": "Description",
+    }
+    lignes = []
+    for f in formations:
+        lignes.append({
+            "id": f.id,
+            "titre": f.titre,
+            "domaine": f.domaine.nom if f.domaine else "",
+            "duree_jours": f.duree_jours,
+            "description": f.description or "",
+        })
+    date_str = date.today().isoformat()
+    return generer_csv_response(f"formations_export_{date_str}.csv", en_tetes, lignes)
+
+@formations_bp.route("/export/xlsx", methods=["GET"])
+@login_required
+def export_formations_xlsx():
+    from app.services.export_service import generer_xlsx_response
+    formations, err = obtenir_formations_filtrees(current_user, request.args)
+    if err:
+        return err
+    en_tetes = {
+        "id": "ID Formation",
+        "titre": "Titre",
+        "domaine": "Domaine",
+        "duree_jours": "Durée (jours)",
+        "description": "Description",
+    }
+    lignes = []
+    for f in formations:
+        lignes.append({
+            "id": f.id,
+            "titre": f.titre,
+            "domaine": f.domaine.nom if f.domaine else "",
+            "duree_jours": f.duree_jours,
+            "description": f.description or "",
+        })
+    date_str = date.today().isoformat()
+    return generer_xlsx_response(f"formations_export_{date_str}.xlsx", en_tetes, lignes, titre_feuille="Formations")
 
 @formations_bp.route("/<int:formation_id>", methods=["GET"])
 @login_required

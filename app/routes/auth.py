@@ -1,7 +1,13 @@
 from flask import Blueprint, request, jsonify, session
 from flask_login import login_user, logout_user, login_required, current_user
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
+from app.extensions import db
 from app.models import Utilisateur
+from app.services.activation_service import (
+    hasher_token,
+    est_token_expire,
+    valider_force_mot_de_passe,
+)
 
 # Un blueprint regroupe les routes liées à un même thème (ici : l'authentification)
 # et permet de les enregistrer toutes ensemble dans app/__init__.py
@@ -14,13 +20,13 @@ def login():
     envoyés en JSON dans le corps de la requête :
     { "email": "...", "mot_de_passe": "..." }
     """
-    donnees = request.get_json()
+    donnees = request.get_json() or {}
     email = donnees.get("email")
     mot_de_passe = donnees.get("mot_de_passe")
 
     utilisateur = Utilisateur.query.filter_by(email=email).first()
 
-    if not utilisateur or not utilisateur.actif:
+    if not utilisateur or not utilisateur.actif or not utilisateur.mot_de_passe_hash:
         return jsonify({"erreur": "Identifiants invalides"}), 401
 
     if not check_password_hash(utilisateur.mot_de_passe_hash, mot_de_passe):
@@ -36,6 +42,74 @@ def login():
             "email": utilisateur.email,
             "role": utilisateur.role.nom,
         }
+    }), 200
+
+@auth_bp.route("/activer-compte", methods=["POST"])
+def activer_compte():
+    """
+    Active un compte utilisateur en vérifiant son token à usage unique
+    et en enregistrant son mot de passe choisi.
+    Payload attendu : { "token": "...", "mot_de_passe": "..." }
+    """
+    donnees = request.get_json() or {}
+    token = donnees.get("token")
+    mot_de_passe = donnees.get("mot_de_passe")
+
+    if not token or not mot_de_passe:
+        return jsonify({"erreur": "Le token et le mot de passe sont obligatoires."}), 400
+
+    valide, msg_erreur = valider_force_mot_de_passe(mot_de_passe)
+    if not valide:
+        return jsonify({"erreur": msg_erreur}), 400
+
+    token_hash = hasher_token(token)
+    utilisateur = Utilisateur.query.filter_by(token_activation_hash=token_hash).first()
+
+    if not utilisateur:
+        return jsonify({"erreur": "Ce lien d'activation est invalide ou a déjà été utilisé."}), 400
+
+    if est_token_expire(utilisateur.expiration_token):
+        return jsonify({"erreur": "Ce lien d'activation a expiré. Veuillez contacter un administrateur."}), 400
+
+    if utilisateur.actif:
+        return jsonify({"erreur": "Ce compte a déjà été activé."}), 400
+
+    # Activation définitive et invalidation irréversible du token
+    utilisateur.mot_de_passe_hash = generate_password_hash(mot_de_passe, method="pbkdf2:sha256")
+    utilisateur.actif = True
+    utilisateur.token_activation_hash = None
+    utilisateur.expiration_token = None
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Votre compte a été activé avec succès. Vous pouvez maintenant vous connecter.",
+        "email": utilisateur.email,
+        "nom": utilisateur.nom,
+    }), 200
+
+@auth_bp.route("/verifier-token/<token>", methods=["GET"])
+def verifier_token(token):
+    """
+    Vérifie la validité d'un token d'activation (pour affichage initial sur la page d'activation).
+    """
+    if not token:
+        return jsonify({"valide": False, "erreur": "Token manquant."}), 400
+
+    token_hash = hasher_token(token)
+    utilisateur = Utilisateur.query.filter_by(token_activation_hash=token_hash).first()
+
+    if not utilisateur:
+        return jsonify({"valide": False, "erreur": "Ce lien d'activation est invalide ou a déjà été utilisé."}), 404
+
+    if est_token_expire(utilisateur.expiration_token):
+        return jsonify({"valide": False, "erreur": "Ce lien d'activation a expiré. Veuillez demander un nouveau lien."}), 400
+
+    return jsonify({
+        "valide": True,
+        "nom": utilisateur.nom,
+        "email": utilisateur.email,
+        "role": utilisateur.role.nom,
     }), 200
 
 @auth_bp.route("/logout", methods=["POST"])

@@ -55,6 +55,17 @@ function pageSessionsData() {
             }
         },
 
+        urlExport(format = 'csv') {
+            const params = new URLSearchParams();
+            Object.entries(this.filtres).forEach(([cle, valeur]) => {
+                if (valeur !== '' && valeur !== null && valeur !== undefined && cle !== 'tri') {
+                    params.set(cle, valeur);
+                }
+            });
+            const qs = params.toString();
+            return `/api/sessions/export/${format}${qs ? '?' + qs : ''}`;
+        },
+
         modaleEditionOuverte: false,
         editionEnCours: false,
         erreurEdition: null,

@@ -49,6 +49,13 @@
                             <span class="text-xs text-gray-500" x-text="session.formation.domaine ? session.formation.domaine.nom : ''"></span>
                         </div>
                     </div>
+                    <div class="flex items-center gap-2">
+                        <a :href="`/api/sessions/${session.id}/export/pdf`" target="_blank"
+                           class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors">
+                            <i data-lucide="file-text" class="w-4 h-4 text-emerald-700"></i>
+                            <span>Feuille d'émargement (PDF)</span>
+                        </a>
+                    </div>
                 </div>
             </div>
 

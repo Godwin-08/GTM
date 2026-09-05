@@ -154,6 +154,51 @@ def export_sessions_csv():
     date_str = date.today().isoformat()
     return generer_csv_response(f"sessions_export_{date_str}.csv", en_tetes, lignes)
 
+@sessions_bp.route("/export/xlsx", methods=["GET"])
+@login_required
+def export_sessions_xlsx():
+    from app.services.export_service import generer_xlsx_response
+    sessions = obtenir_sessions_filtrees(current_user, request.args)
+    en_tetes = {
+        "id": "ID Session",
+        "formation_titre": "Formation",
+        "formateur_nom": "Formateur",
+        "type": "Type",
+        "date_debut": "Date Début",
+        "date_fin": "Date Fin",
+        "lieu": "Lieu",
+        "statut": "Statut",
+        "nb_inscrits_confirmes": "Inscrits Confirmés",
+        "capacite_max": "Capacité Max",
+        "taux_remplissage": "Taux Remplissage (%)",
+    }
+    lignes = []
+    for s in sessions:
+        lignes.append({
+            "id": s.id,
+            "formation_titre": s.formation.titre if s.formation else "",
+            "formateur_nom": s.formateur.nom if s.formateur else "",
+            "type": s.type.upper() if s.type else "",
+            "date_debut": s.date_debut.isoformat() if s.date_debut else "",
+            "date_fin": s.date_fin.isoformat() if s.date_fin else "",
+            "lieu": s.lieu,
+            "statut": s.statut.replace("_", " ").title() if s.statut else "",
+            "nb_inscrits_confirmes": s.nb_inscrits_confirmes(),
+            "capacite_max": s.capacite_max,
+            "taux_remplissage": round(s.taux_remplissage(), 1),
+        })
+    date_str = date.today().isoformat()
+    return generer_xlsx_response(f"sessions_export_{date_str}.xlsx", en_tetes, lignes, titre_feuille="Sessions")
+
+@sessions_bp.route("/<int:session_id>/export/pdf", methods=["GET"])
+@login_required
+def export_session_pdf(session_id):
+    from app.services.export_service import generer_fiche_session_pdf
+    from app.routes.inscriptions import inscription_vers_dict
+    session_obj = exiger_acces(sessions_visibles(current_user), session_id, current_user)
+    inscriptions = [inscription_vers_dict(i) for i in session_obj.inscriptions]
+    return generer_fiche_session_pdf(session_vers_dict(session_obj), inscriptions)
+
 @sessions_bp.route("/<int:session_id>", methods=["GET"])
 @login_required
 def detail_session(session_id):
@@ -192,8 +237,12 @@ def creer_session():
     if not formation:
         return jsonify({"erreur": "formation_id invalide"}), 400
 
-    if not db.session.get(Formateur, formateur_id):
+    formateur = db.session.get(Formateur, formateur_id)
+    if not formateur:
         return jsonify({"erreur": "formateur_id invalide"}), 400
+
+    if formateur.domaine_id != formation.domaine_id:
+        return jsonify({"erreur": "Le formateur sélectionné n'appartient pas au domaine de cette formation"}), 400
 
     session = Session(
         formation_id=formation_id,

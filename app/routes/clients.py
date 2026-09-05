@@ -2,7 +2,7 @@ from datetime import date
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app.extensions import db
-from app.models import Client, Participant, Inscription
+from app.models import Client, Participant, Inscription, Session
 from app.services.permissions import gestionnaire_ou_admin_required
 from app.services.access_service import clients_visibles, exiger_acces
 from app.services.client_activity_service import statut_activite_client
@@ -10,16 +10,24 @@ from app.services.client_activity_service import statut_activite_client
 clients_bp = Blueprint("clients", __name__, url_prefix="/api/clients")
 
 
-def client_vers_dict(client):
+from app.services.access_service import est_formateur, _formateur_id, inscriptions_visibles
+
+def client_vers_dict(client, user=None):
     """
     Transforme un objet Client en dictionnaire JSON pour les vues liste et détail.
+    Si user est un Formateur, restreint l'historique et le nombre de participants/sessions
+    à son périmètre d'habilitation strict.
     """
-    inscriptions_confirmees = (
+    query_inscriptions = (
         Inscription.query
         .join(Participant)
         .filter(Participant.client_id == client.id, Inscription.statut == "confirmee")
-        .all()
     )
+    if user and est_formateur(user):
+        fid = _formateur_id(user)
+        query_inscriptions = query_inscriptions.join(Session).filter(Session.formateur_id == fid)
+
+    inscriptions_confirmees = query_inscriptions.all()
 
     info_activite = statut_activite_client(client.id)
     statut_activite = info_activite["statut"]
@@ -31,7 +39,10 @@ def client_vers_dict(client):
     # Agrégation des sessions de formation suivies par les salariés du client
     sessions_map = {}
     formations_ids = set()
+    participants_ids = set()
     for i in inscriptions_confirmees:
+        if i.participant_id:
+            participants_ids.add(i.participant_id)
         if i.session:
             if i.session.formation_id:
                 formations_ids.add(i.session.formation_id)
@@ -57,12 +68,14 @@ def client_vers_dict(client):
     for s in sessions_historique:
         s.pop("raw_date", None)
 
+    nb_participants = len(participants_ids) if (user and est_formateur(user)) else len(client.participants)
+
     return {
         "id": client.id,
         "nom_entreprise": client.nom_entreprise,
         "secteur": client.secteur,
         "contact_email": client.contact_email,
-        "nb_participants": len(client.participants),
+        "nb_participants": nb_participants,
         "nb_sessions": len(sessions_map),
         "nb_formations": len(formations_ids),
         "derniere_activite": derniere_activite_fmt,
@@ -92,7 +105,7 @@ def obtenir_clients_filtres(user, args):
         query = query.filter(Client.secteur.ilike(f"%{secteur}%"))
 
     clients = query.all()
-    dicts = [client_vers_dict(c) for c in clients]
+    dicts = [client_vers_dict(c, user) for c in clients]
 
     statut_activite = args.get("statut_activite")
     if statut_activite:
@@ -146,11 +159,45 @@ def export_clients_csv():
     date_str = date.today().isoformat()
     return generer_csv_response(f"clients_export_{date_str}.csv", en_tetes, lignes)
 
+@clients_bp.route("/export/xlsx", methods=["GET"])
+@login_required
+def export_clients_xlsx():
+    from app.services.export_service import generer_xlsx_response
+    dicts, err = obtenir_clients_filtres(current_user, request.args)
+    if err:
+        return err
+    en_tetes = {
+        "id": "ID Client",
+        "nom_entreprise": "Entreprise",
+        "secteur": "Secteur",
+        "contact_email": "Contact Email",
+        "nb_participants": "Nb Participants",
+        "nb_sessions": "Nb Sessions",
+        "nb_formations": "Nb Formations",
+        "label_activite": "Statut Activité",
+        "derniere_activite": "Dernière Activité",
+    }
+    lignes = []
+    for d in dicts:
+        lignes.append({
+            "id": d["id"],
+            "nom_entreprise": d["nom_entreprise"],
+            "secteur": d["secteur"] or "",
+            "contact_email": d["contact_email"] or "",
+            "nb_participants": d["nb_participants"],
+            "nb_sessions": d["nb_sessions"],
+            "nb_formations": d["nb_formations"],
+            "label_activite": d["label_activite"],
+            "derniere_activite": d["derniere_activite"] or "Aucune",
+        })
+    date_str = date.today().isoformat()
+    return generer_xlsx_response(f"clients_export_{date_str}.xlsx", en_tetes, lignes, titre_feuille="Clients")
+
 @clients_bp.route("/<int:client_id>", methods=["GET"])
 @login_required
 def detail_client(client_id):
     client = exiger_acces(clients_visibles(current_user), client_id, current_user)
-    return jsonify(client_vers_dict(client)), 200
+    return jsonify(client_vers_dict(client, current_user)), 200
 
 @clients_bp.route("", methods=["POST"])
 @gestionnaire_ou_admin_required

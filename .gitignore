@@ -8,3 +8,4 @@ instance/
 .vscode/
 .idea/
 cookies*.txt
+*.log

@@ -82,6 +82,15 @@ function pageClientsData() {
             return query ? `${urlClients}?${query}` : urlClients;
         },
 
+        urlExport(format = 'csv') {
+            const params = new URLSearchParams();
+            if (this.filtres.q && this.filtres.q.trim()) params.set('q', this.filtres.q.trim());
+            if (this.filtres.secteur && this.filtres.secteur.trim()) params.set('secteur', this.filtres.secteur.trim());
+            if (this.filtres.statut_activite) params.set('statut_activite', this.filtres.statut_activite);
+            const qs = params.toString();
+            return `/api/clients/export/${format}${qs ? '?' + qs : ''}`;
+        },
+
         async charger() {
             this.chargementEnCours = true;
             this.erreur = null;

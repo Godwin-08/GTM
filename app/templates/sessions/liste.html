@@ -16,12 +16,38 @@
                 Gestion et suivi opérationnel des sessions planifiées, en cours et terminées.
             </p>
         </div>
-        {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
-        <button @click="ouvrirModaleCreation()" class="gtm-btn gtm-btn-primary text-xs sm:text-sm font-semibold flex-shrink-0">
-            <i data-lucide="plus" class="w-4 h-4"></i>
-            Nouvelle session
-        </button>
-        {% endif %}
+        <div class="flex items-center gap-2.5">
+            <!-- Dropdown Exporter -->
+            <div x-data="{ exportOuvert: false }" class="relative" @click.outside="exportOuvert = false">
+                <button @click="exportOuvert = !exportOuvert"
+                        type="button"
+                        class="gtm-btn gtm-btn-secondary text-xs sm:text-sm font-semibold flex items-center gap-1.5">
+                    <i data-lucide="download" class="w-4 h-4 text-emerald-700"></i>
+                    <span>Exporter</span>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                </button>
+                <div x-show="exportOuvert" x-cloak
+                     class="absolute right-0 mt-1.5 w-44 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-20 text-xs">
+                    <a :href="urlExport('xlsx')" @click="exportOuvert = false"
+                       class="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 text-slate-700 font-medium transition-colors">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-700"></i>
+                        <span>Excel (.xlsx)</span>
+                    </a>
+                    <a :href="urlExport('csv')" @click="exportOuvert = false"
+                       class="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 text-slate-700 font-medium transition-colors">
+                        <i data-lucide="file-text" class="w-4 h-4 text-slate-500"></i>
+                        <span>CSV (UTF-8 BOM)</span>
+                    </a>
+                </div>
+            </div>
+
+            {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
+            <button @click="ouvrirModaleCreation()" class="gtm-btn gtm-btn-primary text-xs sm:text-sm font-semibold flex-shrink-0">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                Nouvelle session
+            </button>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Barre de Filtres Ergonomique (Compacte + Filtres Avancés) -->
@@ -146,12 +172,6 @@
             </div>
 
             <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-                <a :href="'/api/sessions/export/csv' + (window.location.search || '')"
-                   download
-                   class="gtm-btn gtm-btn-outline text-xs flex items-center gap-1.5 border-slate-300 hover:bg-slate-50">
-                    <i data-lucide="download" class="w-3.5 h-3.5 text-slate-600"></i>
-                    Exporter CSV (Périmètre)
-                </a>
                 <button type="button" @click="reinitialiserFiltres()" class="gtm-btn gtm-btn-ghost text-xs">
                     Réinitialiser
                 </button>
@@ -248,20 +268,42 @@
                                 </span>
                             </td>
                             <td class="text-right">
-                                <div class="flex items-center justify-end gap-2.5">
-                                    <a :href="`/sessions/${session.id}`" class="text-xs font-semibold text-slate-700 hover:text-slate-900 flex items-center gap-1">
-                                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                                        Voir
-                                    </a>
-                                    {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
-                                    <button @click="ouvrirModaleEdition(session)" class="text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1">
-                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                        Modifier
+                                <div class="relative inline-block text-left" x-data="{ menuOuvert: false }">
+                                    <button @click="menuOuvert = !menuOuvert"
+                                            @click.outside="menuOuvert = false"
+                                            class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                                            title="Actions sur cette session">
+                                        <i data-lucide="more-horizontal" class="w-4 h-4"></i>
                                     </button>
-                                    <button @click="ouvrirModaleSuppression(session)" class="text-xs font-semibold text-red-600 hover:text-red-700 flex items-center gap-1">
-                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                    </button>
-                                    {% endif %}
+
+                                    <div x-show="menuOuvert"
+                                         x-cloak
+                                         x-transition:enter="transition ease-out duration-100"
+                                         x-transition:enter-start="transform opacity-0 scale-95"
+                                         x-transition:enter-end="transform opacity-100 scale-100"
+                                         x-transition:leave="transition ease-in duration-75"
+                                         x-transition:leave-start="transform opacity-100 scale-100"
+                                         x-transition:leave-end="transform opacity-0 scale-95"
+                                         class="absolute right-0 mt-1 w-44 rounded-xl bg-white border border-slate-200 shadow-lg py-1 z-30 text-xs">
+                                        <a :href="`/sessions/${session.id}`"
+                                           class="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 transition-colors">
+                                            <i data-lucide="eye" class="w-3.5 h-3.5 text-slate-400"></i>
+                                            Consulter la fiche
+                                        </a>
+                                        {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
+                                        <button @click="ouvrirModaleEdition(session); menuOuvert = false"
+                                                class="w-full text-left flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 transition-colors">
+                                            <i data-lucide="pencil" class="w-3.5 h-3.5 text-slate-400"></i>
+                                            Modifier la session
+                                        </button>
+                                        <div class="my-1 border-t border-slate-100"></div>
+                                        <button @click="ouvrirModaleSuppression(session); menuOuvert = false"
+                                                class="w-full text-left flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 transition-colors">
+                                            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-500"></i>
+                                            Supprimer
+                                        </button>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </td>
                         </tr>

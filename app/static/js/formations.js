@@ -78,6 +78,14 @@ function pageFormationsData() {
             return query ? `${urlFormations}?${query}` : urlFormations;
         },
 
+        urlExport(format = 'csv') {
+            const params = new URLSearchParams();
+            if (this.filtres.q && this.filtres.q.trim()) params.set('q', this.filtres.q.trim());
+            if (this.filtres.domaine_id) params.set('domaine_id', this.filtres.domaine_id);
+            const qs = params.toString();
+            return `/api/formations/export/${format}${qs ? '?' + qs : ''}`;
+        },
+
         async charger() {
             this.chargementEnCours = true;
             this.erreur = null;

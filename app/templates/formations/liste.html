@@ -5,9 +5,35 @@
 <div x-data="pageFormationsData()" x-init="charger()">
     <div class="gtm-list-heading">
         <div><h2 class="gtm-list-title">Catalogue des formations</h2><p class="gtm-list-description">Formations proposées par Galaxy Solutions.</p></div>
-        {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
-        <button @click="ouvrirModaleCreation()" class="gtm-btn gtm-btn-primary text-sm flex-shrink-0"><i data-lucide="plus" class="w-4 h-4"></i>Nouvelle formation</button>
-        {% endif %}
+        <div class="flex items-center gap-2.5">
+            <!-- Dropdown Exporter -->
+            <div x-data="{ exportOuvert: false }" class="relative" @click.outside="exportOuvert = false">
+                <button @click="exportOuvert = !exportOuvert"
+                        type="button"
+                        class="gtm-btn gtm-btn-secondary text-xs sm:text-sm font-semibold flex items-center gap-1.5">
+                    <i data-lucide="download" class="w-4 h-4 text-emerald-700"></i>
+                    <span>Exporter</span>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                </button>
+                <div x-show="exportOuvert" x-cloak
+                     class="absolute right-0 mt-1.5 w-44 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-20 text-xs">
+                    <a :href="urlExport('xlsx')" @click="exportOuvert = false"
+                       class="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 text-slate-700 font-medium transition-colors">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-700"></i>
+                        <span>Excel (.xlsx)</span>
+                    </a>
+                    <a :href="urlExport('csv')" @click="exportOuvert = false"
+                       class="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 text-slate-700 font-medium transition-colors">
+                        <i data-lucide="file-text" class="w-4 h-4 text-slate-500"></i>
+                        <span>CSV (UTF-8 BOM)</span>
+                    </a>
+                </div>
+            </div>
+
+            {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
+            <button @click="ouvrirModaleCreation()" class="gtm-btn gtm-btn-primary text-sm flex-shrink-0"><i data-lucide="plus" class="w-4 h-4"></i>Nouvelle formation</button>
+            {% endif %}
+        </div>
     </div>
     <form @submit.prevent="appliquerFiltres()" class="gtm-card gtm-filter-bar" x-data="{ avances: false }">
         <div class="flex items-center gap-2 mb-4">
@@ -68,16 +94,42 @@
             </div>
         </template>
         <template x-for="formation in formationsFiltrees()" :key="formation.id"><article class="gtm-card gtm-catalog-card"><div class="flex items-start justify-between gap-3"><div class="min-w-0"><h3 class="font-bold text-slate-900" x-text="formation.titre"></h3><p class="text-xs text-slate-500 mt-1 line-clamp-2" x-text="formation.description || 'Aucune description disponible.'"></p></div><span class="gtm-badge gtm-badge-info text-xs" x-text="nomDomaine(formation)"></span></div><div class="flex items-center gap-2 text-xs text-slate-600"><i data-lucide="clock-3" class="w-4 h-4 text-slate-400"></i><span class="font-tabular" x-text="formation.duree_jours + ' jour' + (formation.duree_jours > 1 ? 's' : '')"></span></div><footer>
-            <div class="flex items-center gap-3">
-                <a :href="`/formations/${formation.id}`"
-                   class="text-xs font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1">
-                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                    Voir
-                </a>
-                {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
-                <button @click="ouvrirModaleEdition(formation)" class="text-xs font-medium text-primary hover:text-primary-hover flex items-center gap-1"><i data-lucide="pencil" class="w-3.5 h-3.5"></i>Modifier</button>
-                <button @click="ouvrirModaleSuppression(formation)" class="text-xs font-medium text-danger hover:opacity-70 flex items-center gap-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Supprimer</button>
-                {% endif %}
+            <div class="relative inline-block text-left" x-data="{ menuOuvert: false }">
+                <button @click="menuOuvert = !menuOuvert"
+                        @click.outside="menuOuvert = false"
+                        class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                        title="Actions sur cette formation">
+                    <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                </button>
+
+                <div x-show="menuOuvert"
+                     x-cloak
+                     x-transition:enter="transition ease-out duration-100"
+                     x-transition:enter-start="transform opacity-0 scale-95"
+                     x-transition:enter-end="transform opacity-100 scale-100"
+                     x-transition:leave="transition ease-in duration-75"
+                     x-transition:leave-start="transform opacity-100 scale-100"
+                     x-transition:leave-end="transform opacity-0 scale-95"
+                     class="absolute right-0 bottom-full mb-1 w-44 rounded-xl bg-white border border-slate-200 shadow-lg py-1 z-30 text-xs">
+                    <a :href="`/formations/${formation.id}`"
+                       class="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 transition-colors">
+                        <i data-lucide="eye" class="w-3.5 h-3.5 text-slate-400"></i>
+                        Consulter la fiche
+                    </a>
+                    {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
+                    <button @click="ouvrirModaleEdition(formation); menuOuvert = false"
+                            class="w-full text-left flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 transition-colors">
+                        <i data-lucide="pencil" class="w-3.5 h-3.5 text-slate-400"></i>
+                        Modifier la formation
+                    </button>
+                    <div class="my-1 border-t border-slate-100"></div>
+                    <button @click="ouvrirModaleSuppression(formation); menuOuvert = false"
+                            class="w-full text-left flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 transition-colors">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-500"></i>
+                        Supprimer
+                    </button>
+                    {% endif %}
+                </div>
             </div></footer></article></template>
     </div>
     <div x-show="modaleOuverte" x-cloak @click.self="fermerModaleCreation()" @keydown.escape.window="fermerModaleCreation()" class="fixed inset-0 bg-gray-900/50 z-50 flex items-center justify-center p-4"><div class="bg-white rounded-xl w-full max-w-md p-6" @click.stop>

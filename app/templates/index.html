@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,186 +12,486 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: {
-                            DEFAULT: '#F26B1F',
-                            hover: '#D95A10',
+                        emerald: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            200: '#a7f3d0',
+                            300: '#6ee7b7',
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b',
+                            950: '#022c22',
                         },
-                        success: '#10B981',
-                        warning: '#F59E0B',
-                        danger: '#EF4444',
-                        info: '#3B82F6',
+                        slate: {
+                            850: '#151f32',
+                            900: '#0f172a',
+                            950: '#020617',
+                        }
                     },
                     fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'glow-emerald': '0 0 25px -5px rgba(5, 150, 105, 0.25)',
+                        'card-hover': '0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04)',
                     }
                 }
             }
         }
     </script>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23F26B1F'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold' font-size='18'>G</text></svg>">
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23047857'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold' font-size='18'>G</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
-<body class="bg-gray-50 font-sans text-gray-900 min-h-screen flex flex-col justify-between">
+<body class="bg-slate-50 font-sans text-slate-800 antialiased selection:bg-emerald-500 selection:text-white min-h-screen flex flex-col justify-between">
 
-    <!-- En-tête Navigation -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-white font-bold text-base shadow-sm">
+    <!-- En-tête Navigation Fixe & Flottante -->
+    <header class="bg-white/90 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-40 transition-all duration-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 py-3.5 flex items-center justify-between">
+            
+            <!-- Logo & Identité -->
+            <a href="{{ url_for('pages.index') }}" class="flex items-center gap-3.5 group">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-800 flex items-center justify-center text-white font-bold text-lg shadow-sm shadow-emerald-700/20 group-hover:scale-105 transition-transform duration-200">
                     G
                 </div>
                 <div>
-                    <span class="text-base font-bold text-gray-900 tracking-tight">GTM</span>
-                    <span class="text-xs text-gray-400 block -mt-1 font-medium">Galaxy Solutions</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg font-bold text-slate-900 tracking-tight leading-none group-hover:text-emerald-700 transition-colors">GTM</span>
+                        <span class="px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-800 rounded-full">v2.4</span>
+                    </div>
+                    <span class="text-xs text-slate-500 block font-medium mt-0.5">Galaxy Solutions</span>
                 </div>
-            </div>
+            </a>
 
-            <div>
+            <!-- Navigation centrale desktop -->
+            <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+                <a href="#piliers" class="hover:text-emerald-700 transition-colors">Fonctionnalités</a>
+                <a href="#apercu" class="hover:text-emerald-700 transition-colors">Aperçu Dashboard</a>
+                <a href="#securite" class="hover:text-emerald-700 transition-colors">Gouvernance RBAC</a>
+            </nav>
+
+            <!-- Actions Utilisateur -->
+            <div class="flex items-center gap-3">
                 {% if current_user.is_authenticated %}
                     <a href="{{ url_for('pages.sessions') if current_user.a_role('formateur') else url_for('pages.dashboard') }}"
-                       class="bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors inline-flex items-center gap-2 shadow-xs">
+                       class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-all inline-flex items-center gap-2 shadow-sm shadow-emerald-800/20 hover:shadow-md">
                         <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
-                        Accéder au Dashboard
+                        <span>Accéder au Dashboard</span>
                     </a>
                 {% else %}
                     <a href="{{ url_for('pages.login_page') }}"
-                       class="bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors inline-flex items-center gap-2 shadow-xs">
+                       class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-all inline-flex items-center gap-2 shadow-sm shadow-emerald-800/20 hover:shadow-md hover:translate-y-[-1px]">
                         <i data-lucide="log-in" class="w-4 h-4"></i>
-                        Se connecter
+                        <span>Se connecter</span>
                     </a>
                 {% endif %}
             </div>
         </div>
     </header>
 
-    <!-- Section Principale (Hero) -->
-    <main class="flex-1 flex items-center py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-4xl mx-auto text-center">
-            
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-6">
-                <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
-                Plateforme de gestion et de pilotage des formations
-            </div>
+    <!-- Contenu Principal -->
+    <main class="flex-1">
 
-            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 tracking-tight leading-tight mb-4">
-                Galaxy Training Manager (GTM)
-            </h1>
+        <!-- SECTION HERO PRINCIPALE -->
+        <section class="relative overflow-hidden pt-12 pb-20 lg:pt-18 lg:pb-24 border-b border-slate-200/70 bg-gradient-to-b from-white via-slate-50 to-slate-100/60">
+            <!-- Halos d'ambiance décoratifs -->
+            <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-gradient-to-r from-emerald-100/50 via-teal-100/30 to-emerald-50/50 blur-3xl -z-10 pointer-events-none"></div>
 
-            <p class="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto mb-8 leading-relaxed">
-                Centralisez vos formations. Suivez, filtrez et analysez votre activité.
-            </p>
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                
+                <!-- Badge Statut / Certification -->
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold mb-6 shadow-xs">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Plateforme de gestion, pilotage & décision pédagogique</span>
+                </div>
 
-            <div class="flex items-center justify-center gap-4 mb-12">
-                {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('pages.sessions') if current_user.a_role('formateur') else url_for('pages.dashboard') }}"
-                       class="bg-primary hover:bg-primary-hover text-white text-sm font-medium px-6 py-3 rounded-lg shadow-sm hover:shadow transition-all inline-flex items-center gap-2">
-                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                        Accéder à l'application
+                <!-- Grand Titre -->
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15] mb-6">
+                    Galaxy Training Manager <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-700 to-teal-600">(GTM)</span>
+                </h1>
+
+                <!-- Sous-titre & Proposition de Valeur -->
+                <p class="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto mb-10 leading-relaxed font-normal">
+                    Centralisez vos catalogues de formations, pilotez les inscriptions en temps réel, automatisez vos émargements et valorisez vos décisions grâce à l'analyse factorielle (ACP).
+                </p>
+
+                <!-- Boutons d'Action Principaux -->
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14">
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('pages.sessions') if current_user.a_role('formateur') else url_for('pages.dashboard') }}"
+                           class="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white text-base font-semibold px-7 py-3.5 rounded-xl shadow-lg shadow-emerald-700/25 hover:shadow-xl hover:-translate-y-0.5 transition-all inline-flex items-center justify-center gap-2.5">
+                            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                            <span>Ouvrir mon espace de travail</span>
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('pages.login_page') }}"
+                           class="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white text-base font-semibold px-7 py-3.5 rounded-xl shadow-lg shadow-emerald-700/25 hover:shadow-xl hover:-translate-y-0.5 transition-all inline-flex items-center justify-center gap-2.5">
+                            <i data-lucide="log-in" class="w-5 h-5"></i>
+                            <span>Accéder à GTM</span>
+                        </a>
+                    {% endif %}
+                    
+                    <a href="#apercu"
+                       class="w-full sm:w-auto bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-base font-medium px-6 py-3.5 rounded-xl shadow-xs transition-all inline-flex items-center justify-center gap-2 hover:border-slate-400">
+                        <i data-lucide="eye" class="w-5 h-5 text-slate-500"></i>
+                        <span>Découvrir l'interface</span>
                     </a>
-                {% else %}
-                    <a href="{{ url_for('pages.login_page') }}"
-                       class="bg-primary hover:bg-primary-hover text-white text-sm font-medium px-6 py-3 rounded-lg shadow-sm hover:shadow transition-all inline-flex items-center gap-2">
-                        <i data-lucide="log-in" class="w-4 h-4"></i>
-                        Accéder à GTM
-                    </a>
-                {% endif %}
+                </div>
+
+                <!-- Bandeau des 4 garanties d'entreprise -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto pt-6 border-t border-slate-200/80 text-left">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="shield-check" class="w-5 h-5 text-emerald-600 flex-shrink-0"></i>
+                        <span class="text-xs font-semibold text-slate-700">Contrôle d'accès RBAC</span>
+                    </div>
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="mail-check" class="w-5 h-5 text-emerald-600 flex-shrink-0"></i>
+                        <span class="text-xs font-semibold text-slate-700">Onboarding par e-mail</span>
+                    </div>
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="file-spreadsheet" class="w-5 h-5 text-emerald-600 flex-shrink-0"></i>
+                        <span class="text-xs font-semibold text-slate-700">Exports Excel & PDF A4</span>
+                    </div>
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="scatter-chart" class="w-5 h-5 text-emerald-600 flex-shrink-0"></i>
+                        <span class="text-xs font-semibold text-slate-700">Moteur ACP & Décision</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SECTION 1 : LES 3 PILIERS FONCTIONNELS -->
+        <section id="piliers" class="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-14">
+                <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-3 py-1 rounded-full">Architecture Métier</span>
+                <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 mt-3 tracking-tight">
+                    Une chaîne de valeur pédagogique complète
+                </h2>
+                <p class="text-sm sm:text-base text-slate-500 mt-2">
+                    De la modélisation du catalogue de compétences jusqu'à la restitution statistique pour les comités de direction.
+                </p>
             </div>
 
-            <!-- Grille des 3 Piliers Fonctionnels avec micro-interactions hover -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left mb-14">
-                <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-primary/40 transition-all duration-200 group">
-                    <div class="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200">
-                        <i data-lucide="book-open" class="w-5 h-5"></i>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                
+                <!-- Pilier 1 : Centraliser -->
+                <div class="bg-white rounded-2xl border border-slate-200 p-7 shadow-xs hover:shadow-card-hover hover:-translate-y-1 hover:border-emerald-500/40 transition-all duration-300 flex flex-col justify-between group">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center mb-5 group-hover:scale-110 group-hover:bg-emerald-700 group-hover:text-white transition-all duration-300">
+                            <i data-lucide="book-open" class="w-6 h-6"></i>
+                        </div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-lg font-bold text-slate-900">1. Centraliser</h3>
+                            <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">Socle Catalogue</span>
+                        </div>
+                        <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                            Structurez vos modules de formation, définissez les domaines de compétences, planifiez les sessions avec tarifs et capacités d'accueil.
+                        </p>
                     </div>
-                    <div class="flex items-center justify-between mb-1">
-                        <h3 class="text-base font-semibold text-gray-900">Centraliser</h3>
-                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-100 px-2 py-0.5 rounded">Étape 1</span>
+                    <ul class="text-xs text-slate-500 space-y-2 pt-4 border-t border-slate-100">
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                            <span>Gestion des domaines et programmes</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                            <span>Planification de sessions multi-dates</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Pilier 2 : Gérer -->
+                <div class="bg-white rounded-2xl border border-slate-200 p-7 shadow-xs hover:shadow-card-hover hover:-translate-y-1 hover:border-emerald-500/40 transition-all duration-300 flex flex-col justify-between group">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center mb-5 group-hover:scale-110 group-hover:bg-emerald-700 group-hover:text-white transition-all duration-300">
+                            <i data-lucide="building-2" class="w-6 h-6"></i>
+                        </div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-lg font-bold text-slate-900">2. Gérer</h3>
+                            <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">Suivi Acteurs</span>
+                        </div>
+                        <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                            Gérez les entreprises clientes partenaires, le registre des apprenants et l'affectation des formateurs avec feuilles d'émargement officielles.
+                        </p>
                     </div>
-                    <p class="text-xs text-gray-500 leading-relaxed">
-                        Gestion unifiée des formations, domaines de compétences, sessions et inscriptions.
+                    <ul class="text-xs text-slate-500 space-y-2 pt-4 border-t border-slate-100">
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                            <span>Inscriptions et états de présence</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                            <span>Génération de feuilles d'émargement PDF</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Pilier 3 : Analyser -->
+                <div class="bg-white rounded-2xl border border-slate-200 p-7 shadow-xs hover:shadow-card-hover hover:-translate-y-1 hover:border-emerald-500/40 transition-all duration-300 flex flex-col justify-between group">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center mb-5 group-hover:scale-110 group-hover:bg-emerald-700 group-hover:text-white transition-all duration-300">
+                            <i data-lucide="bar-chart-3" class="w-6 h-6"></i>
+                        </div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-lg font-bold text-slate-900">3. Analyser</h3>
+                            <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">Pilotage & IA</span>
+                        </div>
+                        <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                            Visualisez la performance globale en temps réel, anticipez les risques de sessions déficitaires et explorez les typologies clients par ACP.
+                        </p>
+                    </div>
+                    <ul class="text-xs text-slate-500 space-y-2 pt-4 border-t border-slate-100">
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                            <span>Points d'attention proactifs (sous-remplissage)</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                            <span>Analyse factorielle multivariée (ACP)</span>
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SECTION 2 : APERÇU DASHBOARD RÉALISTE -->
+        <section id="apercu" class="py-16 bg-slate-900 text-white relative overflow-hidden">
+            <div class="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none"></div>
+
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div class="text-center max-w-3xl mx-auto mb-12">
+                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 border border-emerald-800/80 px-3 py-1 rounded-full">Interface Décisionnelle</span>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white mt-3 tracking-tight">
+                        Un tableau de bord épuré & réactif
+                    </h2>
+                    <p class="text-sm sm:text-base text-slate-400 mt-2">
+                        Filtres multi-critères instantanés, alertes de sous-remplissage et export en un clic.
                     </p>
                 </div>
 
-                <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-primary/40 transition-all duration-200 group">
-                    <div class="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200">
-                        <i data-lucide="building-2" class="w-5 h-5"></i>
+                <!-- Fenêtre Mockup Style Mac/App -->
+                <div class="bg-slate-800/90 rounded-2xl border border-slate-700 shadow-2xl overflow-hidden backdrop-blur-md">
+                    <!-- Barre d'en-tête de la fenêtre -->
+                    <div class="bg-slate-900/90 px-4 py-3 border-b border-slate-700/80 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-amber-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                            <span class="ml-3 text-xs font-semibold text-slate-400 hidden sm:inline">GTM — Tableau de bord Décisionnel</span>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs text-slate-300">
+                            <span class="inline-flex items-center gap-1 bg-slate-800 px-2.5 py-1 rounded-md border border-slate-700 text-slate-300">
+                                <i data-lucide="filter" class="w-3.5 h-3.5 text-emerald-400"></i>
+                                Filtres Année : 2026
+                            </span>
+                            <span class="inline-flex items-center gap-1 bg-emerald-900/40 text-emerald-300 px-2.5 py-1 rounded-md border border-emerald-800/50">
+                                <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                Données à jour
+                            </span>
+                        </div>
                     </div>
-                    <div class="flex items-center justify-between mb-1">
-                        <h3 class="text-base font-semibold text-gray-900">Gérer</h3>
-                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-100 px-2 py-0.5 rounded">Étape 2</span>
+
+                    <!-- Contenu du Mockup -->
+                    <div class="p-6 sm:p-8 space-y-6">
+                        
+                        <!-- 4 Indicateurs KPI -->
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs text-slate-400 font-medium">Sessions Actives</span>
+                                    <i data-lucide="calendar" class="w-4 h-4 text-emerald-400"></i>
+                                </div>
+                                <div class="text-2xl font-extrabold text-white">22</div>
+                                <div class="text-[11px] text-emerald-400 font-medium mt-1">100% planifiées</div>
+                            </div>
+
+                            <div class="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs text-slate-400 font-medium">Entreprises Clientes</span>
+                                    <i data-lucide="briefcase" class="w-4 h-4 text-emerald-400"></i>
+                                </div>
+                                <div class="text-2xl font-extrabold text-white">10</div>
+                                <div class="text-[11px] text-slate-400 font-medium mt-1">Partenaires actifs</div>
+                            </div>
+
+                            <div class="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs text-slate-400 font-medium">Apprenants Inscrits</span>
+                                    <i data-lucide="users" class="w-4 h-4 text-emerald-400"></i>
+                                </div>
+                                <div class="text-2xl font-extrabold text-white">40</div>
+                                <div class="text-[11px] text-slate-400 font-medium mt-1">Sur l'exercice 2026</div>
+                            </div>
+
+                            <div class="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs text-slate-400 font-medium">Taux de Remplissage</span>
+                                    <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
+                                </div>
+                                <div class="text-2xl font-extrabold text-emerald-400">71,1 %</div>
+                                <div class="text-[11px] text-emerald-300 font-medium mt-1">+8.4% vs objectif</div>
+                            </div>
+                        </div>
+
+                        <!-- Bannière Point d'Attention -->
+                        <div class="bg-amber-950/40 border border-amber-800/60 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-200">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 rounded-lg bg-amber-900/50 text-amber-400 flex-shrink-0">
+                                    <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-bold uppercase tracking-wider text-amber-400 block">Aide à la décision proactive</span>
+                                    <span class="text-xs sm:text-sm text-slate-300">2 sessions ont un taux de remplissage inférieur à 50%. Relance client recommandée.</span>
+                                </div>
+                            </div>
+                            <span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold px-3 py-1 rounded-lg self-end sm:self-center">
+                                Priorité Moyenne
+                            </span>
+                        </div>
+
                     </div>
-                    <p class="text-xs text-gray-500 leading-relaxed">
-                        Suivi des entreprises clientes, participants et formateurs avec un contrôle d'accès adapté à chaque rôle.
-                    </p>
                 </div>
 
-                <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-primary/40 transition-all duration-200 group">
-                    <div class="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200">
-                        <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
-                    </div>
-                    <div class="flex items-center justify-between mb-1">
-                        <h3 class="text-base font-semibold text-gray-900">Analyser</h3>
-                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-100 px-2 py-0.5 rounded">Étape 3</span>
-                    </div>
-                    <p class="text-xs text-gray-500 leading-relaxed">
-                        Tableau de bord interactif, indicateurs KPI, points d'attention et analyse ACP.
-                    </p>
-                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3 : GOUVERNANCE RBAC & SÉCURITÉ -->
+        <section id="securite" class="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-14">
+                <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-3 py-1 rounded-full">Sécurité & Cloisonnement</span>
+                <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 mt-3 tracking-tight">
+                    3 Rôles RBAC adaptés à chaque profil métier
+                </h2>
+                <p class="text-sm sm:text-base text-slate-500 mt-2">
+                    L'application garantit une étanchéité stricte des données selon le rôle de l'utilisateur connecté.
+                </p>
             </div>
 
-            <!-- Aperçu visuel / Mockup du Dashboard GTM -->
-            <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-lg text-left">
-                <div class="flex items-center justify-between pb-3 mb-4 border-b border-gray-100">
-                    <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 rounded-full bg-red-400"></div>
-                        <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
-                        <div class="w-3 h-3 rounded-full bg-green-400"></div>
-                        <span class="ml-2 text-xs font-semibold text-gray-500">Aperçu du Tableau de bord GTM</span>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                
+                <!-- Rôle Admin -->
+                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-lg bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center font-bold">
+                                <i data-lucide="shield" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-slate-900">Administrateur</h3>
+                                <span class="text-xs text-rose-600 font-semibold">Supervision globale</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed mb-4">
+                            Création des comptes, gestion du cycle de vie des utilisateurs, envoi d'invitations par e-mail avec token unique sécurisé (48 h).
+                        </p>
                     </div>
-                    <div class="flex items-center gap-2 text-xs text-gray-400">
-                        <i data-lucide="filter" class="w-3.5 h-3.5 text-primary"></i>
-                        <span>Filtres réactifs (Année, Domaine, Client, Formateur)</span>
-                    </div>
-                </div>
-
-                <!-- Mini carte de preview -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
-                        <span class="text-[11px] font-medium text-gray-400 block mb-1">Sessions actives</span>
-                        <span class="text-lg font-bold text-gray-900">22</span>
-                    </div>
-                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
-                        <span class="text-[11px] font-medium text-gray-400 block mb-1">Clients actifs</span>
-                        <span class="text-lg font-bold text-gray-900">10</span>
-                    </div>
-                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
-                        <span class="text-[11px] font-medium text-gray-400 block mb-1">Participants</span>
-                        <span class="text-lg font-bold text-gray-900">40</span>
-                    </div>
-                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
-                        <span class="text-[11px] font-medium text-gray-400 block mb-1">Taux Remplissage</span>
-                        <span class="text-lg font-bold text-primary">71,1 %</span>
+                    <div class="bg-slate-50 rounded-xl p-3 text-[11px] text-slate-500 font-medium">
+                        Accès complet : Utilisateurs, Onboarding, Catalogues, Logs & Exports.
                     </div>
                 </div>
 
-                <div class="bg-amber-50/60 border border-amber-200/60 rounded-xl p-3 flex items-center justify-between text-xs text-amber-800">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 flex-shrink-0"></i>
-                        <span><strong>Points d'attention :</strong> Détection automatique des sessions sous-remplies et des relances clients.</span>
+                <!-- Rôle Responsable Formation -->
+                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                                <i data-lucide="briefcase" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-slate-900">Responsable Formation</h3>
+                                <span class="text-xs text-emerald-700 font-semibold">Gestion opérationnelle</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed mb-4">
+                            Planification des sessions, suivi des clients et apprenants, analyse décisionnelle par ACP et exports Excel/PDF.
+                        </p>
                     </div>
-                    <span class="hidden sm:inline-block bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded text-[10px]">Aide à la décision</span>
+                    <div class="bg-slate-50 rounded-xl p-3 text-[11px] text-slate-500 font-medium">
+                        Accès étendu : Dashboard, ACP, Sessions, Inscriptions, Clients, Formateurs.
+                    </div>
+                </div>
+
+                <!-- Rôle Formateur -->
+                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                                <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-slate-900">Formateur</h3>
+                                <span class="text-xs text-blue-600 font-semibold">Espace Pédagogique</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed mb-4">
+                            Espace dédié et sécurisé : consultation exclusive des sessions assignées, liste des inscrits et émargement.
+                        </p>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-3 text-[11px] text-slate-500 font-medium">
+                        Cloisonnement strict : Uniquement ses sessions et ses apprenants.
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- BANNIÈRE CTA BAS DE PAGE -->
+        <section class="bg-gradient-to-r from-emerald-800 to-emerald-950 text-white py-14">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                <h2 class="text-2xl sm:text-3xl font-bold tracking-tight mb-4">
+                    Prêt à piloter votre organisme de formation ?
+                </h2>
+                <p class="text-emerald-200 text-sm sm:text-base max-w-2xl mx-auto mb-8">
+                    Connectez-vous dès maintenant pour accéder à vos sessions, indicateurs KPI et exports officiels.
+                </p>
+                <div class="flex items-center justify-center gap-4">
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('pages.dashboard') }}"
+                           class="bg-white text-emerald-900 hover:bg-emerald-50 text-sm font-bold px-6 py-3 rounded-xl shadow-lg transition-all inline-flex items-center gap-2">
+                            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                            Accéder à mon espace
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('pages.login_page') }}"
+                           class="bg-white text-emerald-900 hover:bg-emerald-50 text-sm font-bold px-6 py-3 rounded-xl shadow-lg transition-all inline-flex items-center gap-2">
+                            <i data-lucide="log-in" class="w-4 h-4"></i>
+                            Se connecter à GTM
+                        </a>
+                    {% endif %}
                 </div>
             </div>
+        </section>
 
-        </div>
     </main>
 
-    <!-- Pied de page -->
-    <footer class="bg-white border-t border-gray-200 py-6 text-center text-xs text-gray-400">
-        <div class="max-w-7xl mx-auto px-4">
-            Galaxy Solutions &copy; 2026 — GTM (Galaxy Training Manager). Tous droits réservés.
+    <!-- Pied de page Institutionnel -->
+    <footer class="bg-white border-t border-slate-200 py-8 text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-7 h-7 rounded-lg bg-emerald-700 flex items-center justify-center text-white font-bold text-xs">
+                    G
+                </div>
+                <div>
+                    <span class="font-bold text-slate-800">Galaxy Solutions</span> &copy; 2026 — GTM (Galaxy Training Manager). Tous droits réservés.
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-6 text-slate-400">
+                <span>Architecture Flask & SQLAlchemy</span>
+                <span>•</span>
+                <span>Design Emerald Graphite</span>
+                <span>•</span>
+                <span class="text-emerald-700 font-semibold">100% Opérationnel</span>
+            </div>
         </div>
     </footer>
 

@@ -138,30 +138,65 @@
                             </span>
                         </td>
                         <td>
-                            <span class="gtm-badge"
-                                  :class="u.actif ? 'gtm-badge-success' : 'gtm-badge-neutral'">
-                                <span class="gtm-badge-dot"></span>
-                                <span x-text="u.actif ? 'Actif' : 'Inactif'"></span>
-                            </span>
+                            <template x-if="u.statut === 'actif' || (u.actif && !u.statut)">
+                                <span class="gtm-badge gtm-badge-success">
+                                    <span class="gtm-badge-dot"></span>
+                                    <span>Actif</span>
+                                </span>
+                            </template>
+                            <template x-if="u.statut === 'en_attente' || u.est_en_attente">
+                                <span class="gtm-badge bg-amber-500/10 text-amber-700 border border-amber-500/20">
+                                    <span class="gtm-badge-dot bg-amber-500"></span>
+                                    <span>En attente</span>
+                                </span>
+                            </template>
+                            <template x-if="u.statut === 'desactive' || (!u.actif && !u.est_en_attente && u.statut !== 'en_attente')">
+                                <span class="gtm-badge gtm-badge-neutral">
+                                    <span class="gtm-badge-dot"></span>
+                                    <span>Désactivé</span>
+                                </span>
+                            </template>
                         </td>
                         <td class="text-slate-500 text-xs font-tabular" x-text="formaterDate(u.date_creation)"></td>
                         <td class="text-right">
-                            <div class="flex items-center justify-end gap-2">
-                                {% if current_user.is_authenticated %}
-                                    {% if current_user.role.nom == 'admin' %}
+                            {% if current_user.is_authenticated and current_user.role.nom == 'admin' %}
+                            <div class="relative inline-block text-left" x-data="{ menuOuvert: false }">
+                                <button @click="menuOuvert = !menuOuvert"
+                                        @click.outside="menuOuvert = false"
+                                        class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                                        title="Actions sur cet utilisateur">
+                                    <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                                </button>
+
+                                <div x-show="menuOuvert"
+                                     x-cloak
+                                     x-transition:enter="transition ease-out duration-100"
+                                     x-transition:enter-start="transform opacity-0 scale-95"
+                                     x-transition:enter-end="transform opacity-100 scale-100"
+                                     x-transition:leave="transition ease-in duration-75"
+                                     x-transition:leave-start="transform opacity-100 scale-100"
+                                     x-transition:leave-end="transform opacity-0 scale-95"
+                                     class="absolute right-0 mt-1 w-48 rounded-xl bg-white border border-slate-200 shadow-lg py-1 z-30 text-xs">
                                     <a :href="`/utilisateurs/${u.id}`"
-                                       class="gtm-btn gtm-btn-ghost py-1 px-2 text-xs">
-                                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                                        Voir
+                                       class="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 transition-colors">
+                                        <i data-lucide="eye" class="w-3.5 h-3.5 text-slate-400"></i>
+                                        Consulter la fiche
                                     </a>
-                                    <button @click="ouvrirModaleEdition(u)"
-                                            class="gtm-btn gtm-btn-outline py-1 px-2.5 text-xs">
-                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                        Modifier
+                                    <template x-if="u.statut === 'en_attente' || u.est_en_attente">
+                                        <button @click="renvoyerInvitation(u); menuOuvert = false"
+                                                class="w-full text-left flex items-center gap-2 px-3 py-2 text-amber-700 hover:bg-amber-50 transition-colors">
+                                            <i data-lucide="send" class="w-3.5 h-3.5 text-amber-600"></i>
+                                            Renvoyer l'invitation
+                                        </button>
+                                    </template>
+                                    <button @click="ouvrirModaleEdition(u); menuOuvert = false"
+                                            class="w-full text-left flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 transition-colors">
+                                        <i data-lucide="pencil" class="w-3.5 h-3.5 text-slate-400"></i>
+                                        Modifier le compte
                                     </button>
-                                    {% endif %}
-                                {% endif %}
+                                </div>
                             </div>
+                            {% endif %}
                         </td>
                     </tr>
                 </template>
@@ -171,12 +206,17 @@
 
     {% if current_user.is_authenticated %}
         {% if current_user.role.nom == 'admin' %}
-    <!-- Modale de Création Utilisateur -->
+    <!-- Modale de Création Utilisateur (Onboarding sans mot de passe initial) -->
     <div x-show="modaleOuverte" x-cloak @click.self="fermerModaleCreation()" @keydown.escape.window="fermerModaleCreation()"
          class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl border border-slate-200" @click.stop>
             <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
-                <h3 class="text-base font-bold text-slate-900">Nouvel Utilisateur</h3>
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-900">Nouvel Utilisateur</h3>
+                </div>
                 <button type="button" @click="fermerModaleCreation()" class="text-slate-400 hover:text-slate-600 transition-colors" aria-label="Fermer la modale">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
@@ -195,19 +235,8 @@
                     <input id="utilisateur-nom" type="text" x-model.trim="formulaire.nom" required class="gtm-input" placeholder="Ex: Jean Dupont">
                 </div>
                 <div>
-                    <label for="utilisateur-email" class="gtm-label">Adresse email</label>
-                    <input id="utilisateur-email" type="email" x-model.trim="formulaire.email" required class="gtm-input" placeholder="j.dupont@entreprise.com">
-                </div>
-                <div>
-                    <label for="utilisateur-mot-de-passe" class="gtm-label">Mot de passe initial</label>
-                    <div class="relative">
-                        <input id="utilisateur-mot-de-passe" :type="motDePasseVisible ? 'text' : 'password'" x-model="formulaire.mot_de_passe" required class="gtm-input pr-10" placeholder="••••••••">
-                        <button type="button" @click="motDePasseVisible = !motDePasseVisible"
-                                :aria-label="motDePasseVisible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
-                                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
-                            <i :data-lucide="motDePasseVisible ? 'eye-off' : 'eye'" class="w-4 h-4"></i>
-                        </button>
-                    </div>
+                    <label for="utilisateur-email" class="gtm-label">Adresse email professionnelle</label>
+                    <input id="utilisateur-email" type="email" x-model.trim="formulaire.email" required class="gtm-input" placeholder="j.dupont@galaxysolutions.ma">
                 </div>
                 <div>
                     <label for="utilisateur-role" class="gtm-label">Rôle système</label>
@@ -218,18 +247,74 @@
                         </template>
                     </select>
                 </div>
+
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 flex items-start gap-2">
+                    <i data-lucide="info" class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5"></i>
+                    <span>Un lien d'activation sécurisé valable 48h sera généré. Le collaborateur définira lui-même son mot de passe.</span>
+                </div>
+
                 <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 mt-6">
                     <button type="button" @click="fermerModaleCreation()" class="gtm-btn gtm-btn-secondary">
                         Annuler
                     </button>
                     <button type="submit" :disabled="envoiEnCours" class="gtm-btn gtm-btn-primary">
-                        <span x-show="!envoiEnCours">Créer l'utilisateur</span>
+                        <span x-show="!envoiEnCours" class="flex items-center gap-1.5">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i> Créer & inviter
+                        </span>
                         <span x-show="envoiEnCours" class="flex items-center gap-2">
                             <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Création...
                         </span>
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modale de Confirmation & Lien d'Activation Généré -->
+    <div x-show="modaleInvitationOuverte"
+         x-cloak
+         @click.self="modaleInvitationOuverte = false"
+         @keydown.escape.window="modaleInvitationOuverte = false"
+         class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl w-full max-w-lg p-6 shadow-2xl border border-slate-200" @click.stop>
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                        <i data-lucide="mail-check" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-900">Invitation d'activation générée</h3>
+                </div>
+                <button type="button" @click="modaleInvitationOuverte = false" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <p class="text-xs text-slate-600 leading-relaxed" x-text="invitationData.message"></p>
+                
+                <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                    <label class="text-[11px] font-semibold text-slate-700 uppercase tracking-wider block">Lien d'activation direct (Valide 48h) :</label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" readonly :value="invitationData.url" class="gtm-input text-xs font-mono bg-white select-all text-slate-700">
+                        <button type="button" @click="copierLienInvitation()"
+                                class="gtm-btn gtm-btn-primary text-xs flex-shrink-0 flex items-center gap-1.5"
+                                :class="invitationData.copie ? 'bg-emerald-700' : ''">
+                            <i :data-lucide="invitationData.copie ? 'check' : 'copy'" class="w-3.5 h-3.5"></i>
+                            <span x-text="invitationData.copie ? 'Copié !' : 'Copier'"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <p class="text-[11px] text-slate-400">
+                    Transmettez ce lien au collaborateur ou invitez-le à vérifier ses emails. Dès qu'il aura défini son mot de passe, son statut passera automatiquement à <strong class="text-slate-600">Actif</strong>.
+                </p>
+            </div>
+
+            <div class="flex justify-end pt-4 border-t border-slate-100 mt-6">
+                <button type="button" @click="modaleInvitationOuverte = false" class="gtm-btn gtm-btn-secondary text-xs">
+                    Fermer
+                </button>
+            </div>
         </div>
     </div>
 

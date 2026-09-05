@@ -3,8 +3,12 @@ const COULEURS_ROLE = { admin: 'bg-primary/10 text-primary', gestionnaire: 'bg-i
 function pageUtilisateursData() {
     return {
         utilisateurs: [], recherche: '', filtreRole: '', tri: '', chargementEnCours: true, erreur: null, accesRefuse: false,
-        modaleOuverte: false, envoiEnCours: false, erreurFormulaire: null, motDePasseVisible: false,
-        formulaire: { nom: '', email: '', mot_de_passe: '', role_id: '' },
+        modaleOuverte: false, envoiEnCours: false, erreurFormulaire: null,
+        formulaire: { nom: '', email: '', role_id: '' },
+
+        // Modale de confirmation d'invitation (lien d'activation à copier)
+        modaleInvitationOuverte: false,
+        invitationData: { email: '', nom: '', url: '', token: '', message: '', copie: false },
 
         init() {
             this.$watch('recherche', () => this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons()));
@@ -140,20 +144,26 @@ function pageUtilisateursData() {
         formaterDate(dateStr) { const date = new Date(dateStr); return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('fr-FR'); },
 
         ouvrirModaleCreation() {
-            this.formulaire = { nom: '', email: '', mot_de_passe: '', role_id: '' };
-            this.motDePasseVisible = false;
+            this.formulaire = { nom: '', email: '', role_id: '' };
             this.erreurFormulaire = null;
             this.modaleOuverte = true;
             this.$nextTick(() => lucide.createIcons());
         },
         fermerModaleCreation() { if (!this.envoiEnCours) this.modaleOuverte = false; },
+
         async soumettreCreation() {
             this.envoiEnCours = true;
             this.erreurFormulaire = null;
             try {
                 const res = await fetch(urlUtilisateurs, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-                    body: JSON.stringify({ nom: this.formulaire.nom, email: this.formulaire.email, mot_de_passe: this.formulaire.mot_de_passe, role_id: this.formulaire.role_id }),
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        nom: this.formulaire.nom,
+                        email: this.formulaire.email,
+                        role_id: this.formulaire.role_id,
+                    }),
                 });
                 const data = await res.json();
                 if (!res.ok) {
@@ -163,11 +173,72 @@ function pageUtilisateursData() {
                 }
                 this.utilisateurs.push(data);
                 this.modaleOuverte = false;
-                if (typeof window.afficherToast === 'function') window.afficherToast('succes', 'Utilisateur créé avec succès.');
+
+                if (data.url_activation) {
+                    this.invitationData = {
+                        email: data.email,
+                        nom: data.nom,
+                        url: `${window.location.origin}${data.url_activation}`,
+                        token: data.token_activation,
+                        message: `Compte créé avec succès. L'invitation pour ${data.email} a été générée.`,
+                        copie: false,
+                    };
+                    this.modaleInvitationOuverte = true;
+                }
+
+                if (typeof window.afficherToast === 'function') window.afficherToast('succes', `Utilisateur ${data.nom} créé avec succès.`);
             } catch (err) {
                 console.error('Erreur création utilisateur :', err);
                 this.erreurFormulaire = 'Impossible de contacter le serveur.';
-            } finally { this.envoiEnCours = false; }
+            } finally {
+                this.envoiEnCours = false;
+                this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
+            }
+        },
+
+        async renvoyerInvitation(utilisateur) {
+            try {
+                const res = await fetch(`${urlUtilisateurs}/${utilisateur.id}/renvoyer-invitation`, {
+                    method: 'POST',
+                    credentials: 'include',
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    if (typeof window.afficherToast === 'function') window.afficherToast('erreur', data.erreur || "Impossible de renvoyer l'invitation.");
+                    return;
+                }
+
+                const index = this.utilisateurs.findIndex(u => u.id === utilisateur.id);
+                if (index !== -1) this.utilisateurs[index] = data;
+
+                this.invitationData = {
+                    email: data.email,
+                    nom: data.nom,
+                    url: `${window.location.origin}${data.url_activation}`,
+                    token: data.token_activation,
+                    message: data.message || `Nouvelle invitation générée pour ${data.email}.`,
+                    copie: false,
+                };
+                this.modaleInvitationOuverte = true;
+
+                if (typeof window.afficherToast === 'function') window.afficherToast('succes', `Invitation renouvelée pour ${data.email}.`);
+            } catch (err) {
+                console.error("Erreur renvoi invitation :", err);
+                if (typeof window.afficherToast === 'function') window.afficherToast('erreur', 'Erreur réseau.');
+            } finally {
+                this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
+            }
+        },
+
+        copierLienInvitation() {
+            if (!this.invitationData.url) return;
+            navigator.clipboard.writeText(this.invitationData.url).then(() => {
+                this.invitationData.copie = true;
+                if (typeof window.afficherToast === 'function') window.afficherToast('succes', 'Lien copié dans le presse-papier !');
+                setTimeout(() => { this.invitationData.copie = false; }, 3000);
+            }).catch(err => {
+                console.error('Erreur copie presse-papier :', err);
+            });
         },
     };
 }

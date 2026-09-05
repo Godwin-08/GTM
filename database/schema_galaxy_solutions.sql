@@ -39,13 +39,16 @@ CREATE TABLE Utilisateur (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
-    mot_de_passe_hash VARCHAR(255) NOT NULL,
+    mot_de_passe_hash VARCHAR(255) NULL,
     role_id INT NOT NULL,
-    actif BOOLEAN NOT NULL DEFAULT TRUE,
+    actif BOOLEAN NOT NULL DEFAULT FALSE,
+    token_activation_hash VARCHAR(64) NULL,
+    expiration_token DATETIME NULL,
     date_creation DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (role_id) REFERENCES Role(id)
         ON DELETE RESTRICT
-        ON UPDATE CASCADE
+        ON UPDATE CASCADE,
+    INDEX idx_utilisateur_token_activation (token_activation_hash)
 );
 
 -- ============================================

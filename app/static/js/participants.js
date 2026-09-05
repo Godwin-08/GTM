@@ -68,6 +68,14 @@ function pageParticipantsData() {
             return query ? `${urlParticipants}?${query}` : urlParticipants;
         },
 
+        urlExport(format = 'csv') {
+            const params = new URLSearchParams();
+            if (this.filtres.q && this.filtres.q.trim()) params.set('q', this.filtres.q.trim());
+            if (this.filtres.client_id) params.set('client_id', this.filtres.client_id);
+            const qs = params.toString();
+            return `/api/participants/export/${format}${qs ? '?' + qs : ''}`;
+        },
+
         async charger() {
             this.chargementEnCours = true;
             this.erreur = null;

@@ -121,3 +121,44 @@ def pca():
     return jsonify(get_acp_complete()), 200
 
 
+@stats_bp.route("/export/pdf", methods=["GET"])
+@gestionnaire_ou_admin_required
+def export_dashboard_pdf():
+    """Génère le rapport de décision PDF du tableau de bord selon les filtres actifs."""
+    from app.services.export_service import generer_rapport_dashboard_pdf
+    from app.models import Domaine, Client, Formateur
+    from app.extensions import db
+
+    try:
+        annee, domaine_id, client_id, formateur_id = extraire_filtres_stats()
+    except ErreurFiltre as err:
+        return jsonify({"erreur": str(err)}), 400
+
+    kpis = stats_service.kpi_globaux(
+        annee=annee, domaine_id=domaine_id, client_id=client_id, formateur_id=formateur_id
+    )
+    points_att = points_attention_service.get_points_attention(
+        annee=annee, domaine_id=domaine_id, client_id=client_id, formateur_id=formateur_id
+    )
+
+    labels = []
+    if annee:
+        labels.append(f"Année {annee}")
+    if domaine_id:
+        d = db.session.get(Domaine, domaine_id)
+        if d:
+            labels.append(f"Domaine: {d.nom}")
+    if client_id:
+        c = db.session.get(Client, client_id)
+        if c:
+            labels.append(f"Client: {c.nom_entreprise}")
+    if formateur_id:
+        f = db.session.get(Formateur, formateur_id)
+        if f:
+            labels.append(f"Formateur: {f.nom}")
+
+    filtres_str = " • ".join(labels) if labels else "Global Entreprise"
+    return generer_rapport_dashboard_pdf(kpis, points_att, filtres_str)
+
+
+

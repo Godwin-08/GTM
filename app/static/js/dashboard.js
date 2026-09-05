@@ -114,6 +114,10 @@ function pageDashboardData() {
             return query ? `?${query}` : '';
         },
 
+        urlExportPdf() {
+            return `/api/stats/export/pdf${this.construireQueryString()}`;
+        },
+
         async chargerOptions() {
             try {
                 const [resD, resC, resF] = await Promise.all([

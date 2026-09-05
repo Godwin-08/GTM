@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activation de votre compte | Galaxy Solutions — GTM</title>
+    
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Config Tailwind : palette Galaxy Solutions & Tokens GTM -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gtm: {
+                            brand: 'var(--gtm-brand)',
+                            primary: 'var(--gtm-primary)',
+                            interactive: 'var(--gtm-primary-interactive)',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23F26B1F'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold' font-size='18'>G</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="bg-slate-900 font-sans text-slate-900 min-h-screen flex items-center justify-center p-4 sm:p-6">
+
+    <div class="w-full max-w-4xl bg-white rounded-2xl border border-slate-800 shadow-2xl overflow-hidden grid grid-cols-1 md:grid-cols-2"
+         x-data="activationCompteData('{{ token }}')" x-init="verifierToken()">
+        
+        <!-- Panneau de Gauche : Branding & Explications -->
+        <div class="bg-slate-900 p-8 md:p-12 text-white flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-800 relative overflow-hidden">
+            <div class="absolute -top-24 -left-24 w-64 h-64 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="relative z-10 space-y-6">
+                <!-- Logo Galaxy -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-[#F26B1F] flex items-center justify-center flex-shrink-0 shadow-md">
+                        <span class="text-white text-base font-bold">G</span>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-white leading-tight">GTM</h1>
+                        <p class="text-xs text-slate-400 font-medium">Galaxy Solutions</p>
+                    </div>
+                </div>
+
+                <div class="pt-6 space-y-3">
+                    <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                        Activation Sécurisée
+                    </div>
+                    <h2 class="text-2xl font-bold text-white leading-tight">
+                        Bienvenue dans votre espace de travail GTM
+                    </h2>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Un compte utilisateur a été préparé pour vous. Définissez votre mot de passe pour finaliser l'activation et accéder à vos modules selon votre habilitation.
+                    </p>
+                </div>
+            </div>
+
+            <div class="relative z-10 pt-8 mt-8 border-t border-slate-800/80">
+                <div class="flex items-center gap-2 text-xs text-slate-500">
+                    <i data-lucide="lock" class="w-3.5 h-3.5 text-emerald-500"></i>
+                    <span>Chiffrement PBKDF2-SHA256 & Token à usage unique</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panneau de Droite : Formulaire d'Activation -->
+        <div class="p-8 md:p-12 flex flex-col justify-center bg-white">
+            
+            <!-- État 1 : Chargement de la vérification du token -->
+            <template x-if="chargementVerification">
+                <div class="text-center py-10 space-y-3">
+                    <i data-lucide="loader-2" class="w-8 h-8 mx-auto animate-spin text-emerald-600"></i>
+                    <p class="text-sm text-slate-600 font-medium">Vérification du lien d'activation...</p>
+                </div>
+            </template>
+
+            <!-- État 2 : Token Invalide ou Expiré -->
+            <template x-if="!chargementVerification && erreurToken">
+                <div class="space-y-6 text-center py-4">
+                    <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+                        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">Lien d'activation invalide</h3>
+                        <p class="text-xs text-slate-500 mt-2 max-w-sm mx-auto" x-text="erreurToken"></p>
+                    </div>
+                    <div class="pt-4">
+                        <a href="{{ url_for('pages.login_page') }}" class="gtm-btn gtm-btn-secondary text-xs inline-flex items-center gap-2">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                            Retour à la page de connexion
+                        </a>
+                    </div>
+                </div>
+            </template>
+
+            <!-- État 3 : Activation Réussie -->
+            <template x-if="!chargementVerification && activationReussie">
+                <div class="space-y-6 text-center py-4">
+                    <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
+                        <i data-lucide="check-circle" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">Compte activé avec succès !</h3>
+                        <p class="text-xs text-slate-500 mt-2">
+                            Votre mot de passe est enregistré. Vous pouvez dès à présent vous connecter avec votre adresse email.
+                        </p>
+                    </div>
+                    <div class="pt-4">
+                        <a href="{{ url_for('pages.login_page') }}" class="gtm-btn gtm-btn-primary text-xs w-full py-2.5 justify-center">
+                            Se connecter maintenant
+                        </a>
+                    </div>
+                </div>
+            </template>
+
+            <!-- État 4 : Formulaire de Définition du Mot de Passe -->
+            <template x-if="!chargementVerification && !erreurToken && !activationReussie">
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">Définissez votre mot de passe</h3>
+                        <p class="text-xs text-slate-500 mt-1">
+                            Compte : <strong class="text-slate-800" x-text="infosUtilisateur.email"></strong> (<span x-text="infosUtilisateur.role"></span>)
+                        </p>
+                    </div>
+
+                    <template x-if="erreurSoumission">
+                        <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-start gap-2">
+                            <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
+                            <span x-text="erreurSoumission"></span>
+                        </div>
+                    </template>
+
+                    <form @submit.prevent="soumettreActivation()" class="space-y-4">
+                        <div>
+                            <label class="gtm-label">Nouveau mot de passe</label>
+                            <div class="relative">
+                                <input :type="motDePasseVisible ? 'text' : 'password'"
+                                       x-model="motDePasse"
+                                       required
+                                       minlength="8"
+                                       placeholder="8 caractères minimum"
+                                       class="gtm-input pr-10">
+                                <button type="button"
+                                        @click="motDePasseVisible = !motDePasseVisible"
+                                        class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+                                    <i :data-lucide="motDePasseVisible ? 'eye-off' : 'eye'" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="gtm-label">Confirmer le mot de passe</label>
+                            <div class="relative">
+                                <input :type="confirmationVisible ? 'text' : 'password'"
+                                       x-model="confirmationMotDePasse"
+                                       required
+                                       minlength="8"
+                                       placeholder="Confirmez votre mot de passe"
+                                       class="gtm-input pr-10">
+                                <button type="button"
+                                        @click="confirmationVisible = !confirmationVisible"
+                                        class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+                                    <i :data-lucide="confirmationVisible ? 'eye-off' : 'eye'" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="pt-2">
+                            <button type="submit" :disabled="envoiEnCours" class="gtm-btn gtm-btn-primary w-full justify-center py-2.5">
+                                <span x-show="!envoiEnCours" class="flex items-center gap-2">
+                                    <i data-lucide="check" class="w-4 h-4"></i> Activer mon compte
+                                </span>
+                                <span x-show="envoiEnCours" class="flex items-center gap-2">
+                                    <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Activation en cours...
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </template>
+
+        </div>
+    </div>
+
+    <script>
+        function activationCompteData(token) {
+            return {
+                token: token,
+                chargementVerification: true,
+                erreurToken: null,
+                infosUtilisateur: { nom: '', email: '', role: '' },
+                motDePasse: '',
+                confirmationMotDePasse: '',
+                motDePasseVisible: false,
+                confirmationVisible: false,
+                envoiEnCours: false,
+                erreurSoumission: null,
+                activationReussie: false,
+
+                async verifierToken() {
+                    this.chargementVerification = true;
+                    this.erreurToken = null;
+                    try {
+                        const res = await fetch(`/api/auth/verifier-token/${this.token}`);
+                        const data = await res.json();
+                        if (!res.ok) {
+                            this.erreurToken = data.erreur || "Ce lien d'activation est invalide ou expiré.";
+                            return;
+                        }
+                        this.infosUtilisateur = {
+                            nom: data.nom,
+                            email: data.email,
+                            role: data.role
+                        };
+                    } catch (err) {
+                        console.error('Erreur vérification token :', err);
+                        this.erreurToken = "Impossible de joindre le serveur.";
+                    } finally {
+                        this.chargementVerification = false;
+                        this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
+                    }
+                },
+
+                async soumettreActivation() {
+                    if (this.motDePasse !== this.confirmationMotDePasse) {
+                        this.erreurSoumission = "Les deux mots de passe ne correspondent pas.";
+                        return;
+                    }
+                    if (this.motDePasse.length < 8) {
+                        this.erreurSoumission = "Le mot de passe doit comporter au moins 8 caractères.";
+                        return;
+                    }
+
+                    this.envoiEnCours = true;
+                    this.erreurSoumission = null;
+
+                    try {
+                        const res = await fetch('/api/auth/activer-compte', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                token: this.token,
+                                mot_de_passe: this.motDePasse
+                            })
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                            this.erreurSoumission = data.erreur || "Une erreur est survenue lors de l'activation.";
+                            return;
+                        }
+                        this.activationReussie = true;
+                    } catch (err) {
+                        console.error('Erreur activation :', err);
+                        this.erreurSoumission = "Impossible de contacter le serveur.";
+                    } finally {
+                        this.envoiEnCours = false;
+                        this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
+                    }
+                }
+            };
+        }
+    </script>
+</body>
+</html>

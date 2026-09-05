@@ -9,11 +9,19 @@ pages_bp = Blueprint('pages', __name__)
 
 @pages_bp.route('/')
 def index():
+    if current_user.is_authenticated:
+        if current_user.a_role("formateur"):
+            return redirect(url_for('pages.sessions'))
+        return redirect(url_for('pages.dashboard'))
     return render_template('index.html')
 
 @pages_bp.route('/login')
 def login_page():
     return render_template('login.html')
+
+@pages_bp.route('/activation/<token>')
+def activation_page(token):
+    return render_template('auth/activation.html', token=token)
 
 @pages_bp.route('/dashboard')
 @login_required

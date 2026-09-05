@@ -205,3 +205,57 @@ class ExportsTestCase(unittest.TestCase):
         self.assertEqual(json_ids, csv_ids)
         self.assertEqual(csv_ids, [self.session_1.id])
         self.assertNotIn(self.session_2.id, csv_ids)
+
+    def test_export_sessions_xlsx(self):
+        """Vérifie que l'export Excel XLSX des sessions renvoie un fichier valide."""
+        self._login(self.admin)
+        resp = self.client.get("/api/sessions/export/xlsx")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", resp.headers["Content-Type"])
+        self.assertIn("attachment; filename=", resp.headers["Content-Disposition"])
+        self.assertTrue(len(resp.data) > 0)
+
+    def test_export_clients_xlsx(self):
+        """Vérifie que l'export Excel XLSX des clients renvoie un fichier valide."""
+        self._login(self.admin)
+        resp = self.client.get("/api/clients/export/xlsx")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", resp.headers["Content-Type"])
+        self.assertTrue(len(resp.data) > 0)
+
+    def test_export_participants_xlsx(self):
+        """Vérifie que l'export Excel XLSX des participants renvoie un fichier valide."""
+        self._login(self.admin)
+        resp = self.client.get("/api/participants/export/xlsx")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", resp.headers["Content-Type"])
+        self.assertTrue(len(resp.data) > 0)
+
+    def test_export_formations_csv_and_xlsx(self):
+        """Vérifie que l'export CSV et XLSX des formations renvoie des fichiers valides."""
+        self._login(self.admin)
+        resp_csv = self.client.get("/api/formations/export/csv")
+        self.assertEqual(resp_csv.status_code, 200)
+        self.assertIn("text/csv", resp_csv.headers["Content-Type"])
+
+        resp_xlsx = self.client.get("/api/formations/export/xlsx")
+        self.assertEqual(resp_xlsx.status_code, 200)
+        self.assertIn("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", resp_xlsx.headers["Content-Type"])
+
+    def test_export_dashboard_pdf(self):
+        """Vérifie que le rapport de décision PDF du Dashboard est généré avec succès."""
+        self._login(self.admin)
+        resp = self.client.get("/api/stats/export/pdf")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("application/pdf", resp.headers["Content-Type"])
+        self.assertIn("attachment; filename=", resp.headers["Content-Disposition"])
+        self.assertTrue(len(resp.data) > 0)
+
+    def test_export_session_fiche_pdf(self):
+        """Vérifie que la fiche d'émargement PDF d'une session est générée avec succès."""
+        self._login(self.admin)
+        resp = self.client.get(f"/api/sessions/{self.session_1.id}/export/pdf")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("application/pdf", resp.headers["Content-Type"])
+        self.assertIn("attachment; filename=", resp.headers["Content-Disposition"])
+        self.assertTrue(len(resp.data) > 0)

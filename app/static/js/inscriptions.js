@@ -61,6 +61,17 @@ function pageInscriptionsData() {
             }
         },
 
+        urlExport(format = 'csv') {
+            const params = new URLSearchParams();
+            Object.entries(this.filtres).forEach(([cle, valeur]) => {
+                if (valeur !== '' && valeur !== null && valeur !== undefined) {
+                    params.set(cle, valeur);
+                }
+            });
+            const qs = params.toString();
+            return `/api/inscriptions/export/${format}${qs ? '?' + qs : ''}`;
+        },
+
         async charger() {
             this.chargementEnCours = true;
             this.erreur = null;

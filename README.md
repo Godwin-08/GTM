@@ -392,6 +392,36 @@ L'accès à l'application est gouverné par trois rôles utilisateur.
 
 Le contrôle des autorisations est **systématiquement exécuté côté backend** (dans les contrôleurs Flask et les services de permission). Masquer un bouton dans l'interface frontend ne constitue qu'un confort d'ergonomie et non une mesure de sécurité.
 
+### 9.1 Parcours d'Onboarding & Cycle d'Activation Sécurisé
+
+GTM implémente un parcours d'onboarding utilisateur d'entreprise sécurisé, sans manipulation manuelle de mots de passe temporaires :
+
+```text
+ADMIN
+  ↓ Crée l'utilisateur (Nom + Email pro + Rôle)
+GTM
+  ↓ Génère un compte "En attente d'activation" (actif=False)
+  ↓ Génère un token cryptographique aléatoire unique (secrets, validité 48h)
+  ↓ Stocke uniquement le hash SHA-256 en base (aucun token en clair)
+SERVICE MESSAGERIE
+  ├── Mode Console (démo locale / soutenance) : lien affiché dans les logs + copiable dans l'UI
+  └── Mode SMTP (production) : envoi du courriel transactionnel charté Emerald Graphite
+COLLABORATEUR
+  ↓ Reçoit l'invitation et clique sur /activation/<token>
+  ↓ Vérification de validité et de non-expiration en temps constant
+  ↓ Définit son propre mot de passe sécurisé (min. 8 caractères)
+GTM
+  ↓ Hache le mot de passe (PBKDF2-SHA256), active le compte (actif=True) et purge le token
+COLLABORATEUR
+  ↓ Se connecte sur /login et accède à son espace selon son rôle RBAC
+```
+
+**Points forts de sécurité de l'onboarding :**
+- **Zéro mot de passe temporaire en clair** : Le mot de passe final est choisi exclusivement par le collaborateur.
+- **Token à usage unique** : Purge irréversible après activation avec protection anti-rejeu.
+- **Durée de vie limitée** : Expiration automatique après 48h (renouvelable en un clic par l'Admin via l'action *« Renvoyer l'invitation »*).
+- **Résilience SMTP** : Si le serveur SMTP est injoignable, le compte reste créé en statut *« En attente »*, l'Admin peut copier le lien direct d'activation et réexpédier l'invitation dès le rétablissement du réseau.
+
 ---
 
 ## 10. Règles métier importantes
@@ -533,10 +563,12 @@ L'**Analyse en Composantes Principales (ACP)** est un outil d'**analyse explorat
 
 Développée avec **NumPy et Pandas** (`app/services/acp_service.py`), elle calcule la matrice de corrélation $R$ et exécute une recherche de valeurs/vecteurs propres (`np.linalg.eigh`) pour réduire les dimensions des données d'inscriptions (Clients × Formations) et projeter les entités sur deux axes factoriels principaux.
 
-Elle permet d'analyser visuellement :
-- la proximité des profils d'activité clients ;
-- la variance expliquée par chaque axe ;
-- les qualités de représentation ($\cos^2$) et contributions ($ctr$).
+Elle propose une **interface pédagogique avec l'identité visuelle Violet Analytics (`#7C3AED`)** :
+- **Zone pédagogique "Qu'est-ce que vous regardez ?"** : explications claires des axes F1/F2, de la proximité des points et de la distance du centre ;
+- **Qualité de représentation ($\cos^2$) vulgarisée en %** avec badges d'évaluation ("Excellente 87%", "Bonne 55%", "Faible 32%") ;
+- **Poids sur les tendances (CTR %)** explicités et qualifiés ("Majeur", "Moyen", "Faible") ;
+- **Synthèse automatique des profils** : détection visuelle des profils atypiques et des paires de clients les plus similaires ;
+- **Bandeau de périmètre global** rappelant que l'ACP analyse l'intégralité du portefeuille de l'entreprise.
 
 ---
 
@@ -545,15 +577,26 @@ Elle permet d'analyser visuellement :
 L'application expose une API REST complète au format JSON sous le préfixe `/api/`.
 
 ### Exemples d'endpoints principaux :
-- `POST /api/auth/login` — Authentification
+- `POST /api/auth/login` — Authentification par session sécurisée
+- `POST /api/auth/logout` — Déconnexion et invalidation de session
+- `POST /api/auth/activer-compte` — Activation de compte par token unique et définition de mot de passe
+- `GET /api/auth/verifier-token/<token>` — Pré-vérification de validité et expiration d'un lien d'activation
+- `GET /api/utilisateurs` — Répertoire des utilisateurs internes (Admin)
+- `POST /api/utilisateurs` — Création d'un utilisateur en attente & génération de token d'invitation (Admin)
+- `POST /api/utilisateurs/<id>/renvoyer-invitation` — Régénération et réexpédition de l'invitation (Admin)
 - `GET /api/sessions` — Liste des sessions (avec filtres GET)
+- `GET /api/sessions/export/csv` & `GET /api/sessions/export/xlsx` — Export sessions filtrées
+- `GET /api/sessions/<id>/export/pdf` — Feuille d'émargement officielle de session en PDF
 - `POST /api/sessions` — Création d'une session
 - `GET /api/inscriptions` — Inscriptions (avec `?session_id=`)
 - `POST /api/inscriptions` — Création d'une inscription
 - `PUT /api/inscriptions/<id>` — Modification d'un statut d'inscription
-- `GET /api/participants` — Liste des participants (avec `?client_id=`)
+- `GET /api/clients/export/csv` & `GET /api/clients/export/xlsx` — Export clients filtrés
+- `GET /api/participants/export/csv` & `GET /api/participants/export/xlsx` — Export participants
+- `GET /api/formations/export/csv` & `GET /api/formations/export/xlsx` — Export catalogue formations
 - `GET /api/stats/kpi-globaux` — Indicateurs KPI du Dashboard
 - `GET /api/stats/points-attention` — Points d'attention
+- `GET /api/stats/export/pdf` — Rapport de synthèse & pilotage décisionnel en PDF
 - `GET /api/stats/pca` — Données factorielles de l'ACP
 
 ### Format des erreurs JSON :
@@ -707,18 +750,18 @@ Les comptes ci-dessous sont intégrés au Seed officiel pour tester l'applicatio
 
 ## 30. Tests
 
-Le projet inclut une suite de tests automatisés couvrant l'authentification, les autorisations RBAC, les filtres, l'activité client, les erreurs API, les inscriptions et la cohérence des données.
+Le projet inclut une suite de tests automatisés exhaustive couvrant l'authentification, le parcours d'onboarding, les autorisations RBAC, les filtres, l'activité client, les erreurs API, les inscriptions, les exports métier (Excel/PDF/CSV) et la cohérence des données.
 
-Lancer la suite de tests :
+Lancer la suite de tests complète :
 
 ```powershell
-.\venv\Scripts\python.exe -m unittest discover -s tests
+.\venv\Scripts\pytest.exe
 ```
 
 Résultat du dernier lancement sur la version finale :
 ```text
-Ran 93 tests in 24.823s
-OK (0 échec, 0 erreur)
+============================ 119 passed in 42.13s =============================
+OK (119 tests validés, 100% de réussite)
 ```
 
 ---
@@ -726,8 +769,8 @@ OK (0 échec, 0 erreur)
 ## 31. Gestion des erreurs
 
 L'application gère les erreurs HTTP avec des réponses structurées :
-- `400 Bad Request` : Paramètre GET invalide ou données JSON manquantes.
-- `401 Unauthorized` : Session non authentifiée.
+- `400 Bad Request` : Paramètre GET invalide, token expiré/invalide ou données JSON manquantes.
+- `401 Unauthorized` : Session non authentifiée ou compte non encore activé.
 - `403 Forbidden` : Tentative d'accès hors privilèges RBAC.
 - `404 Not Found` : Ressource introuvable.
 - `409 Conflict` : Violation d'une règle métier (session pleine, doublon).
@@ -739,7 +782,8 @@ L'application gère les erreurs HTTP avec des réponses structurées :
 
 Les dispositifs de sécurité mis en œuvre comprennent :
 - Authentification sécurisée par cookie de session Flask-Login ;
-- Mots de passe stockés sous forme de hash fort (Werkzeug `generate_password_hash`) ;
+- Mots de passe stockés sous forme de hash fort (PBKDF2:SHA256 via Werkzeug) ;
+- **Parcours d'onboarding sans mot de passe initial** avec token cryptographique aléatoire unique (48h) et comparaison en temps constant (`hmac.compare_digest`) ;
 - Contrôle d'accès RBAC vérifié au niveau backend sur chaque route API ;
 - Isolation stricte des données du Formateur ;
 - Protection contre les doublons d'inscription par contrainte d'unicité SQL ;
@@ -767,7 +811,6 @@ Consultez le fichier [RECETTE_SOUTENANCE.md](RECETTE_SOUTENANCE.md) pour obtenir
 
 L'application répond intégralement au cahier des charges du PFA. Dans une évolution future de production, les axes d'amélioration pourraient inclure :
 - un système de pagination côté serveur pour les très grands volumes (> 10 000 entrées) ;
-- l'envoi automatisé de convocations et notifications par e-mail SMTP ;
 - la mise en place d'une suite de tests E2E automatisés (Cypress / Playwright).
 
 ---
@@ -776,19 +819,16 @@ L'application répond intégralement au cahier des charges du PFA. Dans une évo
 
 ```text
 Gestion métier            ✅ Validé
-Authentification & RBAC   ✅ Validé
+Authentification & RBAC   ✅ Validé (Isolation Formateur hermétique sur sessions, clients, participants et agrégats)
+Onboarding & Activation   ✅ Validé (Token unique 48h, service messagerie Console/SMTP, mot de passe choisi par l'utilisateur)
 Fiches détail             ✅ Validé
 Filtres & URL state       ✅ Validé
 Dashboard & KPI           ✅ Validé
 Points d'attention        ✅ Validé
-Analyse ACP               ✅ Validé
-CRUD Inscriptions         ✅ Validé
-Seed de démonstration     ✅ Validé
-Landing page              ✅ Validé
-Toasts & Feedback UI      ✅ Validé
-Micro-interactions        ✅ Validé
-Tests automatisés (93/93) ✅ Validé
-Documentation README      ✅ Validé
+Exports Métier            ✅ Validé (Excel stylisé openpyxl, Rapports décisionnels PDF, Feuilles d'émargement PDF)
+Analyse ACP               ✅ Validé (Interprétation business en 1ère position, projection 2D et détails mathématiques)
+Suite de tests (pytest)   ✅ 119 / 119 tests réussis (100%)
+Documentation & Recette   ✅ Validé (Protocole RECETTE_SOUTENANCE.md & README)
 ```
 
 ---

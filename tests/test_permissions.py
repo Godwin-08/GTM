@@ -159,6 +159,15 @@ class PermissionsTestCase(unittest.TestCase):
         res_formation = self.client.get(f"/api/formations/{self.formation_2.id}")
         self.assertEqual(res_formation.status_code, 403)
 
+        # 3. Vérification de l'isolation des agrégats (pas de fuite des sessions/participants des autres formateurs)
+        client_data = self.client.get(f"/api/clients/{self.client_1.id}").get_json()
+        self.assertEqual(client_data["nb_sessions"], 1)
+        self.assertEqual(client_data["nb_participants"], 1)
+
+        participant_data = self.client.get(f"/api/participants/{self.participant_1.id}").get_json()
+        self.assertEqual(participant_data["nb_inscriptions"], 1)
+        self.assertEqual(participant_data["nb_formations"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

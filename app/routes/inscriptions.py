@@ -142,6 +142,40 @@ def export_inscriptions_csv():
     date_str = date.today().isoformat()
     return generer_csv_response(f"inscriptions_export_{date_str}.csv", en_tetes, lignes)
 
+@inscriptions_bp.route("/export/xlsx", methods=["GET"])
+@login_required
+def export_inscriptions_xlsx():
+    from app.services.export_service import generer_xlsx_response
+    inscriptions, err = obtenir_inscriptions_filtrees(current_user, request.args)
+    if err:
+        return err
+    en_tetes = {
+        "id": "ID Inscription",
+        "participant_nom": "Participant",
+        "participant_email": "Email Participant",
+        "entreprise": "Entreprise Cliente",
+        "formation_titre": "Formation",
+        "session_id": "ID Session",
+        "date_debut_session": "Date Début Session",
+        "date_inscription": "Date Inscription",
+        "statut": "Statut",
+    }
+    lignes = []
+    for i in inscriptions:
+        lignes.append({
+            "id": i.id,
+            "participant_nom": i.participant.nom if i.participant else "",
+            "participant_email": i.participant.email if i.participant else "",
+            "entreprise": i.participant.client.nom_entreprise if i.participant and i.participant.client else "",
+            "formation_titre": i.session.formation.titre if i.session and i.session.formation else "",
+            "session_id": i.session_id,
+            "date_debut_session": i.session.date_debut.isoformat() if i.session and i.session.date_debut else "",
+            "date_inscription": i.date_inscription.isoformat() if i.date_inscription else "",
+            "statut": i.statut.replace("_", " ").title() if i.statut else "",
+        })
+    date_str = date.today().isoformat()
+    return generer_xlsx_response(f"inscriptions_export_{date_str}.xlsx", en_tetes, lignes, titre_feuille="Inscriptions")
+
 @inscriptions_bp.route("", methods=["POST"])
 @gestionnaire_ou_admin_required
 def creer_inscription():
