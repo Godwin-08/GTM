@@ -75,6 +75,32 @@ class AuthTestCase(unittest.TestCase):
         response = self.client.get("/api/auth/logout")
         self.assertEqual(response.status_code, 405)
 
+    def test_changer_mot_de_passe_succes(self):
+        self.connecter()
+        res = self.client.post("/api/auth/changer-mot-de-passe", json={
+            "ancien_mot_de_passe": "Secret123",
+            "nouveau_mot_de_passe": "NouveauSecret2026!"
+        })
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("modifié avec succès", res.get_json()["message"])
+
+    def test_changer_mot_de_passe_erreurs(self):
+        self.connecter()
+        # Ancien mot de passe faux
+        res = self.client.post("/api/auth/changer-mot-de-passe", json={
+            "ancien_mot_de_passe": "MauvaisMdp",
+            "nouveau_mot_de_passe": "NouveauSecret2026!"
+        })
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("incorrect", res.get_json()["erreur"])
+
+        # Nouveau mot de passe trop court
+        res2 = self.client.post("/api/auth/changer-mot-de-passe", json={
+            "ancien_mot_de_passe": "Secret123",
+            "nouveau_mot_de_passe": "court"
+        })
+        self.assertEqual(res2.status_code, 400)
+
 
 if __name__ == "__main__":
     unittest.main()

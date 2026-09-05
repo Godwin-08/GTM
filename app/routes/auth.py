@@ -129,3 +129,32 @@ def me():
         "email": current_user.email,
         "role": current_user.role.nom,
     }), 200
+
+@auth_bp.route("/changer-mot-de-passe", methods=["POST"])
+@login_required
+def changer_mot_de_passe():
+    """
+    Permet à l'utilisateur connecté de modifier son mot de passe.
+    Payload : { "ancien_mot_de_passe": "...", "nouveau_mot_de_passe": "..." }
+    """
+    donnees = request.get_json() or {}
+    ancien = donnees.get("ancien_mot_de_passe")
+    nouveau = donnees.get("nouveau_mot_de_passe")
+
+    if not ancien or not nouveau:
+        return jsonify({"erreur": "L'ancien mot de passe et le nouveau mot de passe sont obligatoires."}), 400
+
+    if not check_password_hash(current_user.mot_de_passe_hash, ancien):
+        return jsonify({"erreur": "L'ancien mot de passe est incorrect."}), 400
+
+    valide, msg_erreur = valider_force_mot_de_passe(nouveau)
+    if not valide:
+        return jsonify({"erreur": msg_erreur}), 400
+
+    if check_password_hash(current_user.mot_de_passe_hash, nouveau):
+        return jsonify({"erreur": "Le nouveau mot de passe doit être différent de l'ancien."}), 400
+
+    current_user.mot_de_passe_hash = generate_password_hash(nouveau, method="pbkdf2:sha256")
+    db.session.commit()
+
+    return jsonify({"message": "Votre mot de passe a été modifié avec succès."}), 200
