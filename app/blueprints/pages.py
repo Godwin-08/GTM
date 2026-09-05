@@ -13,7 +13,6 @@ def index():
         if current_user.a_role("formateur"):
             return redirect(url_for('pages.sessions'))
         return redirect(url_for('pages.dashboard'))
-    return render_template('index.html')
     return redirect(url_for('pages.login_page'))
 
 @pages_bp.route('/login')
@@ -105,19 +104,6 @@ def analytics_acp():
         return redirect(url_for('pages.sessions'))
     return render_template('analytics/acp.html')
 
-# Route temporaire de dev pour prévisualiser le Design System (isolée, sans BDD, sans auth)
-@pages_bp.route('/design-system-preview')
-def design_system_preview():
-    return render_template('design-system-preview.html')
-
-@pages_bp.route('/utilisateurs-preview')
-def utilisateurs_preview():
-    from flask_login import login_user
-    from app.models import Utilisateur
-    admin_user = Utilisateur.query.filter_by(email="admin@galaxysolutions.ma").first()
-    if admin_user:
-        login_user(admin_user)
-    return render_template('utilisateurs/liste.html')
 
 
 

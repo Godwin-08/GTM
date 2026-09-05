@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from app.extensions import db
@@ -108,6 +109,7 @@ def creer_utilisateur():
     reponse = utilisateur_vers_dict(utilisateur)
     if token_activation:
         base_url = request.host_url.rstrip("/")
+        base_url = current_app.config.get("APP_BASE_URL") or request.host_url.rstrip("/")
         url_complete = f"{base_url}/activation/{token_activation}"
         reponse["token_activation"] = token_activation
         reponse["url_activation"] = f"/activation/{token_activation}"
@@ -143,6 +145,7 @@ def renvoyer_invitation(utilisateur_id):
     db.session.commit()
 
     base_url = request.host_url.rstrip("/")
+    base_url = current_app.config.get("APP_BASE_URL") or request.host_url.rstrip("/")
     url_complete = f"{base_url}/activation/{token_brut}"
 
     reponse = utilisateur_vers_dict(utilisateur)
