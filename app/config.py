@@ -41,5 +41,5 @@ class Config:
     MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL", "false").lower() in ("true", "1", "yes")
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
-    MAIL_FROM = os.environ.get("MAIL_FROM", "Galaxy Training Manager <no-reply@galaxysolutions.ma>")
-    APP_BASE_URL = os.environ.get("APP_BASE_URL", "")
+    MAIL_FROM = os.environ.get("MAIL_FROM", "Galaxy Training Manager <no-reply@gtm.galaxysolutions.ma>")
+    APP_BASE_URL = os.environ.get("APP_BASE_URL", "http://127.0.0.1:5000")
