@@ -71,6 +71,7 @@ class MailServiceTestCase(unittest.TestCase):
         self.assertIn("Sofia Amrani", html)
         self.assertIn(url_test, html)
         self.assertIn("#047857", html)  # Couleur Emerald GTM
+        self.assertIn("#F26B1F", html)  # Couleur Orange Galaxy Solutions
         self.assertIn("Activer mon compte", html)
 
     def test_envoi_mode_console_sans_smtp(self):

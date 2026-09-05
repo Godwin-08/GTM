@@ -56,8 +56,10 @@ Plateforme GTM — https://galaxysolutions.ma
                 <table role="presentation" width="100%" style="max-width: 580px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);">
                     
                     <!-- En-tête de marque Emerald Graphite -->
+                    <!-- En-tête de marque Galaxy Solutions -->
                     <tr>
                         <td style="background-color: #047857; padding: 32px 40px; text-align: left;">
+                        <td style="background-color: #0f172a; padding: 32px 40px; text-align: left; border-bottom: 3px solid #F26B1F;">
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                                 <tr>
                                     <td>
@@ -89,6 +91,8 @@ Plateforme GTM — https://galaxysolutions.ma
                                 <tr>
                                     <td align="center" style="border-radius: 10px; background-color: #047857;">
                                         <a href="{url_activation}" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 10px; background-color: #047857; letter-spacing: 0.01em;">
+                                    <td align="center" style="border-radius: 10px; background-color: #F26B1F;">
+                                        <a href="{url_activation}" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 10px; background-color: #F26B1F; letter-spacing: 0.01em;">
                                             Activer mon compte &rarr;
                                         </a>
                                     </td>
@@ -109,6 +113,7 @@ Plateforme GTM — https://galaxysolutions.ma
                             <p style="margin: 24px 0 0 0; font-size: 12px; line-height: 1.5; color: #94a3b8;">
                                 Si le bouton ne fonctionne pas, copiez et collez cette URL dans votre navigateur :<br>
                                 <a href="{url_activation}" style="color: #047857; text-decoration: underline; word-break: break-all;">{url_activation}</a>
+                                <a href="{url_activation}" style="color: #F26B1F; text-decoration: underline; word-break: break-all;">{url_activation}</a>
                             </p>
                         </td>
                     </tr>
