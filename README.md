@@ -258,7 +258,7 @@ Cette séparation nette des responsabilités garantit la maintenabilité du code
 - **Scikit-learn 1.9+** (inclus dans l'environnement pour extensions analytiques futures)
 
 ### Tests & Qualité
-- **Python `unittest`** (suite de 93 tests automatisés)
+- **Pytest 9.x** & **Python `unittest`** (suite de 118 tests automatisés)
 
 ### Gestion de version
 - **Git** & **GitHub**
@@ -305,8 +305,8 @@ PFA_galaxy_solutions/
 │       ├── base.html              # Layout principal (Sidebar, Header, Toasts)
 │       ├── dashboard.html, notifications.html, analytics_acp.html
 │       ├── sessions/ (detail.html, liste.html)
-│       ├── formations/, clients/, formateurs/, participants/, utilisateurs/
-│       └── index.html             # Page d'accueil / Landing page
+│       ├── login.html, activation.html
+│       └── sessions/, formations/, clients/, formateurs/, participants/, utilisateurs/
 │
 ├── database/
 │   ├── schema_galaxy_solutions.sql  # Schéma SQL DDL officiel
@@ -315,9 +315,10 @@ PFA_galaxy_solutions/
 ├── scripts/
 │   └── generate_seed_data.py        # Script Python de génération du Seed SQL
 │
-├── tests/                           # Suite de 93 tests unitaires et d'intégration
+├── tests/                           # Suite de 118 tests unitaires et d'intégration
 │   ├── test_auth.py, test_permissions.py, test_sessions.py, test_client_activity.py
 │   ├── test_api_errors.py, test_filters.py, test_acp.py, test_dashboard.py
+│   ├── test_onboarding.py, test_mail_service.py, test_e2e_onboarding_lifecycle.py
 │   ├── test_coherence_globale.py, test_feedback.py, test_homepage.py, test_seed_generator.py...
 │
 ├── .env.example                     # Modèle d'exemple des variables d'environnement
@@ -405,7 +406,7 @@ GTM
   ↓ Stocke uniquement le hash SHA-256 en base (aucun token en clair)
 SERVICE MESSAGERIE
   ├── Mode Console (démo locale / soutenance) : lien affiché dans les logs + copiable dans l'UI
-  └── Mode SMTP (production) : envoi du courriel transactionnel charté Emerald Graphite
+  └── Mode SMTP (production) : envoi du courriel transactionnel charté Orange Galaxy Solutions (#F26B1F) & Ardoise (#0F172A)
 COLLABORATEUR
   ↓ Reçoit l'invitation et clique sur /activation/<token>
   ↓ Vérification de validité et de non-expiration en temps constant
@@ -760,8 +761,8 @@ Lancer la suite de tests complète :
 
 Résultat du dernier lancement sur la version finale :
 ```text
-============================ 119 passed in 42.13s =============================
-OK (119 tests validés, 100% de réussite)
+============================ 118 passed in 34.26s =============================
+OK (118 tests validés, 100% de réussite)
 ```
 
 ---
@@ -827,7 +828,7 @@ Dashboard & KPI           ✅ Validé
 Points d'attention        ✅ Validé
 Exports Métier            ✅ Validé (Excel stylisé openpyxl, Rapports décisionnels PDF, Feuilles d'émargement PDF)
 Analyse ACP               ✅ Validé (Interprétation business en 1ère position, projection 2D et détails mathématiques)
-Suite de tests (pytest)   ✅ 119 / 119 tests réussis (100%)
+Suite de tests (pytest)   ✅ 118 / 118 tests réussis (100%)
 Documentation & Recette   ✅ Validé (Protocole RECETTE_SOUTENANCE.md & README)
 ```
 
