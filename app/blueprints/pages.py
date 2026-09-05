@@ -14,6 +14,7 @@ def index():
             return redirect(url_for('pages.sessions'))
         return redirect(url_for('pages.dashboard'))
     return render_template('index.html')
+    return redirect(url_for('pages.login_page'))
 
 @pages_bp.route('/login')
 def login_page():

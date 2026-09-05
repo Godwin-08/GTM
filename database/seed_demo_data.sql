@@ -31,12 +31,12 @@ INSERT INTO Domaine (nom) VALUES
 
 -- Utilisateur
 INSERT INTO Utilisateur (nom, email, mot_de_passe_hash, role_id, actif) VALUES
-('Admin Galaxy', 'admin@galaxysolutions.ma', 'pbkdf2:sha256:1000000$PwZPFVoieM1CAH2G$addcc189c3fa6c5becb7abbd32adbb93771cf938c021baaa4d6e957f09dea835', 1, TRUE),
-('Sofia Amrani', 'sofia.amrani@galaxysolutions.ma', 'pbkdf2:sha256:1000000$3aVHPj4GlKSbkJ5B$27c6e10a0b40b29b57db8427eb87a634a9574f543f9b1122690454ef58187116', 2, TRUE),
-('Yassine El Idrissi', 'yassine.el.idrissi@galaxysolutions.ma', 'pbkdf2:sha256:1000000$AhstaZ5uWdfE1hfG$6fedcf9477880715c80b61cb64695982f8ca8b34a5a10e1edad3cd635346ed78', 2, TRUE),
-('Karim Bensouda', 'karim.bensouda@galaxysolutions.ma', 'pbkdf2:sha256:1000000$nISW9htY5d0ks4o9$0dabc947c7962020982b60771ab9665ae4edeca018163785e588991085c93d11', 3, TRUE),
-('Nadia Chraibi', 'nadia.chraibi@galaxysolutions.ma', 'pbkdf2:sha256:1000000$60coyXsbvLWh8DLU$15087fc77dc5def1aa6185c6201fa803decbc4f67ebf828b4a13f372afd3ba16', 3, TRUE),
-('Hicham Berrada', 'hicham.berrada@galaxysolutions.ma', 'pbkdf2:sha256:1000000$Wq3gVAnEf0iaApWY$9a7b1f59d2603819a36d3e9af998bf81bbfce38adf7794212a63c730c9387d2e', 3, TRUE);
+('Admin Galaxy', 'admin@galaxysolutions.ma', 'pbkdf2:sha256:1000000$3Cv5C2xIJzOc0Mh1$f61881b408001054706f0a4634b98cab117d3b726fcdf579a949acd9f235d26d', 1, TRUE),
+('Sofia Amrani', 'sofia.amrani@galaxysolutions.ma', 'pbkdf2:sha256:1000000$rLPJmedl1kU1LKyW$18e1c0425ef09574997e191e13da78f42ce111fdc94a21d3a644a06dbcf98eed', 2, TRUE),
+('Yassine El Idrissi', 'yassine.el.idrissi@galaxysolutions.ma', 'pbkdf2:sha256:1000000$kfZ9INm4dwKiYy00$8858a7ef1b80eb779c61744284379b6c1cce80a7628910169775c95f9ea76836', 2, TRUE),
+('Karim Bensouda', 'karim.bensouda@galaxysolutions.ma', 'pbkdf2:sha256:1000000$h43ipqFvC5alaFXo$4518d9609299142b629fe887548c275cb71d461ccc8aec7e75ed33f7bc6cecb4', 3, TRUE),
+('Nadia Chraibi', 'nadia.chraibi@galaxysolutions.ma', 'pbkdf2:sha256:1000000$mi9G14hbIf37aYj5$96c3a60bce541f02aaf58ceb2a111f3cab0cd2b8023cf81068df1c54bd36b490', 3, TRUE),
+('Hicham Berrada', 'hicham.berrada@galaxysolutions.ma', 'pbkdf2:sha256:1000000$gJehax3CTwS4ywgr$4d71276522ca952d059535ec1283b39d3086316fc52efaab9d06e85ddf67813e', 3, TRUE);
 
 -- Formateur
 INSERT INTO Formateur (nom, email, telephone, domaine_id, utilisateur_id) VALUES
