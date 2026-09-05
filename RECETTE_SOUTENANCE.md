@@ -108,4 +108,4 @@ Ce document constitue le **script de scène officiel** pour la démonstration or
 - [x] Inscription sur session complète (liste d'attente / refus 409) démontrée.
 - [x] Bouton `✓` anti-double-clic et rollback Alpine.js validés.
 - [x] Sécurité RBAC Formateur (UI + API 403) testée.
-- [x] 93 tests automatisés exécutés et verts.
+- [x] 118 tests automatisés exécutés et verts.
