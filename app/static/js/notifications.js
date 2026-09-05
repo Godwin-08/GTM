@@ -20,6 +20,10 @@ function pageNotificationsData() {
                 if (!res.ok) throw new Error('Réponse serveur invalide');
                 const data = await res.json();
                 this.items = data.items;
+                this.items = data.items || [];
+                try {
+                    sessionStorage.setItem('gtm_notifs_vues_total', (data.total !== undefined ? data.total : this.items.length).toString());
+                } catch(e) {}
             } catch (err) {
                 console.error('Erreur chargement notifications :', err);
                 this.erreur = 'Impossible de charger les notifications.';

@@ -280,9 +280,18 @@
                     <div class="relative" x-data="clocheNotificationsData()" x-init="charger()">
                         <button @click="menuOuvert = !menuOuvert"
                                 class="text-slate-500 hover:text-slate-900 relative p-2 rounded-lg hover:bg-slate-100 transition-colors duration-150">
+                        <button @click="ouvrirMenu()"
+                                class="text-slate-500 hover:text-slate-900 relative p-2 rounded-lg hover:bg-slate-100 transition-colors duration-150"
+                                title="Notifications">
                             <i data-lucide="bell" class="w-5 h-5"></i>
                             <template x-if="total > 0">
                                 <span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-red-600 ring-2 ring-white"></span>
+                            <template x-if="total > 0 && !vu">
+                                <span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-[10px] font-bold text-white flex items-center justify-center ring-2 ring-white shadow-xs font-tabular animate-in fade-in zoom-in-75 duration-200"
+                                      x-text="total > 99 ? '99+' : total"></span>
+                            </template>
+                            <template x-if="total > 0 && vu">
+                                <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-slate-300 ring-2 ring-white" title="Notifications consultées"></span>
                             </template>
                         </button>
 
@@ -492,6 +501,7 @@
                 total: 0,
                 items: [],
                 menuOuvert: false,
+                vu: false,
                 async charger() {
                     if (!urlPointsAttentionGlobal) return;
                     try {
@@ -500,15 +510,39 @@
                             const data = await res.json();
                             this.total = data.total || 0;
                             this.items = data.items || [];
+                            
+                            const vuDernierTotal = parseInt(sessionStorage.getItem('gtm_notifs_vues_total') || '-1', 10);
+                            if (window.location.pathname.includes('/notifications')) {
+                                this.marquerVu();
+                            } else if (vuDernierTotal === this.total) {
+                                this.vu = true;
+                            } else {
+                                this.vu = false;
+                            }
                         }
                     } catch (e) {
                         console.error("Erreur cloche notifications :", e);
                     }
                 },
+                ouvrirMenu() {
+                    this.menuOuvert = !this.menuOuvert;
+                    if (this.menuOuvert) {
+                        this.marquerVu();
+                    }
+                },
+                marquerVu() {
+                    this.vu = true;
+                    try {
+                        sessionStorage.setItem('gtm_notifs_vues_total', this.total.toString());
+                    } catch (e) {}
+                },
                 couleurPastille(niveau) {
                     if (niveau === 'danger') return 'bg-danger';
                     if (niveau === 'warning') return 'bg-warning';
                     if (niveau === 'info') return 'bg-success';
+                    if (niveau === 'danger') return 'bg-rose-500';
+                    if (niveau === 'warning') return 'bg-amber-500';
+                    if (niveau === 'info') return 'bg-blue-500';
                     return 'bg-gray-400';
                 }
             };
