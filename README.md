@@ -300,7 +300,7 @@ PFA_galaxy_solutions/
 │   ├── extensions.py              # Extensions Flask (db, login_manager, migrate)
 │   │
 │   ├── blueprints/                # Routes pour le rendu des pages HTML Jinja2
-│   │   └── pages.py               # Contrôleur principal des vues web (21 routes)
+│   │   └── pages.py               # Contrôleur principal des vues web (19 routes)
 │   │
 │   ├── models/                    # Modèles SQLAlchemy (9 entités ORM)
 │   │   ├── __init__.py            # Registre des modèles
@@ -360,13 +360,12 @@ PFA_galaxy_solutions/
 │   │       ├── points_attention.js    # Widget points d'attention
 │   │       └── acp.js                 # Module Analyse en Composantes Principales
 │   │
-│   ├── templates/                 # Templates HTML Jinja2 (21 fichiers)
+│   ├── templates/                 # Templates HTML Jinja2 (20 fichiers)
 │   │   ├── base.html              # Layout principal (Sidebar, Header, Profil, Toasts)
 │   │   ├── login.html             # Page de connexion
 │   │   ├── dashboard.html         # Tableau de bord principal
 │   │   ├── notifications.html     # Centre d'alertes
 │   │   ├── design-system-preview.html  # Aperçu du design system
-│   │   ├── logo_showcase.html          # Showcase du logo GTM
 │   │   ├── auth/
 │   │   │   └── activation.html         # Page d'activation de compte
 │   │   ├── analytics/

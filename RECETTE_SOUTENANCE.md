@@ -16,8 +16,8 @@ Ce document constitue le **script de scène officiel** pour la démonstration or
 
 ## 🎯 Données de référence pour la démonstration
 
-- **Session ouverte (non complète)** : Session 1 (*Sécurité Web OWASP*) — Capacité 15, Inscrits < 15.
-- **Session complète (`session.est_complete == True`)** : Session 5 — Capacité 10, Inscrits 10 (badge orange *Session complète*).
+- **Session ouverte (non complète)** : Session 1 (*Développement web full-stack*) — Capacité 20, Inscrits confirmés 15 (5 places restantes).
+- **Session complète (`session.est_complete == True`)** : Session 56 (*SQL avancé et modélisation de données*) — Capacité 20, Inscrits confirmés 20 (badge orange *Session complète*).
 
 ---
 
@@ -40,7 +40,7 @@ Ce document constitue le **script de scène officiel** pour la démonstration or
 - **À OBSERVER** : Affichage des dates, du formateur référent, du lieu, de la carte KPI remplissage et du tableau des inscrits.
 - **ACTION** : Cliquer sur **+ Ajouter un participant**.
 - **À OBSERVER** : La modale s'ouvre. Le statut par défaut est positionné automatiquement sur `confirmée`.
-- **ACTION** : Sélectionner le Client *TechCorp Maroc*.
+- **ACTION** : Sélectionner le Client *Maroc Telecom*.
 - **À OBSERVER** : Appel automatique `GET /api/participants?client_id=X`. La liste des participants se charge de manière ciblée pour ce client.
 - **ACTION** : Choisir un participant et cliquer sur **Confirmer l'inscription**.
 - **À OBSERVER** : Toast de succès vert, fermeture de la modale, réactualisation immédiate de la liste des inscrits ET du KPI de remplissage.
@@ -48,7 +48,7 @@ Ce document constitue le **script de scène officiel** pour la démonstration or
 - **RÉSULTAT ATTENDU** : Participant inscrit, KPI de remplissage mis à jour.
 
 ### Étape 4 : Gestion de Session Complète & Liste d'attente
-- **ACTION** : Ouvrir la fiche de la Session #5 (marquée *Session complète*).
+- **ACTION** : Ouvrir la fiche de la Session #56 (marquée *Session complète*).
 - **ACTION** : Cliquer sur **+ Ajouter un participant**.
 - **À OBSERVER** : La modale affiche un avertissement visuel et positionne le statut initial par défaut sur `liste_attente`.
 - **ACTION** : Choisir un client/participant, laisser sur `liste_attente` et valider.
@@ -108,4 +108,4 @@ Ce document constitue le **script de scène officiel** pour la démonstration or
 - [x] Inscription sur session complète (liste d'attente / refus 409) démontrée.
 - [x] Bouton `✓` anti-double-clic et rollback Alpine.js validés.
 - [x] Sécurité RBAC Formateur (UI + API 403) testée.
-- [x] 118 tests automatisés exécutés et verts.
+- [x] 120 tests automatisés exécutés et verts.
