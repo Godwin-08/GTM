@@ -23,6 +23,11 @@ def login_page():
 def activation_page(token):
     return render_template('auth/activation.html', token=token)
 
+@pages_bp.route('/logo-showcase')
+def logo_showcase():
+    return render_template('logo_showcase.html')
+
+
 @pages_bp.route('/dashboard')
 @login_required
 def dashboard():

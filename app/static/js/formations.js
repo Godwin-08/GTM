@@ -29,6 +29,9 @@ function pageFormationsData() {
         aSupprimer: null,
 
         init() {
+            this.$watch('formations', () => {
+                this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
+            });
             window.addEventListener('popstate', () => {
                 this.lireFiltresDepuisUrl();
                 this.appliquerFiltres(true, false);
@@ -146,8 +149,40 @@ function pageFormationsData() {
             return formation.domaine?.nom || '';
         },
 
+        domaineGradient(domaineNom) {
+            if (!domaineNom) return 'from-slate-400 to-slate-600';
+            if (domaineNom.includes('Cyber')) return 'from-emerald-500 to-teal-600';
+            if (domaineNom.includes('Web') || domaineNom.includes('Data')) return 'from-blue-500 to-indigo-600';
+            if (domaineNom.includes('Agile') || domaineNom.includes('Management')) return 'from-orange-500 to-amber-500';
+            return 'from-violet-500 to-purple-600';
+        },
+
+        domaineBadgeClass(domaineNom) {
+            if (!domaineNom) return 'bg-slate-100 text-slate-700 border-slate-200';
+            if (domaineNom.includes('Cyber')) return 'bg-emerald-50 text-emerald-700 border-emerald-200/80';
+            if (domaineNom.includes('Web') || domaineNom.includes('Data')) return 'bg-blue-50 text-blue-700 border-blue-200/80';
+            if (domaineNom.includes('Agile') || domaineNom.includes('Management')) return 'bg-amber-50 text-amber-800 border-amber-200/80';
+            return 'bg-purple-50 text-purple-700 border-purple-200/80';
+        },
+
+        domaineIcon(domaineNom) {
+            if (!domaineNom) return 'book-open';
+            if (domaineNom.includes('Cyber')) return 'shield-check';
+            if (domaineNom.includes('Web') || domaineNom.includes('Data')) return 'code-2';
+            if (domaineNom.includes('Agile') || domaineNom.includes('Management')) return 'zap';
+            return 'graduation-cap';
+        },
+
+        domaineIconBg(domaineNom) {
+            if (!domaineNom) return 'bg-slate-100 text-slate-600 border-slate-200';
+            if (domaineNom.includes('Cyber')) return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+            if (domaineNom.includes('Web') || domaineNom.includes('Data')) return 'bg-blue-50 text-blue-600 border-blue-100';
+            if (domaineNom.includes('Agile') || domaineNom.includes('Management')) return 'bg-amber-50 text-amber-600 border-amber-100';
+            return 'bg-purple-50 text-purple-600 border-purple-100';
+        },
+
         couleurDomaine(nomDomaine) {
-            return COULEURS_DOMAINE[nomDomaine] || 'bg-gray-100 text-gray-600';
+            return this.domaineBadgeClass(nomDomaine);
         },
 
         ouvrirModaleCreation() {

@@ -220,6 +220,15 @@ function pageDashboardData() {
             const labels = data.map(d => d.domaine);
             const valeurs = data.map(d => d.nb_sessions);
 
+            // Couleurs de marque dynamiques par domaine
+            const couleurs = labels.map(nom => {
+                if (!nom) return '#047857';
+                if (nom.includes('Cyber')) return '#059669';
+                if (nom.includes('Web') || nom.includes('Data')) return '#2563EB';
+                if (nom.includes('Agile') || nom.includes('Management')) return '#F26B1F';
+                return '#7C3AED';
+            });
+
             chartDomaineInstance = new Chart(canvas, {
                 type: 'bar',
                 data: {
@@ -227,19 +236,31 @@ function pageDashboardData() {
                     datasets: [{
                         label: 'Sessions',
                         data: valeurs,
-                        backgroundColor: '#047857',
-                        hoverBackgroundColor: '#065F46',
+                        backgroundColor: couleurs,
                         borderRadius: 8,
-                        maxBarThickness: 36,
+                        maxBarThickness: 40,
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    animation: {
+                        duration: 650,
+                        easing: 'easeOutQuart',
+                    },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#0F172A',
+                            titleFont: { family: 'Inter', size: 12, weight: 'bold' },
+                            bodyFont: { family: 'Inter', size: 12 },
+                            padding: 10,
+                            cornerRadius: 8,
+                        }
+                    },
                     scales: {
                         y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#F1F5F9' } },
-                        x: { grid: { display: false }, ticks: { maxRotation: 0, minRotation: 0 } }
+                        x: { grid: { display: false }, ticks: { maxRotation: 0, minRotation: 0, font: { family: 'Inter', size: 11 } } }
                     }
                 }
             });
@@ -283,11 +304,14 @@ function pageDashboardData() {
                     datasets: [{
                         label: 'Inscriptions',
                         data: valeurs,
-                        borderColor: '#7C3AED',
-                        backgroundColor: 'rgba(124, 58, 237, 0.08)',
+                        borderColor: '#047857',
+                        backgroundColor: 'rgba(4, 120, 87, 0.08)',
                         fill: true,
-                        tension: 0.3,
-                        pointBackgroundColor: '#7C3AED',
+                        tension: 0.35,
+                        borderWidth: 2.5,
+                        pointBackgroundColor: '#047857',
+                        pointBorderColor: '#FFFFFF',
+                        pointBorderWidth: 2,
                         pointRadius: 4,
                         pointHoverRadius: 6,
                         pointHoverBackgroundColor: '#F26B1F',
@@ -296,10 +320,23 @@ function pageDashboardData() {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    animation: {
+                        duration: 750,
+                        easing: 'easeOutQuart',
+                    },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#0F172A',
+                            titleFont: { family: 'Inter', size: 12, weight: 'bold' },
+                            bodyFont: { family: 'Inter', size: 12 },
+                            padding: 10,
+                            cornerRadius: 8,
+                        }
+                    },
                     scales: {
                         y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#F1F5F9' } },
-                        x: { grid: { display: false }, ticks: { maxRotation: 0, minRotation: 0 } }
+                        x: { grid: { display: false }, ticks: { maxRotation: 0, minRotation: 0, font: { family: 'Inter', size: 11 } } }
                     }
                 }
             });

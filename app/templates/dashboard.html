@@ -130,82 +130,82 @@
         
         <!-- Ligne 1 : Activité Principale -->
         <!-- KPI 1 : Sessions actives -->
-        <div class="gtm-kpi-card p-4 sm:p-5">
+        <div class="gtm-kpi-card p-4 sm:p-5 gtm-fade-in gtm-delay-1">
             <div>
                 <span class="gtm-kpi-label text-xs sm:text-sm text-slate-500 font-medium">Sessions actives</span>
                 <p class="gtm-kpi-valeur text-2xl sm:text-3xl font-extrabold font-tabular text-slate-900 mt-1" x-text="kpi.sessions_actives !== undefined ? kpi.sessions_actives : '–'"></p>
                 <span class="text-xs text-slate-400 mt-1 block">Sessions non annulées au périmètre</span>
             </div>
-            <div class="p-2.5 rounded-lg bg-slate-900 text-white shadow-xs">
+            <div class="p-2.5 rounded-lg bg-slate-900 text-white shadow-xs gtm-kpi-icon">
                 <i data-lucide="calendar" class="w-5 h-5"></i>
             </div>
         </div>
 
         <!-- KPI 2 : Taux de remplissage (avec micro-barre 0-100%) -->
-        <div class="gtm-kpi-card p-4 sm:p-5">
+        <div class="gtm-kpi-card p-4 sm:p-5 gtm-fade-in gtm-delay-2">
             <div class="flex-1 min-w-0">
                 <span class="gtm-kpi-label text-xs sm:text-sm text-slate-500 font-medium">Taux de remplissage</span>
                 <p class="gtm-kpi-valeur text-2xl sm:text-3xl font-extrabold font-tabular text-slate-900 mt-1" x-text="kpi.taux_moyen_remplissage !== undefined ? kpi.taux_moyen_remplissage.toFixed(1) + '%' : '–'"></p>
                 
                 <!-- Micro-barre visuelle 0-100% -->
                 <div class="w-full bg-slate-100 h-2 rounded-full mt-2 overflow-hidden border border-slate-200">
-                    <div class="h-full bg-[#047857] transition-all duration-300"
+                    <div class="h-full bg-[#047857] transition-all duration-500 ease-out"
                          :style="`width: ${Math.min(100, Math.max(0, kpi.taux_moyen_remplissage || 0))}%`"></div>
                 </div>
                 <span class="text-xs text-slate-400 mt-1 block" title="Formule : Moyenne des ratios (Inscrits confirmés ÷ Capacité max) pour les sessions non annulées du périmètre actuel">
                     Formule : Moyenne des ratios (Inscrits ÷ Capacité)
                 </span>
             </div>
-            <div class="p-2.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <div class="p-2.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 gtm-kpi-icon">
                 <i data-lucide="percent" class="w-5 h-5"></i>
             </div>
         </div>
 
         <!-- KPI 3 : Participants distincts -->
-        <div class="gtm-kpi-card p-4 sm:p-5">
+        <div class="gtm-kpi-card p-4 sm:p-5 gtm-fade-in gtm-delay-3">
             <div>
                 <span class="gtm-kpi-label text-xs sm:text-sm text-slate-500 font-medium">Participants distincts</span>
                 <p class="gtm-kpi-valeur text-2xl sm:text-3xl font-extrabold font-tabular text-slate-900 mt-1" x-text="kpi.participants_distincts !== undefined ? kpi.participants_distincts : '–'"></p>
                 <span class="text-xs font-semibold mt-1 block font-tabular" id="kpi-participants-tendance"></span>
             </div>
-            <div class="p-2.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+            <div class="p-2.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 gtm-kpi-icon">
                 <i data-lucide="users" class="w-5 h-5"></i>
             </div>
         </div>
 
         <!-- Ligne 2 : Couverture Opérationnelle -->
         <!-- KPI 4 : Clients actifs -->
-        <div class="gtm-kpi-card p-4 sm:p-5">
+        <div class="gtm-kpi-card p-4 sm:p-5 gtm-fade-in gtm-delay-4">
             <div>
                 <span class="gtm-kpi-label text-xs sm:text-sm text-slate-500 font-medium">Clients actifs</span>
                 <p class="gtm-kpi-valeur text-2xl sm:text-3xl font-extrabold font-tabular text-slate-900 mt-1" x-text="kpi.clients_actifs !== undefined ? kpi.clients_actifs : '–'"></p>
                 <span class="text-xs text-slate-400 mt-1 block">Entreprises actives (&lt; 6 mois)</span>
             </div>
-            <div class="p-2.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+            <div class="p-2.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 gtm-kpi-icon">
                 <i data-lucide="building-2" class="w-5 h-5"></i>
             </div>
         </div>
 
         <!-- KPI 5 : Formations dispensées -->
-        <div class="gtm-kpi-card p-4 sm:p-5">
+        <div class="gtm-kpi-card p-4 sm:p-5 gtm-fade-in gtm-delay-5">
             <div>
                 <span class="gtm-kpi-label text-xs sm:text-sm text-slate-500 font-medium" x-text="filtres.client_id || filtres.formateur_id || filtres.annee ? 'Formations dispensées' : 'Formations au catalogue'"></span>
                 <p class="gtm-kpi-valeur text-2xl sm:text-3xl font-extrabold font-tabular text-slate-900 mt-1" x-text="kpi.formations_catalogue !== undefined ? kpi.formations_catalogue : '–'"></p>
                 <span class="text-xs text-slate-400 mt-1 block" x-text="filtres.client_id || filtres.formateur_id || filtres.annee ? 'Sujets dispensés au périmètre' : 'Catalogue global'"></span>
             </div>
-            <div class="p-2.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+            <div class="p-2.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 gtm-kpi-icon">
                 <i data-lucide="book-open" class="w-5 h-5"></i>
             </div>
         </div>
 
         <!-- KPI 6 : Formateurs mobilisés -->
-        <div class="gtm-kpi-card p-4 sm:p-5">
+        <div class="gtm-kpi-card p-4 sm:p-5 gtm-fade-in gtm-delay-6">
             <div>
                 <span class="gtm-kpi-label text-xs sm:text-sm text-slate-500 font-medium">Formateurs mobilisés</span>
                 <p class="gtm-kpi-valeur text-2xl sm:text-3xl font-extrabold font-tabular text-slate-900 mt-1" x-text="kpi.formateurs_mobilises !== undefined ? kpi.formateurs_mobilises : '–'"></p>
                 <span class="text-xs text-slate-400 mt-1 block">Intervenants actifs</span>
             </div>
-            <div class="p-2.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+            <div class="p-2.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 gtm-kpi-icon">
                 <i data-lucide="user-check" class="w-5 h-5"></i>
             </div>
         </div>
@@ -254,8 +254,8 @@
     </template>
 
     <!-- 6. Zone Analytique (2 Colonnes Graphiques Chart.js — Hauteur équilibrée 256-288px) -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-        <div class="gtm-card p-5">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5 gtm-fade-in gtm-delay-3">
+        <div class="gtm-card p-5 hover:border-slate-300 transition-colors shadow-xs">
             <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
                 <h3 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
                     <i data-lucide="bar-chart-3" class="w-4 h-4 text-slate-600"></i>
@@ -268,10 +268,10 @@
             </div>
         </div>
 
-        <div class="gtm-card p-5">
+        <div class="gtm-card p-5 hover:border-slate-300 transition-colors shadow-xs">
             <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
                 <h3 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-                    <i data-lucide="trending-up" class="w-4 h-4 text-purple-600"></i>
+                    <i data-lucide="trending-up" class="w-4 h-4 text-emerald-700"></i>
                     Évolution des inscriptions
                 </h3>
                 <span class="text-xs text-slate-400 font-mono">Tendance mensuelle</span>
@@ -283,10 +283,10 @@
     </div>
 
     <!-- 7. Performance & Activité Proche (2 Colonnes : Formateurs & Sessions à Venir) -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 gtm-fade-in gtm-delay-4">
         
         <!-- Tableau Formateurs (.gtm-table) -->
-        <div class="gtm-card overflow-hidden flex flex-col justify-between">
+        <div class="gtm-card overflow-hidden flex flex-col justify-between hover:border-slate-300 transition-colors shadow-xs">
             <div>
                 <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
                     <h3 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">

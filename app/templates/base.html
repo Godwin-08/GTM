@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Galaxy Solutions | GTM{% endblock %}</title>
+    <title>{% block title %}GTM — Training Manager{% endblock %}</title>
 
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -42,7 +42,7 @@
         };
     </script>
 
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23F26B1F'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold' font-size='18'>G</text></svg>">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
@@ -87,8 +87,20 @@
             <!-- Logo & Branding -->
             <div class="h-16 flex items-center justify-between px-5 border-b border-slate-800 flex-shrink-0">
                 <a href="{{ url_for('pages.dashboard') }}" class="flex items-center gap-3 group">
-                    <div class="w-8 h-8 rounded-lg bg-[#F26B1F] flex items-center justify-center flex-shrink-0 shadow-sm transition-transform group-hover:scale-105">
-                        <span class="text-white text-sm font-bold">G</span>
+                    <div class="w-8 h-8 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center flex-shrink-0 shadow-sm transition-transform group-hover:scale-105 p-1">
+                        <svg class="w-full h-full" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="baseLogoGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#C2410C" />
+                                    <stop offset="50%" stop-color="#F26B1F" />
+                                    <stop offset="100%" stop-color="#FDBA74" />
+                                </linearGradient>
+                            </defs>
+                            <path d="M72 34C67 25 58 20 48 20C32.5 20 20 32.5 20 48C20 63.5 32.5 76 48 76C62 76 74 65 75.8 51H50V41H86C86 68 68 86 48 86C27 86 10 69 10 48C10 27 27 10 48 10C61 10 73 17 80 28L72 34Z" fill="url(#baseLogoGrad)"/>
+                            <rect x="36" y="52" width="6" height="14" rx="3" fill="#F26B1F" opacity="0.6"/>
+                            <rect x="46" y="44" width="6" height="22" rx="3" fill="#F26B1F" opacity="0.8"/>
+                            <rect x="56" y="34" width="6" height="32" rx="3" fill="#F26B1F"/>
+                        </svg>
                     </div>
                     <div class="min-w-0">
                         <p class="text-sm font-bold text-white leading-tight tracking-wide">GTM</p>

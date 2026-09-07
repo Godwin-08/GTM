@@ -1046,6 +1046,40 @@ L'interface web est entièrement responsive et adaptée aux écrans desktop et m
 - Composant état vide (`empty_state`) pour les listes sans résultat ;
 - Badge compteur numérique sur la cloche de notifications.
 
+### 35.1 Identité visuelle — Logo G-Growth
+
+GTM dispose d'une identité visuelle propre : le logo **G-Growth**, un monogramme G construit avec trois barres ascendantes symbolisant la progression des compétences.
+
+- **Couleurs** : Orange `#F26B1F` (marque Galaxy Solutions) + fond Ardoise `#0F172A`
+- **Format** : SVG vectoriel, décliné en version transparente (`gtm-logo.svg`) et favicon (`favicon.svg`)
+- **Intégration** : Sidebar, page de connexion (`login.html`), page d'activation (`activation.html`), email transactionnel
+
+### 35.2 Animations du Dashboard
+
+Le tableau de bord applique des animations professionnelles et sobres, adaptées au contexte B2B :
+- **Entrée en fondu décalée** : Les 6 cartes KPI apparaissent en séquence avec un délai de 40 ms entre chaque (`@keyframes gtmFadeInUp`, classes `.gtm-fade-in` + `.gtm-delay-1` à `.gtm-delay-6`)
+- **Survol des cartes KPI** : Légère élévation (`translateY(-2px)`) et accentuation de l'ombre portée au survol
+- **Graphiques Chart.js animés** : Barre par domaine (couleurs emerald/blue/orange/purple), animation `easeOutQuart` 650 ms ; courbe d'inscriptions en vert emerald, animation 750 ms ; tooltips sombres (`#0F172A`, police Inter)
+
+### 35.3 Cartes de formations colorées
+
+La page catalogue des formations (`/formations`) présente chaque formation avec un bandeau de couleur par domaine :
+
+| Domaine | Couleur | Icône |
+| :--- | :--- | :--- |
+| Cybersécurité | Emerald `#059669` | `shield-check` |
+| Web & Data | Bleu `#2563EB` | `code-2` |
+| Management Agile | Orange `#F26B1F` | `zap` |
+
+Au survol, la carte se lève légèrement et le titre de la formation passe en orange.
+
+### 35.4 Effet de survol des lignes de tableau
+
+Sur tous les tableaux de l'application, le passage de la souris sur une ligne déclenche un effet d'attention discret :
+- **Fond teinté** : `slate-100` avec transition fluide 150 ms
+- **Texte renforcé** : Passage en `slate-900` pour un meilleur contraste
+- **Liseré orange** : Bordure de 3 px sur le bord gauche de la première cellule (`box-shadow: inset 3px 0 0 var(--gtm-primary)`) — effet de sélection professionnel
+
 ---
 
 ## 36. Démonstration recommandée

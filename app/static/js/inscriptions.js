@@ -24,6 +24,9 @@ function pageInscriptionsData() {
         },
 
         init() {
+            this.$watch('inscriptions', () => {
+                this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
+            });
             window.addEventListener('popstate', () => {
                 this.lireFiltresDepuisUrl();
                 this.appliquerFiltres(true, false);

@@ -9,3 +9,13 @@ instance/
 .idea/
 cookies*.txt
 *.log
+
+# Images locales & assets générés
+app/static/img/
+
+# Pages de dev temporaires
+app/templates/logo_showcase.html
+
+# Captures d'écran locales
+captures_toutes/
+captures_toutes.zip

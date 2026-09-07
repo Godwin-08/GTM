@@ -99,7 +99,7 @@
     pointer-events: none;
 }
 
-/* Button Primary (Bleu Structurel #1E40AF) */
+/* Button Primary (Bleu Structurel / Vert GTM) */
 .gtm-btn-primary {
     background-color: var(--gtm-primary);
     color: var(--gtm-white);
@@ -169,7 +169,6 @@
     border-color: var(--gtm-brand-hover);
 }
 
-
 /* ============ FORMULAIRES ============ */
 .gtm-label {
     display: block;
@@ -194,7 +193,7 @@
 .gtm-input:focus {
     outline: none;
     border-color: var(--gtm-primary-interactive);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.15);
 }
 
 .gtm-input::placeholder {
@@ -215,7 +214,7 @@
     box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
 }
 
-/* Select HTML natif stylé sans composant JS */
+/* Select HTML natif */
 .gtm-select {
     width: 100%;
     padding: 0.5rem 2.25rem 0.5rem 0.75rem;
@@ -239,7 +238,7 @@
 .gtm-select:focus {
     outline: none;
     border-color: var(--gtm-primary-interactive);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.15);
 }
 
 .gtm-select:disabled {
@@ -247,7 +246,6 @@
     color: var(--gtm-slate-500);
     cursor: not-allowed;
 }
-
 
 /* ============ BADGES ============ */
 .gtm-badge {
@@ -340,7 +338,6 @@
     background-color: var(--gtm-brand);
 }
 
-
 /* ============ CARTES & SURFACES ============ */
 .gtm-card {
     background-color: var(--gtm-white);
@@ -359,6 +356,29 @@
     border-bottom: 1px solid var(--gtm-slate-100);
 }
 
+/* ============ ANIMATIONS PROFESSIONNELLES B2B ============ */
+@keyframes gtmFadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.gtm-fade-in {
+    animation: gtmFadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.gtm-delay-1 { animation-delay: 40ms; }
+.gtm-delay-2 { animation-delay: 80ms; }
+.gtm-delay-3 { animation-delay: 120ms; }
+.gtm-delay-4 { animation-delay: 160ms; }
+.gtm-delay-5 { animation-delay: 200ms; }
+.gtm-delay-6 { animation-delay: 240ms; }
+
 .gtm-kpi-card {
     background-color: var(--gtm-white);
     border: 1px solid var(--gtm-slate-200);
@@ -368,6 +388,33 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.gtm-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+    border-color: var(--gtm-slate-300);
+}
+
+.gtm-kpi-icon {
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+
+.gtm-kpi-card:hover .gtm-kpi-icon {
+    transform: scale(1.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gtm-fade-in,
+    .gtm-kpi-card,
+    .gtm-kpi-icon {
+        animation: none !important;
+        transition: none !important;
+        transform: none !important;
+    }
 }
 
 .gtm-kpi-valeur {
@@ -384,7 +431,6 @@
     font-weight: 500;
     color: var(--gtm-slate-500);
 }
-
 
 /* ============ TABLEAUX ============ */
 .gtm-table-container {
@@ -424,8 +470,17 @@
     border-bottom: none;
 }
 
+.gtm-table tbody tr {
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
 .gtm-table tbody tr:hover td {
-    background-color: rgba(248, 250, 252, 0.8);
+    background-color: rgba(241, 245, 249, 0.95);
+    color: var(--gtm-slate-900);
+}
+
+.gtm-table tbody tr:hover td:first-child {
+    box-shadow: inset 3px 0 0 var(--gtm-primary);
 }
 
 /* ============ LISTES OPÉRATIONNELLES ============ */
@@ -451,7 +506,6 @@
 .gtm-catalog-card footer { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding-top: 0.875rem; border-top: 1px solid var(--gtm-slate-100); }
 @media (max-width: 1024px) { .gtm-catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .gtm-list-title { font-size: 1.25rem; } .gtm-list-description { font-size: 0.8125rem; } .gtm-filter-bar { padding: 0.875rem; } .gtm-table th, .gtm-table td { padding: 0.75rem; } .gtm-catalog-grid { grid-template-columns: 1fr; } }
-
 
 /* ============ ÉTATS UI (LOADING / EMPTY / ERROR) ============ */
 .gtm-empty-state {

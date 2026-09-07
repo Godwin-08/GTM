@@ -114,63 +114,79 @@
         </div>
     </form>
 
- <div class=gtm-card overflow-hidden shadow-xs mb-6>
- <div class=gtm-table-container border-none rounded-none>
- <table class=gtm-table>
- <thead>
- <tr>
- <th class=text-xs font-bold uppercase tracking-wider>Participant</th>
- <th class=text-xs font-bold uppercase tracking-wider>Entreprise</th>
- <th class=text-xs font-bold uppercase tracking-wider>Formation / Session</th>
- <th class=text-xs font-bold uppercase tracking-wider>Statut</th>
- </tr>
- </thead>
- <tbody>
- <template x-if=chargementEnCours>
- <tr><td colspan=4 class=px-5 py-10 text-center text-slate-400 text-sm>
- <i data-lucide=loader-2 class=w-6 h-6 mx-auto mb-2 animate-spin text-emerald-700></i>
- Chargement des inscriptions...
- </td></tr>
- </template>
- <template x-if=erreur>
- <tr><td colspan=4 class=px-5 py-10 text-center text-red-600 text-sm>
- <i data-lucide=alert-circle class=w-6 h-6 mx-auto mb-2></i>
- Impossible de charger les données. <span x-text=erreur></span>
- </td></tr>
- </template>
- <template x-if=!chargementEnCours && !erreur && inscriptions.length === 0>
- <tr><td colspan=4 class=px-5 py-12 text-center>
- <i data-lucide=search-x class=w-9 h-9 mx-auto mb-2 text-slate-300></i>
- <p class=text-sm font-bold text-slate-900 mb-1>Aucune inscription trouvée</p>
- <p class=text-xs text-slate-500 mb-4>Aucune inscription ne correspond aux filtres appliqués.</p>
- <template x-if=aDesFiltresActifs()>
- <button @click=reinitialiserFiltres() class=gtm-btn gtm-btn-ghost text-xs text-emerald-700>Réinitialiser les filtres</button>
- </template>
- </td></tr>
- </template>
- <template x-for=inscription in inscriptions :key=inscription.id>
- <tr class=hover:bg-slate-50 transition-colors>
- <td>
- <p class=font-bold text-slate-900 text-sm x-text=inscription.participant?.nom></p>
- <p class=text-xs text-slate-500 mt-0.5 x-text=inscription.participant?.email></p>
- </td>
- <td class=text-slate-700 text-xs sm:text-sm font-medium x-text=inscription.participant?.client?.nom_entreprise || '—'></td>
- <td>
- <p class=font-bold text-slate-900 text-sm x-text=inscription.session?.formation?.titre></p>
- <p class=text-xs text-slate-500 mt-0.5 font-tabular x-text=inscription.session?.date_debut + ' → ' + inscription.session?.date_fin></p>
- </td>
- <td>
- <span class=gtm-badge text-xs :class={ 'gtm-badge-success': inscription.statut === 'confirmee', 'gtm-badge-danger': inscription.statut === 'annulee', 'gtm-badge-warning': inscription.statut === 'liste_attente' }>
- <span class=gtm-badge-dot></span>
- <span x-text=libelleStatut(inscription.statut)></span>
- </span>
- </td>
- </tr>
- </template>
- </tbody>
- </table>
- </div>
- </div>
+    <div class="gtm-card overflow-hidden shadow-xs mb-6">
+        <div class="gtm-table-container border-none rounded-none">
+            <table class="gtm-table">
+                <thead>
+                    <tr>
+                        <th class="text-xs font-bold uppercase tracking-wider">Participant</th>
+                        <th class="text-xs font-bold uppercase tracking-wider">Entreprise</th>
+                        <th class="text-xs font-bold uppercase tracking-wider">Formation / Session</th>
+                        <th class="text-xs font-bold uppercase tracking-wider">Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-if="chargementEnCours">
+                        <tr>
+                            <td colspan="4" class="px-5 py-10 text-center text-slate-400 text-sm">
+                                <i data-lucide="loader-2" class="w-6 h-6 mx-auto mb-2 animate-spin text-emerald-700"></i>
+                                Chargement des inscriptions...
+                            </td>
+                        </tr>
+                    </template>
+                    <template x-if="erreur">
+                        <tr>
+                            <td colspan="4" class="px-5 py-10 text-center text-red-600 text-sm">
+                                <i data-lucide="alert-circle" class="w-6 h-6 mx-auto mb-2"></i>
+                                Impossible de charger les données. <span x-text="erreur"></span>
+                            </td>
+                        </tr>
+                    </template>
+                    <template x-if="!chargementEnCours && !erreur && inscriptions.length === 0">
+                        <tr>
+                            <td colspan="4" class="px-5 py-12 text-center">
+                                <i data-lucide="search-x" class="w-9 h-9 mx-auto mb-2 text-slate-300"></i>
+                                <p class="text-sm font-bold text-slate-900 mb-1">Aucune inscription trouvée</p>
+                                <p class="text-xs text-slate-500 mb-4">Aucune inscription ne correspond aux filtres appliqués.</p>
+                                <template x-if="aDesFiltresActifs()">
+                                    <button type="button" @click="reinitialiserFiltres()" class="gtm-btn gtm-btn-ghost text-xs text-emerald-700">Réinitialiser les filtres</button>
+                                </template>
+                            </td>
+                        </tr>
+                    </template>
+                    <template x-for="inscription in inscriptions" :key="inscription.id">
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td>
+                                <p class="font-bold text-slate-900 text-sm" x-text="inscription.participant?.nom"></p>
+                                <p class="text-xs text-slate-500 mt-0.5" x-text="inscription.participant?.email"></p>
+                            </td>
+                            <td class="text-slate-700 text-xs sm:text-sm font-medium" x-text="inscription.participant?.client?.nom_entreprise || '—'"></td>
+                            <td>
+                                <p class="font-bold text-slate-900 text-sm" x-text="inscription.session?.formation?.titre"></p>
+                                <p class="text-xs text-slate-500 mt-0.5 font-tabular" x-text="inscription.session?.date_debut + ' → ' + inscription.session?.date_fin"></p>
+                            </td>
+                            <td>
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border"
+                                      :class="{
+                                          'bg-emerald-50 text-emerald-700 border-emerald-200/80': inscription.statut === 'confirmee',
+                                          'bg-slate-100 text-slate-600 border-slate-200': inscription.statut === 'annulee',
+                                          'bg-amber-50 text-amber-800 border-amber-200/80': inscription.statut === 'liste_attente'
+                                      }">
+                                    <span class="w-1.5 h-1.5 rounded-full"
+                                          :class="{
+                                              'bg-emerald-500': inscription.statut === 'confirmee',
+                                              'bg-slate-400': inscription.statut === 'annulee',
+                                              'bg-amber-500': inscription.statut === 'liste_attente'
+                                          }"></span>
+                                    <span x-text="libelleStatut(inscription.statut)"></span>
+                                </span>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 {% endblock %}
 

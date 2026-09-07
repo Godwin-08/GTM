@@ -10,9 +10,9 @@ const MOIS_ABREGES = [
 ];
 
 const COULEURS_DOMAINE = {
-    'Web & Data': 'bg-info/10 text-info',
-    'Management Agile': 'bg-success/10 text-success',
-    'Cybersécurité': 'bg-danger/10 text-danger',
+    'Web & Data': 'bg-blue-50 text-blue-700 border border-blue-200/80',
+    'Management Agile': 'bg-amber-50 text-amber-800 border border-amber-200/80',
+    'Cybersécurité': 'bg-emerald-50 text-emerald-700 border border-emerald-200/80',
 };
 
 const COULEURS_STATUT = {
