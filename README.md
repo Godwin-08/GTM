@@ -20,24 +20,26 @@
 - [17. URL et navigation](#17-url-et-navigation)
 - [18. Points d'attention](#18-points-dattention)
 - [19. Analyse ACP](#19-analyse-acp)
-- [20. API REST](#20-api-rest)
-- [21. Installation](#21-installation)
-- [22. Cloner le projet](#22-cloner-le-projet)
-- [23. Créer l'environnement virtuel](#23-créer-lenvironnement-virtuel)
-- [24. Installer les dépendances](#24-installer-les-dépendances)
-- [25. Configuration](#25-configuration)
-- [26. Préparer la base de données](#26-préparer-la-base-de-données)
-- [27. Charger les données de démonstration](#27-charger-les-données-de-démonstration)
-- [28. Lancer l'application](#28-lancer-lapplication)
-- [29. Comptes de démonstration](#29-comptes-de-démonstration)
-- [30. Tests](#30-tests)
-- [31. Gestion des erreurs](#31-gestion-des-erreurs)
-- [32. Sécurité](#32-sécurité)
-- [33. Responsive et expérience utilisateur](#33-responsive-et-expérience-utilisateur)
-- [34. Démonstration recommandée](#34-démonstration-recommandée)
-- [35. Limites connues et perspectives](#35-limites-connues-et-perspectives)
-- [36. État du projet](#36-état-du-projet)
-- [37. Conclusion](#37-conclusion)
+- [20. Exports métier](#20-exports-métier)
+- [21. Profil utilisateur](#21-profil-utilisateur)
+- [22. API REST](#22-api-rest)
+- [23. Installation](#23-installation)
+- [24. Cloner le projet](#24-cloner-le-projet)
+- [25. Créer l'environnement virtuel](#25-créer-lenvironnement-virtuel)
+- [26. Installer les dépendances](#26-installer-les-dépendances)
+- [27. Configuration](#27-configuration)
+- [28. Préparer la base de données](#28-préparer-la-base-de-données)
+- [29. Charger les données de démonstration](#29-charger-les-données-de-démonstration)
+- [30. Lancer l'application](#30-lancer-lapplication)
+- [31. Comptes de démonstration](#31-comptes-de-démonstration)
+- [32. Tests](#32-tests)
+- [33. Gestion des erreurs](#33-gestion-des-erreurs)
+- [34. Sécurité](#34-sécurité)
+- [35. Responsive et expérience utilisateur](#35-responsive-et-expérience-utilisateur)
+- [36. Démonstration recommandée](#36-démonstration-recommandée)
+- [37. Limites connues et perspectives](#37-limites-connues-et-perspectives)
+- [38. État du projet](#38-état-du-projet)
+- [39. Conclusion](#39-conclusion)
 
 ---
 
@@ -55,6 +57,7 @@ L'objectif principal est de remplacer une gestion dispersée des données par un
 - gérer les inscriptions ;
 - suivre l'activité grâce à un tableau de bord réactif ;
 - détecter les points d'attention et alertes de gestion ;
+- exporter les données métier en CSV, Excel stylisé et PDF ;
 - analyser les profils d'activité avec une Analyse en Composantes Principales (ACP).
 
 L'application permet ainsi de passer d'une simple saisie de données à une réelle logique de **pilotage et d'aide à la décision**.
@@ -109,7 +112,9 @@ L'application permet de :
 - filtrer les formations par domaine ;
 - créer une nouvelle formation (durée, titre, domaine) ;
 - modifier une formation existante ;
-- consulter le détail d'une formation et l'historique de ses sessions.
+- supprimer une formation (uniquement si aucune session n'y est associée) ;
+- consulter le détail d'une formation et l'historique de ses sessions ;
+- exporter le catalogue de formations en CSV et Excel.
 
 Une formation est obligatoirement rattachée à un domaine d'expertise.
 
@@ -123,9 +128,11 @@ L'application permet de :
 - rechercher et filtrer les sessions par critères croisés ;
 - créer une nouvelle session (dates, lieu, type intra/inter, capacité maximale, formateur référent) ;
 - modifier les caractéristiques d'une session ;
+- supprimer une session (uniquement si aucune inscription n'y est associée) ;
 - consulter les participants inscrits et leur statut ;
 - suivre le nombre de places confirmées et la capacité maximale ;
-- calculer le taux de remplissage en temps réel.
+- calculer le taux de remplissage en temps réel ;
+- exporter les sessions en CSV, Excel et PDF (feuille d'émargement).
 
 Les filtres Sessions peuvent être combinés :
 - recherche textuelle `q` ;
@@ -144,7 +151,11 @@ L'application permet de :
 - consulter les entreprises clientes ;
 - rechercher un client par nom ou secteur ;
 - filtrer par secteur d'activité et statut de réactivité ;
-- consulter la fiche détaillée d'un client.
+- créer un nouveau client ;
+- modifier un client existant ;
+- supprimer un client (uniquement s'il n'a aucun participant rattaché) ;
+- consulter la fiche détaillée d'un client ;
+- exporter la liste des clients en CSV et Excel.
 
 La fiche client présente notamment :
 - le nombre de sessions suivies ;
@@ -162,8 +173,12 @@ L'application permet de :
 - consulter l'annuaire des participants ;
 - rechercher un participant par nom ou email ;
 - filtrer par entreprise cliente ;
+- créer un nouveau participant ;
+- modifier un participant existant ;
+- supprimer un participant (uniquement s'il n'a aucune inscription associée) ;
 - consulter la fiche détaillée d'un participant ;
-- voir son historique d'inscriptions et son statut pour chaque session.
+- voir son historique d'inscriptions et son statut pour chaque session ;
+- exporter les participants en CSV et Excel.
 
 ---
 
@@ -171,7 +186,9 @@ L'application permet de :
 L'application permet de :
 - consulter la liste des formateurs ;
 - rechercher un formateur ;
-- filtrer par domaine de compétence ;
+- filtrer par domaine de compétence et par type (interne / externe) ;
+- créer un nouveau formateur (avec liaison optionnelle à un compte utilisateur) ;
+- modifier un formateur existant ;
 - consulter la fiche d'un formateur (sessions animées, taux de remplissage moyen, domaine).
 
 ---
@@ -183,7 +200,8 @@ Depuis la fiche d'une session, un utilisateur autorisé (Admin / Gestionnaire) p
 - ajouter un participant à la session ;
 - choisir le statut initial de l'inscription ;
 - modifier le statut d'une inscription existante avec confirmation et état de chargement ;
-- consulter le tableau des inscrits.
+- consulter le tableau des inscrits ;
+- exporter les inscriptions en CSV et Excel.
 
 Les statuts d'inscription disponibles sont :
 - `confirmee` : place réservée comptabilisée dans la capacité.
@@ -242,8 +260,10 @@ Cette séparation nette des responsabilités garantit la maintenabilité du code
 - **Flask 3.1.3**
 - **Flask-Login 0.6.3** (gestion des sessions utilisateur)
 - **Flask-SQLAlchemy 3.1.1** & **SQLAlchemy 2.0.51** (ORM DB)
+- **Flask-Migrate 4.1.0** & **Alembic 1.19** (migrations de schéma)
 - **PyMySQL 1.2.0** (Connecteur MySQL)
 - **python-dotenv 1.2.2** (chargement de la configuration `.env`)
+- **Werkzeug 3.1.8** (hachage PBKDF2-SHA256, utilitaires HTTP)
 
 ### Frontend
 - **HTML5**
@@ -252,6 +272,10 @@ Cette séparation nette des responsabilités garantit la maintenabilité du code
 - **JavaScript (ES6+)**
 - **Chart.js 4.x** (graphiques interactifs)
 - **Lucide Icons** (icônes d'interface)
+
+### Exports & Documents
+- **openpyxl 3.1.5** (exports Excel XLSX stylisés)
+- **ReportLab 5.0.1** (génération de rapports PDF et feuilles d'émargement)
 
 ### Analyse & Data
 - **NumPy 2.4+** & **Pandas 3.0+** (calculs vectoriels et décomposition factorielle en algebre linéaire `np.linalg.eigh` pour l'ACP)
@@ -271,55 +295,133 @@ Cette séparation nette des responsabilités garantit la maintenabilité du code
 PFA_galaxy_solutions/
 │
 ├── app/
-│   ├── __init__.py                # Initialisation de l'application Flask et enregistrement des Blueprints
-│   ├── config.py                  # Configuration centralisée de l'application (.env)
+│   ├── __init__.py                # Factory Flask et enregistrement des Blueprints
+│   ├── config.py                  # Configuration centralisée (.env, DB, mail)
 │   ├── extensions.py              # Extensions Flask (db, login_manager, migrate)
 │   │
 │   ├── blueprints/                # Routes pour le rendu des pages HTML Jinja2
-│   │   ├── pages.py               # Contrôleur principal des vues web
-│   │   └── ...
+│   │   └── pages.py               # Contrôleur principal des vues web (21 routes)
 │   │
 │   ├── models/                    # Modèles SQLAlchemy (9 entités ORM)
-│   │   ├── user.py, role.py, domaine.py, formation.py, formateur.py
-│   │   └── client.py, participant.py, session.py, inscription.py
+│   │   ├── __init__.py            # Registre des modèles
+│   │   ├── role.py                # Rôle utilisateur (admin, gestionnaire, formateur)
+│   │   ├── utilisateur.py         # Utilisateur avec onboarding (token, activation)
+│   │   ├── domaine.py             # Domaine d'expertise
+│   │   ├── formation.py           # Formation au catalogue
+│   │   ├── formateur.py           # Formateur (interne lié à un utilisateur / externe)
+│   │   ├── client.py              # Entreprise cliente
+│   │   ├── participant.py         # Salarié rattaché à un client
+│   │   ├── session.py             # Session de formation planifiée
+│   │   └── inscription.py         # Inscription d'un participant à une session
 │   │
 │   ├── routes/                    # Contrôleurs API REST (Réponses JSON)
-│   │   ├── auth.py, sessions.py, inscriptions.py, clients.py, participants.py
-│   │   └── formateurs.py, formations.py, domaines.py, utilisateurs.py, stats.py
+│   │   ├── auth.py                # Authentification, activation, changement de mot de passe
+│   │   ├── sessions.py            # CRUD sessions + exports CSV/XLSX/PDF
+│   │   ├── inscriptions.py        # CRUD inscriptions + exports CSV/XLSX
+│   │   ├── clients.py             # CRUD clients + exports CSV/XLSX
+│   │   ├── participants.py        # CRUD participants + exports CSV/XLSX
+│   │   ├── formateurs.py          # CRUD formateurs
+│   │   ├── formations.py          # CRUD formations + exports CSV/XLSX
+│   │   ├── domaines.py            # Liste des domaines
+│   │   ├── utilisateurs.py        # Gestion des comptes (Admin) + onboarding
+│   │   └── stats.py               # KPI, graphiques, points d'attention, ACP, PDF dashboard
 │   │
 │   ├── services/                  # Services métier et règles de gestion découplés
-│   │   ├── access_service.py              # Contrôle d'accès et scope des requêtes
-│   │   ├── client_activity.py           # Calcul des statuts d'activité client
-│   │   ├── query_validation_service.py   # Validation robuste des paramètres GET
-│   │   ├── session_validation_service.py # Validation des règles de création/modification session
-│   │   ├── stats_service.py              # Agrégations et calculs des KPI
-│   │   ├── acp_service.py                # Calculs statistiques ACP (NumPy & Pandas)
-│   │   └── points_attention_service.py   # Génération des alertes et notifications
+│   │   ├── access_service.py              # Contrôle d'accès et scope des requêtes par rôle
+│   │   ├── permissions.py                 # Décorateurs de restriction d'accès RBAC
+│   │   ├── activation_service.py          # Génération et validation des tokens d'activation
+│   │   ├── mail_service.py                # Service de messagerie (Console / SMTP)
+│   │   ├── client_activity_service.py     # Calcul des statuts d'activité client
+│   │   ├── query_validation_service.py    # Validation robuste des paramètres GET
+│   │   ├── session_validation_service.py  # Validation des règles de création/modification session
+│   │   ├── stats_service.py               # Agrégations et calculs des KPI
+│   │   ├── acp_service.py                 # Calculs statistiques ACP (NumPy & Pandas)
+│   │   ├── points_attention_service.py    # Génération des alertes et notifications
+│   │   └── export_service.py              # Exports CSV, Excel stylisé et PDF (ReportLab)
 │   │
 │   ├── static/                    # Ressources statiques
 │   │   ├── css/app.css            # Styles additionnels
-│   │   └── js/                    # Scripts JS réactifs Alpine.js
-│   │       ├── dashboard.js, session_detail.js, inscriptions.js, clients.js...
+│   │   ├── img/                   # Images et icônes (favicon.svg, gtm-logo.svg)
+│   │   └── js/                    # Scripts JS réactifs Alpine.js (16 modules)
+│   │       ├── dashboard.js           # Tableau de bord KPI et graphiques
+│   │       ├── sessions.js            # Page liste des sessions
+│   │       ├── session_detail.js      # Fiche détail session et inscriptions
+│   │       ├── formations.js          # Page liste des formations
+│   │       ├── formation_detail.js    # Fiche détail formation
+│   │       ├── clients.js             # Page liste des clients
+│   │       ├── client_detail.js       # Fiche détail client
+│   │       ├── participants.js        # Page liste des participants
+│   │       ├── participant_detail.js  # Fiche détail participant
+│   │       ├── formateurs.js          # Page liste des formateurs
+│   │       ├── inscriptions.js        # Page liste des inscriptions
+│   │       ├── utilisateurs.js        # Page gestion des utilisateurs
+│   │       ├── utilisateur_detail.js  # Fiche détail utilisateur
+│   │       ├── notifications.js       # Centre de notifications
+│   │       ├── points_attention.js    # Widget points d'attention
+│   │       └── acp.js                 # Module Analyse en Composantes Principales
 │   │
-│   └── templates/                 # Templates HTML Jinja2
-│       ├── base.html              # Layout principal (Sidebar, Header, Toasts)
-│       ├── dashboard.html, notifications.html, analytics_acp.html
-│       ├── sessions/ (detail.html, liste.html)
-│       ├── login.html, activation.html
-│       └── sessions/, formations/, clients/, formateurs/, participants/, utilisateurs/
+│   ├── templates/                 # Templates HTML Jinja2 (21 fichiers)
+│   │   ├── base.html              # Layout principal (Sidebar, Header, Profil, Toasts)
+│   │   ├── login.html             # Page de connexion
+│   │   ├── dashboard.html         # Tableau de bord principal
+│   │   ├── notifications.html     # Centre d'alertes
+│   │   ├── design-system-preview.html  # Aperçu du design system
+│   │   ├── logo_showcase.html          # Showcase du logo GTM
+│   │   ├── auth/
+│   │   │   └── activation.html         # Page d'activation de compte
+│   │   ├── analytics/
+│   │   │   └── acp.html                # Module Analyse ACP
+│   │   ├── components/
+│   │   │   └── empty_state.html        # Composant état vide réutilisable
+│   │   ├── sessions/
+│   │   │   ├── liste.html              # Liste des sessions
+│   │   │   └── detail.html             # Fiche détail session
+│   │   ├── formations/
+│   │   │   ├── liste.html              # Catalogue des formations
+│   │   │   └── detail.html             # Fiche détail formation
+│   │   ├── clients/
+│   │   │   ├── liste.html              # Liste des clients
+│   │   │   └── detail.html             # Fiche détail client
+│   │   ├── participants/
+│   │   │   ├── liste.html              # Annuaire des participants
+│   │   │   └── detail.html             # Fiche détail participant
+│   │   ├── formateurs/
+│   │   │   └── liste.html              # Liste des formateurs
+│   │   ├── inscriptions/
+│   │   │   └── liste.html              # Liste des inscriptions
+│   │   └── utilisateurs/
+│   │       ├── liste.html              # Gestion des comptes (Admin)
+│   │       └── detail.html             # Fiche détail utilisateur
+│   │
+│   └── utils/                     # Utilitaires techniques
+│       └── __init__.py
 │
 ├── database/
 │   ├── schema_galaxy_solutions.sql  # Schéma SQL DDL officiel
 │   └── seed_demo_data.sql           # Données de démonstration déterministes (536 inscriptions)
 │
 ├── scripts/
-│   └── generate_seed_data.py        # Script Python de génération du Seed SQL
+│   ├── generate_seed_data.py        # Script Python de génération du Seed SQL
+│   └── migrate_onboarding_columns.py  # Migration des colonnes onboarding
 │
-├── tests/                           # Suite de 120 tests unitaires et d'intégration
-│   ├── test_auth.py, test_permissions.py, test_sessions.py, test_client_activity.py
-│   ├── test_api_errors.py, test_filters.py, test_acp.py, test_dashboard.py
-│   ├── test_onboarding.py, test_mail_service.py, test_e2e_onboarding_lifecycle.py
-│   ├── test_coherence_globale.py, test_feedback.py, test_homepage.py, test_seed_generator.py...
+├── tests/                           # Suite de 120 tests unitaires et d'intégration (18 fichiers)
+│   ├── test_auth.py                 # Authentification et login
+│   ├── test_permissions.py          # Autorisations RBAC
+│   ├── test_sessions.py             # CRUD sessions
+│   ├── test_client_activity.py      # Calcul d'activité client
+│   ├── test_api_errors.py           # Gestion des erreurs API
+│   ├── test_filters.py              # Filtres combinés
+│   ├── test_acp.py                  # Analyse en Composantes Principales
+│   ├── test_dashboard.py            # KPI et tableau de bord
+│   ├── test_onboarding.py           # Parcours d'onboarding
+│   ├── test_mail_service.py         # Service de messagerie
+│   ├── test_e2e_onboarding_lifecycle.py  # Cycle de vie onboarding E2E
+│   ├── test_coherence_globale.py    # Cohérence inter-entités
+│   ├── test_feedback.py             # Feedback utilisateur
+│   ├── test_homepage.py             # Page d'accueil et redirections
+│   ├── test_seed_generator.py       # Générateur de données de démo
+│   ├── test_exports.py              # Exports CSV, Excel et PDF
+│   └── test_phase1_fiabilisation.py # Fiabilisation phase 1
 │
 ├── .env.example                     # Modèle d'exemple des variables d'environnement
 ├── .gitignore                       # Exclusions Git (.env, venv, pycache...)
@@ -406,7 +508,7 @@ GTM
   ↓ Stocke uniquement le hash SHA-256 en base (aucun token en clair)
 SERVICE MESSAGERIE
   ├── Mode Console (démo locale / soutenance) : lien affiché dans les logs + copiable dans l'UI
-  └── Mode SMTP (production) : envoi du courriel transactionnel charté Orange Galaxy Solutions (#F26B1F) & Ardoise (#0F172A)
+  └── Mode SMTP (production) : envoi du courriel transactionnel charté Galaxy Solutions
 COLLABORATEUR
   ↓ Reçoit l'invitation et clique sur /activation/<token>
   ↓ Vérification de validité et de non-expiration en temps constant
@@ -455,6 +557,15 @@ Une inscription avec le statut `liste_attente` :
 - ne consomme pas de place sur la `capacite_max` de la session ;
 - peut être enregistrée même si la session est complète ;
 - permet de constituer un réservoir de participants en cas de désistement.
+
+### 10.6 Suppression sécurisée
+Les suppressions suivent des règles d'intégrité référentielle :
+- Une **formation** ne peut être supprimée que si aucune session n'y est associée.
+- Une **session** ne peut être supprimée que si aucune inscription n'y est associée.
+- Un **client** ne peut être supprimé que si aucun participant n'y est rattaché.
+- Un **participant** ne peut être supprimé que si aucune inscription n'y est associée.
+
+En cas de tentative de suppression violant ces contraintes, l'API retourne un code `409 Conflict` avec un message explicite indiquant le nombre d'entités liées.
 
 ---
 
@@ -508,6 +619,13 @@ Le tableau de bord principal (`/dashboard`) restitue six indicateurs KPI clés :
 5. **Formations** : Affiche les *Formations au catalogue* (catalogue global) ou les *Formations dispensées* (si un filtre est actif).
 6. **Formateurs mobilisés** : Nombre de formateurs distincts ayant animé au moins une session sur le périmètre.
 
+Le dashboard intègre également des **graphiques interactifs** (Chart.js) :
+- Activité par domaine
+- Activité par client
+- Activité par formateur
+- Évolution des inscriptions
+- Taux de remplissage global
+
 ---
 
 ## 15. Filtres du Dashboard
@@ -530,7 +648,7 @@ Chaque page de liste propose des filtres URL combinables :
 - **Formateurs** : `q`, `domaine_id`, `type`.
 - **Clients** : `q`, `secteur`, `statut_activite`.
 - **Participants** : `q`, `client_id`.
-- **Inscriptions** : `statut`, `session_id`, `formation_id`, `client_id`, `participant_id`, `date_debut_min`, `date_debut_max`.
+- **Inscriptions** : `q`, `statut`, `session_id`, `formation_id`, `client_id`, `participant_id`, `date_debut_min`, `date_debut_max`.
 
 ---
 
@@ -554,11 +672,13 @@ Le centre d'alertes et de notifications (`/notifications` et composant cloche du
 
 Les alertes s'adaptent dynamiquement au périmètre de filtres sélectionné.
 
+Le badge de la cloche de notification dans le header affiche un **compteur numérique** du nombre d'alertes actives, avec gestion de l'état « déjà vu » via `sessionStorage`.
+
 ---
 
 ## 19. Analyse ACP
 
-Module accessible sur `/analytics-acp`.
+Module accessible sur `/analytics/acp`.
 
 L'**Analyse en Composantes Principales (ACP)** est un outil d'**analyse exploratoire et de synthèse descriptive multidimensionnelle** (et non un modèle prédictif).
 
@@ -573,32 +693,139 @@ Elle propose une **interface pédagogique avec l'identité visuelle Violet Analy
 
 ---
 
-## 20. API REST
+## 20. Exports métier
+
+GTM propose un système d'export complet pour l'ensemble des entités métier :
+
+### 20.1 Export CSV (UTF-8 avec BOM)
+Tous les modules disposent d'un export CSV compatible Excel, LibreOffice et Google Sheets :
+- Sessions, Formations, Clients, Participants, Inscriptions.
+- Encodage `utf-8-sig` pour un affichage correct des caractères accentués dans Excel.
+
+### 20.2 Export Excel (XLSX stylisé)
+Exports Excel avec mise en forme professionnelle (openpyxl) :
+- En-têtes colorés Emerald Galaxy Solutions (`#047857`).
+- Alternance de couleurs de lignes, bordures fines, largeurs de colonnes ajustées.
+- Sessions, Formations, Clients, Participants, Inscriptions.
+
+### 20.3 Export PDF
+- **Feuille d'émargement PDF** : Générée depuis la fiche détail d'une session, contenant la liste des inscrits, les informations de la session et un espace de signature.
+- **Rapport de synthèse et pilotage décisionnel PDF** : Exporté depuis le tableau de bord avec les KPI globaux, les points d'attention et les filtres actifs appliqués.
+
+Les exports sont générés par le service `app/services/export_service.py` via **ReportLab** (PDF) et **openpyxl** (XLSX).
+
+---
+
+## 21. Profil utilisateur
+
+Chaque utilisateur connecté dispose d'un **modal de profil** accessible depuis le header de l'application, présentant :
+- Son identité (nom, email, rôle).
+- Un formulaire sécurisé de **changement de mot de passe** nécessitant la saisie de l'ancien mot de passe, la définition d'un nouveau mot de passe (min. 8 caractères) et la vérification que le nouveau mot de passe est différent de l'ancien.
+
+---
+
+## 22. API REST
 
 L'application expose une API REST complète au format JSON sous le préfixe `/api/`.
 
-### Exemples d'endpoints principaux :
-- `POST /api/auth/login` — Authentification par session sécurisée
-- `POST /api/auth/logout` — Déconnexion et invalidation de session
-- `POST /api/auth/activer-compte` — Activation de compte par token unique et définition de mot de passe
-- `GET /api/auth/verifier-token/<token>` — Pré-vérification de validité et expiration d'un lien d'activation
-- `GET /api/utilisateurs` — Répertoire des utilisateurs internes (Admin)
-- `POST /api/utilisateurs` — Création d'un utilisateur en attente & génération de token d'invitation (Admin)
-- `POST /api/utilisateurs/<id>/renvoyer-invitation` — Régénération et réexpédition de l'invitation (Admin)
-- `GET /api/sessions` — Liste des sessions (avec filtres GET)
-- `GET /api/sessions/export/csv` & `GET /api/sessions/export/xlsx` — Export sessions filtrées
-- `GET /api/sessions/<id>/export/pdf` — Feuille d'émargement officielle de session en PDF
-- `POST /api/sessions` — Création d'une session
-- `GET /api/inscriptions` — Inscriptions (avec `?session_id=`)
-- `POST /api/inscriptions` — Création d'une inscription
-- `PUT /api/inscriptions/<id>` — Modification d'un statut d'inscription
-- `GET /api/clients/export/csv` & `GET /api/clients/export/xlsx` — Export clients filtrés
-- `GET /api/participants/export/csv` & `GET /api/participants/export/xlsx` — Export participants
-- `GET /api/formations/export/csv` & `GET /api/formations/export/xlsx` — Export catalogue formations
-- `GET /api/stats/kpi-globaux` — Indicateurs KPI du Dashboard
-- `GET /api/stats/points-attention` — Points d'attention
-- `GET /api/stats/export/pdf` — Rapport de synthèse & pilotage décisionnel en PDF
-- `GET /api/stats/pca` — Données factorielles de l'ACP
+### Authentification & Compte
+| Méthode | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/auth/login` | Authentification par session sécurisée |
+| `POST` | `/api/auth/logout` | Déconnexion et invalidation de session |
+| `GET` | `/api/auth/me` | Informations de l'utilisateur connecté |
+| `POST` | `/api/auth/changer-mot-de-passe` | Changement de mot de passe sécurisé |
+| `POST` | `/api/auth/activer-compte` | Activation de compte par token unique |
+| `GET` | `/api/auth/verifier-token/<token>` | Pré-vérification de validité d'un lien d'activation |
+
+### Utilisateurs (Admin uniquement)
+| Méthode | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/utilisateurs` | Répertoire des utilisateurs internes |
+| `GET` | `/api/utilisateurs/<id>` | Détail d'un utilisateur |
+| `POST` | `/api/utilisateurs` | Création d'un utilisateur + invitation d'activation |
+| `PUT` | `/api/utilisateurs/<id>` | Modification d'un utilisateur |
+| `POST` | `/api/utilisateurs/<id>/renvoyer-invitation` | Régénération et réexpédition de l'invitation |
+
+### Sessions
+| Méthode | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/sessions` | Liste des sessions (avec filtres GET combinables) |
+| `GET` | `/api/sessions/<id>` | Détail d'une session |
+| `POST` | `/api/sessions` | Création d'une session |
+| `PUT` | `/api/sessions/<id>` | Modification d'une session |
+| `DELETE` | `/api/sessions/<id>` | Suppression (si aucune inscription) |
+| `GET` | `/api/sessions/export/csv` | Export sessions filtrées en CSV |
+| `GET` | `/api/sessions/export/xlsx` | Export sessions filtrées en Excel |
+| `GET` | `/api/sessions/<id>/export/pdf` | Feuille d'émargement officielle en PDF |
+
+### Formations
+| Méthode | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/formations` | Liste des formations (avec filtres) |
+| `GET` | `/api/formations/<id>` | Détail d'une formation |
+| `POST` | `/api/formations` | Création d'une formation |
+| `PUT` | `/api/formations/<id>` | Modification d'une formation |
+| `DELETE` | `/api/formations/<id>` | Suppression (si aucune session) |
+| `GET` | `/api/formations/export/csv` | Export catalogue en CSV |
+| `GET` | `/api/formations/export/xlsx` | Export catalogue en Excel |
+
+### Clients
+| Méthode | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/clients` | Liste des clients (avec filtres) |
+| `GET` | `/api/clients/<id>` | Détail d'un client |
+| `POST` | `/api/clients` | Création d'un client |
+| `PUT` | `/api/clients/<id>` | Modification d'un client |
+| `DELETE` | `/api/clients/<id>` | Suppression (si aucun participant) |
+| `GET` | `/api/clients/export/csv` | Export clients filtrés en CSV |
+| `GET` | `/api/clients/export/xlsx` | Export clients filtrés en Excel |
+
+### Participants
+| Méthode | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/participants` | Liste des participants (avec filtres) |
+| `GET` | `/api/participants/<id>` | Détail d'un participant |
+| `POST` | `/api/participants` | Création d'un participant |
+| `PUT` | `/api/participants/<id>` | Modification d'un participant |
+| `DELETE` | `/api/participants/<id>` | Suppression (si aucune inscription) |
+| `GET` | `/api/participants/export/csv` | Export participants en CSV |
+| `GET` | `/api/participants/export/xlsx` | Export participants en Excel |
+
+### Formateurs
+| Méthode | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/formateurs` | Liste des formateurs (avec filtres) |
+| `GET` | `/api/formateurs/<id>` | Détail d'un formateur |
+| `POST` | `/api/formateurs` | Création d'un formateur |
+| `PUT` | `/api/formateurs/<id>` | Modification d'un formateur |
+
+### Inscriptions
+| Méthode | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/inscriptions` | Liste des inscriptions (avec filtres combinables) |
+| `POST` | `/api/inscriptions` | Création d'une inscription |
+| `PUT` | `/api/inscriptions/<id>` | Modification du statut d'une inscription |
+| `GET` | `/api/inscriptions/export/csv` | Export inscriptions filtrées en CSV |
+| `GET` | `/api/inscriptions/export/xlsx` | Export inscriptions filtrées en Excel |
+
+### Domaines
+| Méthode | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/domaines` | Liste des domaines d'expertise |
+
+### Statistiques & Dashboard
+| Méthode | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/stats/kpi-globaux` | Indicateurs KPI du Dashboard |
+| `GET` | `/api/stats/remplissage` | Taux de remplissage global |
+| `GET` | `/api/stats/activite-domaine` | Activité par domaine |
+| `GET` | `/api/stats/activite-client` | Activité par client |
+| `GET` | `/api/stats/activite-formateur` | Activité par formateur |
+| `GET` | `/api/stats/evolution-inscriptions` | Évolution temporelle des inscriptions |
+| `GET` | `/api/stats/points-attention` | Points d'attention et alertes |
+| `GET` | `/api/stats/pca` | Données factorielles de l'ACP |
+| `GET` | `/api/stats/export/pdf` | Rapport de synthèse & pilotage décisionnel en PDF |
 
 ### Format des erreurs JSON :
 En cas d'erreur, l'API renvoie un objet JSON standard :
@@ -612,7 +839,7 @@ Codes d'erreur HTTP retournés : `400 Bad Request`, `401 Unauthorized`, `403 For
 
 ---
 
-## 21. Installation
+## 23. Installation
 
 ### Prérequis
 - Python 3.11 ou supérieur
@@ -627,7 +854,7 @@ mysql --version
 
 ---
 
-## 22. Cloner le projet
+## 24. Cloner le projet
 
 ```bash
 git clone <URL_DU_REPOSITORY>
@@ -636,7 +863,7 @@ cd PFA_galaxy_solutions
 
 ---
 
-## 23. Créer l'environnement virtuel
+## 25. Créer l'environnement virtuel
 
 Sous Windows (PowerShell) :
 ```powershell
@@ -652,7 +879,7 @@ source venv/bin/activate
 
 ---
 
-## 24. Installer les dépendances
+## 26. Installer les dépendances
 
 ```powershell
 .\venv\Scripts\python.exe -m pip install -r requirements.txt
@@ -660,7 +887,7 @@ source venv/bin/activate
 
 ---
 
-## 25. Configuration
+## 27. Configuration
 
 Copier le fichier modèle `.env.example` vers `.env` :
 
@@ -671,19 +898,34 @@ Copy-Item .env.example .env
 Éditer le fichier `.env` avec vos paramètres locaux :
 
 ```env
+# Base de données
 SECRET_KEY=votre_cle_secrete_production_ici
 DB_USER=root
 DB_PASSWORD=votre_mot_de_passe_mysql
 DB_HOST=localhost
 DB_NAME=galaxy_solutions
 FLASK_ENV=development
+
+# Messagerie transactionnelle Onboarding
+# Mode local / démo : console (aucun serveur SMTP requis, lien affiché dans les logs)
+# Mode production : smtp
+MAIL_BACKEND=console
+MAIL_SERVER=localhost
+MAIL_PORT=587
+MAIL_USE_TLS=true
+MAIL_USE_SSL=false
+MAIL_USERNAME=
+MAIL_PASSWORD=
+MAIL_FROM=Galaxy Training Manager <no-reply@gtm.galaxysolutions.ma>
+APP_BASE_URL=http://127.0.0.1:5000
+# En production : APP_BASE_URL=https://gtm.galaxysolutions.ma
 ```
 
 *Le fichier `.env` contient vos secrets locaux et ne doit jamais être commité dans Git.*
 
 ---
 
-## 26. Préparer la base de données
+## 28. Préparer la base de données
 
 Créer la base de données MySQL dans votre serveur (ex: via MySQL Workbench ou ligne de commande) :
 
@@ -693,7 +935,7 @@ CREATE DATABASE galaxy_solutions CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_c
 
 ---
 
-## 27. Charger les données de démonstration
+## 29. Charger les données de démonstration
 
 Exécuter le script de génération ou importer le fichier SQL fourni dans `database/` :
 
@@ -719,7 +961,7 @@ Le jeu de démonstration comprend exactement :
 
 ---
 
-## 28. Lancer l'application
+## 30. Lancer l'application
 
 Démarrer le serveur de développement Flask :
 
@@ -734,7 +976,7 @@ http://127.0.0.1:5000
 
 ---
 
-## 29. Comptes de démonstration
+## 31. Comptes de démonstration
 
 Les comptes ci-dessous sont intégrés au Seed officiel pour tester l'application :
 
@@ -749,7 +991,7 @@ Les comptes ci-dessous sont intégrés au Seed officiel pour tester l'applicatio
 
 ---
 
-## 30. Tests
+## 32. Tests
 
 Le projet inclut une suite de tests automatisés exhaustive couvrant l'authentification, le parcours d'onboarding, les autorisations RBAC, les filtres, l'activité client, les erreurs API, les inscriptions, les exports métier (Excel/PDF/CSV) et la cohérence des données.
 
@@ -767,48 +1009,52 @@ OK (120 tests validés, 100% de réussite)
 
 ---
 
-## 31. Gestion des erreurs
+## 33. Gestion des erreurs
 
 L'application gère les erreurs HTTP avec des réponses structurées :
 - `400 Bad Request` : Paramètre GET invalide, token expiré/invalide ou données JSON manquantes.
 - `401 Unauthorized` : Session non authentifiée ou compte non encore activé.
 - `403 Forbidden` : Tentative d'accès hors privilèges RBAC.
 - `404 Not Found` : Ressource introuvable.
-- `409 Conflict` : Violation d'une règle métier (session pleine, doublon).
+- `409 Conflict` : Violation d'une règle métier (session pleine, doublon, suppression avec dépendances).
 - `500 Internal Server Error` : Erreur interne (les détails d'exception ne sont pas divulgués à l'utilisateur).
 
 ---
 
-## 32. Sécurité
+## 34. Sécurité
 
 Les dispositifs de sécurité mis en œuvre comprennent :
 - Authentification sécurisée par cookie de session Flask-Login ;
 - Mots de passe stockés sous forme de hash fort (PBKDF2:SHA256 via Werkzeug) ;
 - **Parcours d'onboarding sans mot de passe initial** avec token cryptographique aléatoire unique (48h) et comparaison en temps constant (`hmac.compare_digest`) ;
+- **Changement de mot de passe sécurisé** avec vérification de l'ancien mot de passe et validation de la force du nouveau ;
 - Contrôle d'accès RBAC vérifié au niveau backend sur chaque route API ;
 - Isolation stricte des données du Formateur ;
 - Protection contre les doublons d'inscription par contrainte d'unicité SQL ;
+- Protection contre la suppression d'entités ayant des dépendances (intégrité référentielle) ;
 - Fichier de configuration `.env` exclu du dépôt Git (`.gitignore`).
 
 ---
 
-## 33. Responsive et expérience utilisateur
+## 35. Responsive et expérience utilisateur
 
 L'interface web est entièrement responsive et adaptée aux écrans desktop et mobiles :
 - Navigation latérale (Sidebar) rétractable sur mobile ;
 - Indicateurs de chargement (spinners Lucide) lors des appels asynchrones ;
 - Notification Toasts réactives en bas à droite de l'écran ;
-- Transitions CSS Tailwind légères (150-200ms) sans surcharge visuelle.
+- Transitions CSS Tailwind légères (150-200ms) sans surcharge visuelle ;
+- Composant état vide (`empty_state`) pour les listes sans résultat ;
+- Badge compteur numérique sur la cloche de notifications.
 
 ---
 
-## 34. Démonstration recommandée
+## 36. Démonstration recommandée
 
 Consultez le fichier [RECETTE_SOUTENANCE.md](RECETTE_SOUTENANCE.md) pour obtenir le protocole de démonstration pas-à-pas destiné au jury et à la démonstration orale.
 
 ---
 
-## 35. Limites connues et perspectives
+## 37. Limites connues et perspectives
 
 L'application répond intégralement au cahier des charges du PFA. Dans une évolution future de production, les axes d'amélioration pourraient inclure :
 - un système de pagination côté serveur pour les très grands volumes (> 10 000 entrées) ;
@@ -816,17 +1062,18 @@ L'application répond intégralement au cahier des charges du PFA. Dans une évo
 
 ---
 
-## 36. État du projet
+## 38. État du projet
 
 ```text
-Gestion métier            ✅ Validé
+Gestion métier            ✅ Validé (CRUD complet avec suppression sécurisée)
 Authentification & RBAC   ✅ Validé (Isolation Formateur hermétique sur sessions, clients, participants et agrégats)
 Onboarding & Activation   ✅ Validé (Token unique 48h, service messagerie Console/SMTP, mot de passe choisi par l'utilisateur)
-Fiches détail             ✅ Validé
+Profil & Mot de passe     ✅ Validé (Modal profil utilisateur avec changement de mot de passe sécurisé)
+Fiches détail             ✅ Validé (Sessions, Formations, Clients, Participants, Utilisateurs)
 Filtres & URL state       ✅ Validé
-Dashboard & KPI           ✅ Validé
-Points d'attention        ✅ Validé
-Exports Métier            ✅ Validé (Excel stylisé openpyxl, Rapports décisionnels PDF, Feuilles d'émargement PDF)
+Dashboard & KPI           ✅ Validé (6 KPI + 5 graphiques interactifs Chart.js)
+Points d'attention        ✅ Validé (Badge compteur numérique, gestion état vu/non vu)
+Exports Métier            ✅ Validé (CSV UTF-8, Excel stylisé openpyxl, Rapports PDF ReportLab, Feuilles d'émargement PDF)
 Analyse ACP               ✅ Validé (Interprétation business en 1ère position, projection 2D et détails mathématiques)
 Suite de tests (pytest)   ✅ 120 / 120 tests réussis (100%)
 Documentation & Recette   ✅ Validé (Protocole RECETTE_SOUTENANCE.md & README)
@@ -834,8 +1081,8 @@ Documentation & Recette   ✅ Validé (Protocole RECETTE_SOUTENANCE.md & README)
 
 ---
 
-## 37. Conclusion
+## 39. Conclusion
 
 GTM (Galaxy Training Manager) offre à **Galaxy Solutions** un outil centralisé, moderne et sécurisé pour piloter l'ensemble de ses activités de formation.
 
-En combinant **gestion opérationnelle**, **sécurité RBAC**, **tableau de bord décisionnel** et **analyse exploratoire ACP**, GTM transforme la donnée de formation en un levier d'efficacité et d'aide à la décision.
+En combinant **gestion opérationnelle**, **sécurité RBAC**, **tableau de bord décisionnel**, **exports professionnels** et **analyse exploratoire ACP**, GTM transforme la donnée de formation en un levier d'efficacité et d'aide à la décision.
