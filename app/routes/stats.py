@@ -1,11 +1,12 @@
 from flask import Blueprint, request, jsonify
-from flask_login import current_user
+from flask_login import current_user, login_required
 
 from app.services import stats_service, points_attention_service
-from app.services.permissions import gestionnaire_ou_admin_required
+from app.services.permissions import gestionnaire_ou_admin_required, tous_roles_required
 from app.services.query_validation_service import ErreurFiltre, entier_positif
 
 stats_bp = Blueprint("stats", __name__, url_prefix="/api/stats")
+
 
 
 def extraire_filtres_stats():
@@ -159,6 +160,18 @@ def export_dashboard_pdf():
 
     filtres_str = " • ".join(labels) if labels else "Global Entreprise"
     return generer_rapport_dashboard_pdf(kpis, points_att, filtres_str)
+
+
+@stats_bp.route("/kpi-formateur", methods=["GET"])
+@tous_roles_required
+def kpi_formateur():
+    """KPIs personnels du formateur connecté — accès réservé au formateur lui-même."""
+    if not current_user.a_role("formateur"):
+        from flask import abort
+        abort(403, description="Réservé aux formateurs.")
+    if not current_user.formateur:
+        return jsonify({"erreur": "Aucun profil formateur associé à ce compte."}), 404
+    return jsonify(stats_service.kpi_formateur(current_user.formateur.id)), 200
 
 
 

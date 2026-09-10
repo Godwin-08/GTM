@@ -29,3 +29,6 @@ def admin_required(fonction_route):
 
 def gestionnaire_ou_admin_required(fonction_route):
     return role_required("admin", "gestionnaire")(fonction_route)
+
+def tous_roles_required(fonction_route):
+    return role_required("admin", "gestionnaire", "formateur")(fonction_route)

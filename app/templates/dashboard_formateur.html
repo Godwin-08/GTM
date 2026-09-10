@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block page_title %}Mon tableau de bord{% endblock %}
+
+{% block content_container %}max-w-[1200px] mx-auto px-2 sm:px-4{% endblock %}
+
+{% block content %}
+
+<div x-data="pageDashboardFormateurData()" x-init="charger()">
+
+    <!-- En-tête -->
+    <div class="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mb-0.5 tracking-tight"
+                x-text="obtenirSalutation('{{ current_user.nom }}') + ' 👋'"></h2>
+            <p class="text-xs sm:text-sm text-slate-500 font-medium">
+                Vue personnalisée de votre activité de formation.
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
+                <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+                Espace Formateur
+            </span>
+        </div>
+    </div>
+
+    <!-- État de chargement -->
+    <template x-if="chargementEnCours">
+        <div class="gtm-card p-6 text-center text-slate-400 text-sm mb-4">
+            <i data-lucide="loader-2" class="w-6 h-6 mx-auto mb-2 animate-spin text-emerald-700"></i>
+            Chargement de vos indicateurs...
+        </div>
+    </template>
+
+    <template x-if="erreur">
+        <div class="gtm-error-state text-sm p-3.5 mb-4">
+            <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+            <span x-text="erreur"></span>
+        </div>
+    </template>
+
+    <template x-if="!chargementEnCours && !erreur">
+        <div>
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+                <!-- KPI 1 : Sessions totales -->
+                <div class="gtm-kpi-card p-4 sm:p-5 gtm-fade-in gtm-delay-1">
+                    <div>
+                        <span class="gtm-kpi-label text-xs sm:text-sm text-slate-500 font-medium">Mes sessions</span>
+                        <p class="gtm-kpi-valeur text-2xl sm:text-3xl font-extrabold font-tabular text-slate-900 mt-1"
+                           x-text="kpi.nb_sessions_total ?? '–'"></p>
+                        <span class="text-xs text-slate-400 mt-1 block">Total sessions animées</span>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-slate-900 text-white shadow-xs gtm-kpi-icon">
+                        <i data-lucide="calendar" class="w-5 h-5"></i>
+                    </div>
+                </div>
+
+                <!-- KPI 2 : Sessions à venir -->
+                <div class="gtm-kpi-card p-4 sm:p-5 gtm-fade-in gtm-delay-2">
+                    <div>
+                        <span class="gtm-kpi-label text-xs sm:text-sm text-slate-500 font-medium">À venir</span>
+                        <p class="gtm-kpi-valeur text-2xl sm:text-3xl font-extrabold font-tabular text-slate-900 mt-1"
+                           x-text="kpi.nb_sessions_a_venir ?? '–'"></p>
+                        <span class="text-xs text-slate-400 mt-1 block">Sessions planifiées</span>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 gtm-kpi-icon">
+                        <i data-lucide="clock" class="w-5 h-5"></i>
+                    </div>
+                </div>
+
+                <!-- KPI 3 : Taux de remplissage -->
+                <div class="gtm-kpi-card p-4 sm:p-5 gtm-fade-in gtm-delay-3">
+                    <div class="flex-1 min-w-0">
+                        <span class="gtm-kpi-label text-xs sm:text-sm text-slate-500 font-medium">Taux de remplissage</span>
+                        <p class="gtm-kpi-valeur text-2xl sm:text-3xl font-extrabold font-tabular text-slate-900 mt-1"
+                           x-text="kpi.taux_moyen_remplissage !== undefined ? kpi.taux_moyen_remplissage.toFixed(1) + '%' : '–'"></p>
+                        <div class="w-full bg-slate-100 h-2 rounded-full mt-2 overflow-hidden border border-slate-200">
+                            <div class="h-full bg-[#047857] transition-all duration-500 ease-out"
+                                 :style="`width: ${Math.min(100, Math.max(0, kpi.taux_moyen_remplissage || 0))}%`"></div>
+                        </div>
+                        <span class="text-xs text-slate-400 mt-1 block">Moyenne sur mes sessions</span>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 gtm-kpi-icon">
+                        <i data-lucide="percent" class="w-5 h-5"></i>
+                    </div>
+                </div>
+
+                <!-- KPI 4 : Participants formés -->
+                <div class="gtm-kpi-card p-4 sm:p-5 gtm-fade-in gtm-delay-4">
+                    <div>
+                        <span class="gtm-kpi-label text-xs sm:text-sm text-slate-500 font-medium">Participants formés</span>
+                        <p class="gtm-kpi-valeur text-2xl sm:text-3xl font-extrabold font-tabular text-slate-900 mt-1"
+                           x-text="kpi.participants_distincts ?? '–'"></p>
+                        <span class="text-xs text-slate-400 mt-1 block">Stagiaires distincts (confirmés)</span>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 gtm-kpi-icon">
+                        <i data-lucide="users" class="w-5 h-5"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenu principal : Répartition domaines + Prochaines sessions -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+                <!-- Répartition par domaine -->
+                <div class="gtm-card p-5 shadow-xs hover:border-slate-300 transition-colors">
+                    <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+                        <h3 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                            <i data-lucide="pie-chart" class="w-4 h-4 text-slate-600"></i>
+                            Mes domaines d'intervention
+                        </h3>
+                        <span class="text-xs text-slate-400 font-mono">Répartition par domaine</span>
+                    </div>
+
+                    <template x-if="kpi.repartition_domaines && kpi.repartition_domaines.length === 0">
+                        <p class="text-slate-400 text-sm text-center py-6">Aucune session enregistrée.</p>
+                    </template>
+
+                    <template x-if="kpi.repartition_domaines && kpi.repartition_domaines.length > 0">
+                        <div class="space-y-3">
+                            <template x-for="d in kpi.repartition_domaines" :key="d.domaine">
+                                <div>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-sm font-semibold text-slate-700" x-text="d.domaine"></span>
+                                        <span class="text-xs font-tabular font-bold text-slate-900"
+                                              x-text="d.nb_sessions + ' session' + (d.nb_sessions > 1 ? 's' : '')"></span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200">
+                                        <div class="h-full bg-[#047857] rounded-full transition-all duration-500"
+                                             :style="`width: ${kpi.nb_sessions_total > 0 ? Math.round(d.nb_sessions / kpi.nb_sessions_total * 100) : 0}%`"></div>
+                                    </div>
+                                    <span class="text-xs text-slate-400 mt-0.5 block"
+                                          x-text="kpi.nb_sessions_total > 0 ? Math.round(d.nb_sessions / kpi.nb_sessions_total * 100) + '% de mon activité' : ''"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Prochaines sessions -->
+                <div class="gtm-card overflow-hidden flex flex-col shadow-xs hover:border-slate-300 transition-colors">
+                    <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+                        <h3 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                            <i data-lucide="calendar" class="w-4 h-4 text-slate-600"></i>
+                            Mes prochaines sessions
+                        </h3>
+                        <span class="text-xs text-slate-400 font-medium"
+                              x-text="(kpi.prochaines_sessions ? kpi.prochaines_sessions.length : 0) + ' à venir'"></span>
+                    </div>
+
+                    <div class="divide-y divide-slate-100 text-xs sm:text-sm flex-1">
+                        <template x-if="!kpi.prochaines_sessions || kpi.prochaines_sessions.length === 0">
+                            <p class="px-5 py-6 text-slate-400 text-center">Aucune session à venir programmée.</p>
+                        </template>
+                        <template x-for="s in kpi.prochaines_sessions" :key="s.id">
+                            <a :href="`/sessions/${s.id}`"
+                               class="p-3.5 sm:p-4 hover:bg-slate-50 transition-colors duration-150 flex items-center justify-between gap-3 block">
+                                <div class="min-w-0 flex-1 space-y-0.5">
+                                    <p class="font-bold text-slate-900 truncate text-sm" x-text="s.formation"></p>
+                                    <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500 font-tabular">
+                                        <span class="flex items-center gap-1 font-semibold">
+                                            <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i>
+                                            <span x-text="s.date_debut"></span>
+                                        </span>
+                                        <span>•</span>
+                                        <span x-text="s.lieu"></span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <span class="font-tabular font-extrabold text-slate-800 text-sm"
+                                          x-text="`${s.nb_inscrits_confirmes}/${s.capacite_max}`"></span>
+                                    <span class="gtm-badge text-xs"
+                                          :class="{
+                                              'gtm-badge-neutral': s.est_complete,
+                                              'gtm-badge-success': !s.est_complete && s.taux_remplissage >= 0.7,
+                                              'gtm-badge-warning': !s.est_complete && s.taux_remplissage >= 0.4 && s.taux_remplissage < 0.7,
+                                              'gtm-badge-danger': !s.est_complete && s.taux_remplissage < 0.4
+                                          }">
+                                        <span class="gtm-badge-dot"></span>
+                                        <span x-text="s.est_complete ? 'Complète' : s.taux_remplissage >= 0.7 ? 'Bon remplissage' : s.taux_remplissage >= 0.4 ? 'À surveiller' : 'Sous-remplie'"></span>
+                                    </span>
+                                </div>
+                            </a>
+                        </template>
+                    </div>
+
+                    <div class="px-5 py-3 border-t border-slate-100 bg-slate-50">
+                        <a href="{{ url_for('pages.sessions') }}"
+                           class="text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 transition-colors">
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                            Voir toutes mes sessions
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </template>
+
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const urlKpiFormateur = "{{ url_for('stats.kpi_formateur') }}";
+
+    function obtenirSalutation(nom) {
+        const h = new Date().getHours();
+        const salut = h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
+        return `${salut}, ${nom}`;
+    }
+
+    function pageDashboardFormateurData() {
+        return {
+            kpi: {},
+            chargementEnCours: false,
+            erreur: null,
+
+            async charger() {
+                this.chargementEnCours = true;
+                this.erreur = null;
+                try {
+                    const resp = await fetch(urlKpiFormateur);
+                    if (!resp.ok) {
+                        const data = await resp.json().catch(() => ({}));
+                        throw new Error(data.erreur || `Erreur ${resp.status}`);
+                    }
+                    this.kpi = await resp.json();
+                } catch (e) {
+                    this.erreur = e.message || 'Impossible de charger les indicateurs.';
+                } finally {
+                    this.chargementEnCours = false;
+                    this.$nextTick(() => {
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    });
+                }
+            }
+        };
+    }
+</script>
+{% endblock %}
+

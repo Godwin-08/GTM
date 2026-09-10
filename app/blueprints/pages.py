@@ -11,7 +11,7 @@ pages_bp = Blueprint('pages', __name__)
 def index():
     if current_user.is_authenticated:
         if current_user.a_role("formateur"):
-            return redirect(url_for('pages.sessions'))
+            return redirect(url_for('pages.dashboard_formateur'))
         return redirect(url_for('pages.dashboard'))
     return redirect(url_for('pages.login_page'))
 
@@ -32,8 +32,16 @@ def logo_showcase():
 @login_required
 def dashboard():
     if current_user.a_role("formateur"):
-        return redirect(url_for('pages.sessions'))
+        return redirect(url_for('pages.dashboard_formateur'))
     return render_template('dashboard.html')
+
+@pages_bp.route('/dashboard-formateur')
+@login_required
+def dashboard_formateur():
+    if not current_user.a_role("formateur"):
+        return redirect(url_for('pages.dashboard'))
+    return render_template('dashboard_formateur.html')
+
 
 @pages_bp.route('/formations')
 @login_required
@@ -89,7 +97,7 @@ def inscriptions():
 @login_required
 def notifications():
     if current_user.a_role("formateur"):
-        return redirect(url_for('pages.sessions'))
+        return redirect(url_for('pages.dashboard_formateur'))
     return render_template('notifications.html')
 
 @pages_bp.route('/utilisateurs')
@@ -106,8 +114,9 @@ def utilisateur_detail(utilisateur_id):
 @login_required
 def analytics_acp():
     if current_user.a_role("formateur"):
-        return redirect(url_for('pages.sessions'))
+        return redirect(url_for('pages.dashboard_formateur'))
     return render_template('analytics/acp.html')
+
 
 
 

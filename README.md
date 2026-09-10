@@ -491,6 +491,7 @@ L'accès à l'application est gouverné par trois rôles utilisateur.
 - Accès restreint en **consultation seule** (mode lecture).
 - Accès limité aux sessions dont il est le formateur référent et aux inscrits rattachés.
 - **Interdiction stricte d'écriture** : Toute tentative d'exécuter un POST, PUT ou DELETE sur l'API renvoie un code HTTP `403 Forbidden`.
+- Dispose d'un **tableau de bord personnalisé** (`/dashboard-formateur`) affichant ses propres indicateurs d'activité (voir section 14.1).
 
 Le contrôle des autorisations est **systématiquement exécuté côté backend** (dans les contrôleurs Flask et les services de permission). Masquer un bouton dans l'interface frontend ne constitue qu'un confort d'ergonomie et non une mesure de sécurité.
 
@@ -625,7 +626,25 @@ Le dashboard intègre également des **graphiques interactifs** (Chart.js) :
 - Évolution des inscriptions
 - Taux de remplissage global
 
+### 14.1 Dashboard Formateur (`/dashboard-formateur`)
+
+En complément du tableau de bord global réservé aux rôles Admin et Gestionnaire, le rôle **Formateur** dispose d'un **espace de synthèse personnalisé** accessible à `/dashboard-formateur`. C'est la page d'accueil du formateur après connexion.
+
+Il restitue **4 indicateurs KPI personnels** :
+
+1. **Mes sessions** : Nombre total de sessions animées (non annulées).
+2. **À venir** : Nombre de sessions planifiées à partir d'aujourd'hui.
+3. **Taux de remplissage moyen** : Moyenne des taux de remplissage de ses propres sessions, avec jauge visuelle.
+4. **Participants formés** : Nombre de participants distincts ayant une inscription confirmée sur ses sessions.
+
+Il affiche également :
+- **Répartition par domaine** : Barres de progression proportionnelles au nombre de sessions par domaine.
+- **Mes prochaines sessions** : Liste des 5 prochaines sessions avec date, lieu, ratio inscrits/capacité et badge de remplissage coloré.
+
+> Les données sont chargées via `GET /api/stats/kpi-formateur`, un endpoint strictement isolé : il ne renvoie que les données du formateur connecté et renvoie `403 Forbidden` à tout autre rôle.
+
 ---
+
 
 ## 15. Filtres du Dashboard
 
@@ -816,7 +835,8 @@ L'application expose une API REST complète au format JSON sous le préfixe `/ap
 ### Statistiques & Dashboard
 | Méthode | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/api/stats/kpi-globaux` | Indicateurs KPI du Dashboard |
+| `GET` | `/api/stats/kpi-globaux` | Indicateurs KPI du Dashboard (Admin & Gestionnaire) |
+| `GET` | `/api/stats/kpi-formateur` | KPIs personnels du formateur connecté (Formateur uniquement) |
 | `GET` | `/api/stats/remplissage` | Taux de remplissage global |
 | `GET` | `/api/stats/activite-domaine` | Activité par domaine |
 | `GET` | `/api/stats/activite-client` | Activité par client |

@@ -79,23 +79,37 @@ Ce document constitue le **script de scène officiel** pour la démonstration or
 
 ---
 
-## 🎬 Scénario 2 : Parcours Formateur (5 min — Étanchéité & Sécurité RBAC)
+## 🎬 Scénario 2 : Parcours Formateur (7 min — Dashboard personnalisé & Étanchéité RBAC)
 
 ### Étape 1 : Connexion Formateur
 - **ACTION** : Se connecter avec `karim.bensouda@galaxysolutions.ma` / `Karim@2026`.
-- **À OBSERVER** : Redirection vers l'espace Formateur.
+- **À OBSERVER** : Redirection automatique vers `/dashboard-formateur` (et non vers `/sessions` ou `/dashboard`).
+- **À EXPLIQUER AU JURY** : « Chaque rôle dispose d'un point d'entrée adapté à ses responsabilités. Le formateur est accueilli par ses propres indicateurs d'activité. »
+- **RÉSULTAT ATTENDU** : Connexion réussie, redirection vers le tableau de bord formateur.
 
-### Étape 2 : Contrôle de l'Interface (UI Scoping)
-- **ACTION** : Naviguer sur `/sessions`.
+### Étape 2 : Tableau de bord Formateur
+- **ACTION** : Observer le tableau de bord à `/dashboard-formateur`.
+- **À OBSERVER** :
+  - **4 cartes KPI** : *Mes sessions* (total), *À venir* (sessions planifiées), *Taux de remplissage moyen* (avec jauge visuelle), *Participants formés* (distincts, inscrits confirmés).
+  - **Répartition par domaine** : Barres de progression montrant la répartition de son activité par domaine (ex: 60% Web & Data, 40% Cybersécurité).
+  - **Mes prochaines sessions** : Liste des 5 prochaines sessions avec date, lieu, taux de remplissage et badge coloré (Bon remplissage / À surveiller / Sous-remplie / Complète).
+  - **Lien "Voir toutes mes sessions"** en bas du widget.
+- **À EXPLIQUER AU JURY** : « Le dashboard formateur appelle l'endpoint `/api/stats/kpi-formateur`, qui est strictement isolé : il ne renvoie que les données relatives à ce formateur et est inaccessible aux autres rôles. »
+- **RÉSULTAT ATTENDU** : KPIs personnels chargés, données cohérentes avec les sessions référencées.
+
+### Étape 3 : Navigation dans les sessions
+- **ACTION** : Naviguer sur `/sessions` via le menu latéral ou le lien du widget.
 - **À OBSERVER** : Le Formateur ne voit que les sessions dont il est le formateur référent.
 - **ACTION** : Ouvrir la fiche d'une session.
 - **À OBSERVER** : Le bouton **+ Ajouter un participant** et les sélecteurs de statut du tableau sont **masqués** (filtrés côté Jinja2).
 - **À EXPLIQUER AU JURY** : « Pour l'ergonomie, l'interface masque les boutons de gestion qui ne concernent pas le formateur. »
 
-### Étape 3 : Tentative de contournement API (Sécurité Backend)
+### Étape 4 : Tentative de contournement API (Sécurité Backend)
 - **ACTION** : Émettre une requête directe `POST /api/inscriptions` ou `PUT /api/inscriptions/1` avec la session du Formateur (ex: via console navigateur).
 - **À OBSERVER** : Réponse HTTP `403 Forbidden` (`{"erreur": "Accès interdit"}`).
-- **À EXPLIQUER AU JURY** : « Le masque visuel ne suffit pas : le backend vérifie systématiquement le rôle et bloque toute écriture non autorisée avec un code 403. »
+- **ACTION** : Tenter d'accéder à `GET /api/stats/kpi-globaux` (endpoint réservé admin/gestionnaire).
+- **À OBSERVER** : Réponse HTTP `403 Forbidden`.
+- **À EXPLIQUER AU JURY** : « Le masque visuel ne suffit pas : le backend vérifie systématiquement le rôle et bloque toute tentative d'accès ou d'écriture non autorisée. L'isolation est hermétique à tous les niveaux. »
 - **RÉSULTAT ATTENDU** : Étanchéité RBAC backend 100% vérifiée.
 
 ---
@@ -103,9 +117,10 @@ Ce document constitue le **script de scène officiel** pour la démonstration or
 ## 📊 Synthèse d'évaluation de la recette soutenance
 
 - [x] Connexion & déconnexion des 3 rôles validées.
-- [x] Filtres Dashboard et URL state réactifs.
+- [x] Filtres Dashboard et URL state réactifs (Admin/Gestionnaire).
+- [x] **Dashboard Formateur personnalisé** (`/dashboard-formateur`) — 4 KPIs, répartition domaines, prochaines sessions.
 - [x] Inscription dynamique avec filtrage `client_id` testée.
 - [x] Inscription sur session complète (liste d'attente / refus 409) démontrée.
 - [x] Bouton `✓` anti-double-clic et rollback Alpine.js validés.
-- [x] Sécurité RBAC Formateur (UI + API 403) testée.
+- [x] Sécurité RBAC Formateur (UI + API 403) testée — isolation hermétique vérifiée.
 - [x] 120 tests automatisés exécutés et verts.
