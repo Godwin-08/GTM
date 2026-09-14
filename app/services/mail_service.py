@@ -1,8 +1,13 @@
 """
-Service d'envoi de courriels transactionnels pour Galaxy Training Manager (GTM).
-Supporte deux modes d'exécution :
-- 'console' (mode local / démo / soutenance) : formatage complet et affichage dans les logs sans dépendance SMTP
-- 'smtp' (mode production) : envoi réel via smtplib (SSL / TLS) avec configuration sécurisée par variables d'environnement
+==============================================================================
+Service de Messagerie Transactionnelle — Galaxy Training Manager (GTM)
+==============================================================================
+Gère l'expédition des courriels d'activation et d'onboarding utilisateur :
+- Mode 'console' (par défaut) : Mise en forme et journalisation sécurisée dans
+  la console (idéal pour le développement local et la soutenance sans serveur SMTP).
+- Mode 'smtp' (production)    : Envoi via smtplib avec chiffrement TLS / SSL
+  et authentification sécurisée par variables d'environnement.
+- Génération d'e-mails MIME multipart (version texte brut + version HTML responsive).
 """
 
 import logging
@@ -18,12 +23,16 @@ def generer_contenu_invitation(nom_utilisateur: str, url_activation: str) -> Tup
     """
     Génère le sujet, la version texte brut et la version HTML responsive de l'invitation.
     Charte visuelle : Emerald Graphite (Galaxy Solutions).
+    
+    :param nom_utilisateur: Nom complet du collaborateur invité
+    :param url_activation: URL absolue sécurisée intégrant le token unique
+    :return: Tuple (sujet, texte_brut, html)
     """
     sujet = "Invitation à rejoindre Galaxy Training Manager"
 
     nom_affiche = nom_utilisateur.strip() if nom_utilisateur else "Collaborateur"
 
-    # 1. Version Texte Brut
+    # 1. Version Texte Brut (pour les clients de messagerie texte ou lecteurs d'écran)
     texte_brut = f"""Bonjour {nom_affiche},
 
 Un compte utilisateur a été créé pour vous sur la plateforme Galaxy Training Manager (GTM).
@@ -191,9 +200,9 @@ def envoyer_invitation_activation(
 
     sujet, texte_brut, html = generer_contenu_invitation(nom_utilisateur, url_activation)
 
-    # -------------------------------------------------------------
+    # -------------------------------------------------------------------------
     # 1. MODE CONSOLE / DÉMO / LOCAL (Zéro dépendance externe)
-    # -------------------------------------------------------------
+    # -------------------------------------------------------------------------
     if backend != "smtp":
         logger.info(
             "\n" + "=" * 70 + "\n"
@@ -212,9 +221,9 @@ def envoyer_invitation_activation(
             "url_activation": url_activation,
         }
 
-    # -------------------------------------------------------------
+    # -------------------------------------------------------------------------
     # 2. MODE SMTP RÉEL (Production)
-    # -------------------------------------------------------------
+    # -------------------------------------------------------------------------
     serveur_smtp = config.get("MAIL_SERVER", "localhost")
     port = int(config.get("MAIL_PORT", 587))
     use_tls = bool(config.get("MAIL_USE_TLS", True))
@@ -271,4 +280,5 @@ def envoyer_invitation_activation(
             "erreur": "Échec de l'acheminement de l'e-mail d'invitation via le serveur SMTP.",
             "url_activation": url_activation,
         }
+
 

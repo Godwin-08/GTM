@@ -1,11 +1,14 @@
-# Ce fichier centralise l'import de tous les modèles.
-# Il permet d'écrire "from app.models import Role, Formation, ..."
-# ailleurs dans le code, au lieu de connaître le nom exact de chaque
-# fichier (app.models.role, app.models.formation, etc.)
-#
-# L'ORDRE des imports n'a pas d'importance ici : SQLAlchemy résout les
-# relations entre modèles (via les chaînes "Session", "Formation"...)
-# seulement au moment où l'application démarre, pas à la lecture de ce fichier.
+"""
+==============================================================================
+Package des Modèles de Données SQLAlchemy — Galaxy Training Manager (GTM)
+==============================================================================
+Ce module centralise l'export de l'ensemble des entités relationnelles.
+Il simplifie les imports dans l'application :
+`from app.models import Client, Formation, Session, ...`
+
+Les relations de clés étrangères et back_populates sont résolues dynamiquement
+par SQLAlchemy au moment de l'initialisation de l'application.
+"""
 
 from app.models.role import Role
 from app.models.domaine import Domaine
@@ -16,3 +19,4 @@ from app.models.client import Client
 from app.models.participant import Participant
 from app.models.session import Session
 from app.models.inscription import Inscription
+

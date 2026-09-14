@@ -16,8 +16,11 @@ from app.services.mail_service import (
 
 
 class MailServiceTestCase(unittest.TestCase):
+    """Suite de tests unitaires pour le service de messagerie transactionnelle (mode console et SMTP)."""
+
     @classmethod
     def setUpClass(cls):
+        """Configure l'application Flask avec base SQLite en mémoire pour les tests de messagerie."""
         cls.original_database_uri = Config.SQLALCHEMY_DATABASE_URI
         Config.SQLALCHEMY_DATABASE_URI = "sqlite://"
         cls.app = create_app()
@@ -25,9 +28,11 @@ class MailServiceTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """Restaure la configuration initiale de la base de données."""
         Config.SQLALCHEMY_DATABASE_URI = cls.original_database_uri
 
     def setUp(self):
+        """Crée le contexte applicatif, les rôles et l'administrateur de test."""
         self.context = self.app.app_context()
         self.context.push()
         db.drop_all()
@@ -50,10 +55,12 @@ class MailServiceTestCase(unittest.TestCase):
         self.client = self.app.test_client()
 
     def tearDown(self):
+        """Nettoie la session et le contexte de test."""
         db.session.remove()
         self.context.pop()
 
     def connecter_admin(self):
+        """Simule la session d'un administrateur connecté."""
         with self.client.session_transaction() as session:
             session["_user_id"] = str(self.admin.id)
             session["_fresh"] = True

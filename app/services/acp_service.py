@@ -1,15 +1,23 @@
 """
-Service centralisé de calcul de l'Analyse en Composantes Principales (ACP) pour GTM.
-Calcule la décomposition factorielle (individus clients × variables formations),
-les corrélations, la qualité de représentation (cos²), la contribution aux axes
-et produit une synthèse d'interprétation métier descriptive.
+==============================================================================
+Service d'Analyse en Composantes Principales (ACP) — Galaxy Training Manager
+==============================================================================
+Ce module implémente de bout en bout l'Analyse en Composantes Principales (ACP)
+normée pour explorer les relations entre les Entreprises Clientes (individus)
+et les Formations suivies (variables).
 
-Méthodologie :
-1. Construction de la matrice de comptage (Clients × Formations)
-2. Centrage-réduction (Z-Score) avec sécurité sur variance nulle
-3. Matrice de corrélation R et recherche des valeurs/vecteurs propres (Eigendecomposition)
-4. Calcul des coordonnées factorielles, cos² et contributions (ctr)
-5. Analyse descriptive métier (effets de taille, clients atypiques, paires proches)
+Formulation mathématique et étapes algorithmiques :
+1. Construction de la matrice brute des effectifs $X$ (taille $n \times p$)
+2. Centrage et réduction de la matrice pour obtenir $Z$ ($Z = \frac{X - \mu}{\sigma}$)
+3. Calcul de la matrice des corrélations $R = \frac{1}{n} Z^T Z$
+4. Décomposition spectrale de $R$ : résolution des couples $(\lambda_k, v_k)$
+5. Projection factorielle des individus : $F = Z \cdot V$
+6. Calcul des coordonnées et corrélations des variables : $r(x_j, F_k) = v_{jk} \sqrt{\lambda_k}$
+7. Calcul des métriques d'aide à l'interprétation :
+   - Cosinus carrés ($\cos^2$) : qualité de projection sur les axes
+   - Contributions relatives ($CTR$) : part prise dans la construction de l'axe
+8. Synthèse métier automatique : détection des clients singuliers (outliers),
+   paires similaires et interprétation sémantique des axes factoriels.
 """
 
 import numpy as np
@@ -20,18 +28,24 @@ from app.models import Client, Formation
 
 def build_matrix():
     """
-    Construit la matrice X : lignes = clients, colonnes = formations,
-    valeurs = nombre d'inscriptions confirmées de ce client à cette formation.
+    Construit le tableau de contingence brut individus × variables.
+    - Lignes (Individus) : Entreprises clientes ($n$).
+    - Colonnes (Variables) : Formations du catalogue ($p$).
+    - Valeurs $X_{ij}$ : Nombre total de salariés inscrits et confirmés du client $i$ à la formation $j$.
+    
+    :return: DataFrame pandas (index=noms_clients, colonnes=titres_formations)
     """
     clients = Client.query.all()
     formations = Formation.query.all()
 
+    # Initialisation du tableau avec des zéros
     matrice = pd.DataFrame(
         0,
         index=[c.nom_entreprise for c in clients],
         columns=[f.titre for f in formations],
     )
 
+    # Remplissage par agrégation des inscriptions confirmées
     for client in clients:
         for participant in client.participants:
             for inscription in participant.inscriptions:
@@ -49,15 +63,24 @@ def build_matrix():
 
 def standardize(X):
     """
-    Centrage-réduction (z-score).
-    Exclut les colonnes sans variance (écart-type = 0).
+    Réalise le centrage et la réduction des variables (Z-score standardisation).
+    Chaque variable $j$ est transformée selon :
+    $$Z_{ij} = \frac{X_{ij} - \bar{X}_j}{\sigma_j}$$
+    
+    Sécurité : Les colonnes à variance nulle ($\sigma_j = 0$) sont automatiquement
+    écartées pour éviter les divisions par zéro.
+    
+    :param X: DataFrame brute des données
+    :return: DataFrame Z des données centrées-réduites
     """
     if X.empty:
         return pd.DataFrame(index=X.index)
 
+    # Calcul de la moyenne et de l'écart-type de population (ddof=0)
     moyennes = X.mean()
     ecarts_types = X.std(ddof=0)
 
+    # Conservation des seules variables présentant une variabilité
     colonnes_valides = ecarts_types[ecarts_types > 0].index
     if len(colonnes_valides) == 0:
         return pd.DataFrame(index=X.index)
@@ -68,7 +91,11 @@ def standardize(X):
 
 def correlation_matrix(Z):
     """
-    Matrice de corrélation R = (1/n) * Z^T * Z.
+    Calcule la matrice des corrélations linéaires $R$ (taille $p \times p$).
+    $$R = \frac{1}{n} Z^T Z$$
+    
+    :param Z: DataFrame des données centrées-réduites
+    :return: DataFrame R de corrélation
     """
     n = len(Z)
     if n == 0 or Z.empty:
@@ -79,18 +106,28 @@ def correlation_matrix(Z):
 
 def eigendecomposition(R):
     """
-    Valeurs propres et vecteurs propres de R.
+    Effectue la décomposition spectrale (valeurs propres et vecteurs propres) de la matrice $R$.
+    Les valeurs propres $\lambda_k$ mesurent la quantité de variance (inertie) expliquée par l'axe $k$.
+    Les vecteurs propres $v_k$ définissent les directions principales d'inertie.
+    
+    Les résultats sont triés par ordre décroissant des valeurs propres.
+    
+    :param R: Matrice de corrélation
+    :return: Tuple (valeurs_propres, vecteurs_propres)
     """
     if R.empty or R.shape[0] == 0 or R.shape[1] == 0:
         return np.array([]), np.array([[]])
 
     try:
+        # np.linalg.eigh est optimisé pour les matrices réelles et symétriques
         valeurs_propres, vecteurs_propres = np.linalg.eigh(R.values)
     except Exception:
         return np.array([]), np.array([[]])
 
+    # Tri par ordre décroissant d'inertie
     idx = np.argsort(valeurs_propres)[::-1]
     valeurs_propres = valeurs_propres[idx]
+    # Tronquage des petites valeurs résiduelles négatives dues aux imprécisions flottantes
     valeurs_propres = np.maximum(valeurs_propres, 0)
     vecteurs_propres = vecteurs_propres[:, idx]
 
@@ -99,7 +136,12 @@ def eigendecomposition(R):
 
 def factor_coordinates(Z, vecteurs_propres):
     """
-    Coordonnées factorielles des individus F = Z . v.
+    Calcule les coordonnées factorielles des individus (scores des clients sur les axes) :
+    $$F = Z \cdot V$$
+    
+    :param Z: DataFrame centrée-réduite
+    :param vecteurs_propres: Matrice $V$ des vecteurs propres colonnes
+    :return: DataFrame $F$ des coordonnées factorielles (colonnes F1, F2, ...)
     """
     if Z.empty or vecteurs_propres.size == 0 or vecteurs_propres.shape[0] == 0:
         return pd.DataFrame(index=Z.index)
@@ -115,7 +157,11 @@ def factor_coordinates(Z, vecteurs_propres):
 
 def explained_variance(valeurs_propres):
     """
-    % de variance expliquée et cumulée.
+    Calcule le pourcentage d'inertie expliquée par chaque axe et l'inertie cumulée :
+    $$\tau_k = \frac{\lambda_k}{\sum \lambda} \times 100$$
+    
+    :param valeurs_propres: Tableau 1D des valeurs propres
+    :return: Tuple (pourcentage_explique_par_axe, pourcentage_cumule)
     """
     total = np.sum(valeurs_propres)
     if total == 0 or len(valeurs_propres) == 0:
@@ -127,7 +173,14 @@ def explained_variance(valeurs_propres):
 
 def variable_coordinates(vecteurs_propres, valeurs_propres, noms_variables):
     """
-    Corrélations variables-axes r(x_j, F_k) = v_jk * sqrt(lambda_k).
+    Calcule les corrélations entre les variables initiales et les axes factoriels :
+    $$r(x_j, F_k) = v_{jk} \sqrt{\lambda_k}$$
+    Ces coordonnées permettent de tracer le cercle des corrélations.
+    
+    :param vecteurs_propres: Matrice des vecteurs propres
+    :param valeurs_propres: Valeurs propres associées
+    :param noms_variables: Liste des libellés de formations
+    :return: DataFrame des coordonnées des variables
     """
     if vecteurs_propres.size == 0 or len(valeurs_propres) == 0:
         return pd.DataFrame(index=noms_variables)
@@ -143,7 +196,11 @@ def variable_coordinates(vecteurs_propres, valeurs_propres, noms_variables):
 
 def compute_cos2_variables(corr_df):
     """
-    Qualité de représentation des variables (cos²).
+    Calcule la qualité de représentation ($\cos^2$) des variables sur les axes $F_1$ et $F_2$ :
+    $$\cos^2(x_j, F_k) = \frac{r(x_j, F_k)^2}{\sum_l r(x_j, F_l)^2}$$
+    
+    :param corr_df: DataFrame des corrélations variables-axes
+    :return: DataFrame contenant cos2_F1 et cos2_F2
     """
     if corr_df.empty:
         return pd.DataFrame(index=corr_df.index)
@@ -163,7 +220,12 @@ def compute_cos2_variables(corr_df):
 
 def compute_cos2_individus(F_df):
     """
-    Qualité de représentation des individus (cos²).
+    Calcule la qualité de représentation ($\cos^2$) des individus sur les axes $F_1$ et $F_2$ :
+    $$\cos^2(i, F_k) = \frac{F_{ik}^2}{d^2(i, G)}$$
+    Un $\cos^2$ élevé indique que l'individu est fidèlement projeté sans déformation sur le plan factoriel.
+    
+    :param F_df: DataFrame des coordonnées factorielles des individus
+    :return: DataFrame contenant cos2_F1 et cos2_F2
     """
     if F_df.empty:
         return pd.DataFrame(index=F_df.index)
@@ -183,7 +245,12 @@ def compute_cos2_individus(F_df):
 
 def compute_contributions_variables(corr_df, valeurs_propres):
     """
-    Contribution des variables aux axes.
+    Calcule la contribution relative (%) d'une variable à l'inertie d'un axe :
+    $$CTR(x_j, F_k) = \frac{r(x_j, F_k)^2}{\lambda_k} \times 100$$
+    
+    :param corr_df: DataFrame des corrélations variables-axes
+    :param valeurs_propres: Tableau des valeurs propres
+    :return: DataFrame contenant ctr_F1 et ctr_F2
     """
     if corr_df.empty or len(valeurs_propres) == 0:
         return pd.DataFrame(index=corr_df.index)
@@ -202,7 +269,12 @@ def compute_contributions_variables(corr_df, valeurs_propres):
 
 def compute_contributions_individus(F_df, valeurs_propres):
     """
-    Contribution des individus aux axes.
+    Calcule la contribution relative (%) d'un individu à la construction d'un axe :
+    $$CTR(i, F_k) = \frac{p_i \cdot F_{ik}^2}{\lambda_k} \times 100 \quad \text{avec } p_i = \frac{1}{n}$$
+    
+    :param F_df: DataFrame des coordonnées factorielles
+    :param valeurs_propres: Tableau des valeurs propres
+    :return: DataFrame contenant ctr_F1 et ctr_F2
     """
     if F_df.empty or len(valeurs_propres) == 0:
         return pd.DataFrame(index=F_df.index)
@@ -223,10 +295,18 @@ def compute_contributions_individus(F_df, valeurs_propres):
 
 
 def filter_reliable_clients(clients, seuil=0.5):
+    """
+    Filtre les clients dont la qualité de représentation globale sur le plan $(F_1, F_2)$
+    est suffisante ($\cos^2(F_1) + \cos^2(F_2) \ge seuil$, par défaut $0.5$).
+    """
     return [c for c in clients if (c.get("cos2_f1", 0) + c.get("cos2_f2", 0)) >= seuil]
 
 
 def find_distinct_client(clients_fiables):
+    """
+    Détecte automatiquement le client le plus singulier (outlier) sur le plan factoriel
+    par rapport au centre de gravité de l'ensemble des clients fiables.
+    """
     if len(clients_fiables) < 3:
         return None
 
@@ -263,6 +343,10 @@ def find_distinct_client(clients_fiables):
 
 
 def find_closest_pair(clients_fiables):
+    """
+    Détecte la paire d'entreprises clientes ayant les profils de formation les plus similaires
+    (distance euclidienne minimale sur le plan factoriel $F_1 \times F_2$).
+    """
     if len(clients_fiables) < 4:
         return None
 
@@ -301,6 +385,10 @@ def find_closest_pair(clients_fiables):
 
 
 def interpret_axis(formations, axe="f1"):
+    """
+    Interprète sémantiquement un axe factoriel en identifiant les formations contributives
+    positives et négatives et en détectant un éventuel effet de taille global.
+    """
     if not formations:
         return {"positif": [], "negatif": [], "effet_taille": False}
 
@@ -328,6 +416,9 @@ def interpret_axis(formations, axe="f1"):
 
 
 def build_business_summary(resultats_acp):
+    """
+    Génère la synthèse décisionnelle métier à destination du tableau de bord.
+    """
     clients = resultats_acp.get("clients", [])
     formations = resultats_acp.get("formations", [])
     clients_fiables = filter_reliable_clients(clients)
@@ -350,7 +441,8 @@ def build_business_summary(resultats_acp):
 
 def get_acp_complete():
     """
-    Exécute l'analyse ACP complète descriptive et renvoie une structure JSON sécurisée.
+    Point d'entrée principal : Orchestre l'analyse factorielle complète et renvoie
+    la structure JSON finale prête pour l'API et Chart.js.
     """
     X = build_matrix()
     if X.empty:
@@ -443,5 +535,6 @@ def get_acp_complete():
     return resultats
 
 
-# Alias pour compatibilité
+# Alias pour compatibilité ascendante
 get_acp_clients = get_acp_complete
+

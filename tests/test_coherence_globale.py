@@ -28,8 +28,11 @@ from scripts.generate_seed_data import generer_donnees_seed, OUTPUT_FILE
 
 
 class CoherenceGlobaleTestCase(unittest.TestCase):
+    """Suite de tests d'audit de cohérence globale technique, fonctionnelle et sécuritaire."""
+
     @classmethod
     def setUpClass(cls):
+        """Configure SQLite en mémoire pour exécuter les tests de cohérence."""
         cls.original_database_uri = Config.SQLALCHEMY_DATABASE_URI
         Config.SQLALCHEMY_DATABASE_URI = "sqlite://"
         cls.app = create_app()
@@ -37,9 +40,11 @@ class CoherenceGlobaleTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """Restaure l'URI de base de données d'origine."""
         Config.SQLALCHEMY_DATABASE_URI = cls.original_database_uri
 
     def setUp(self):
+        """Initialise la base de données et les relations multi-rôles et multi-domaines."""
         self.context = self.app.app_context()
         self.context.push()
         db.drop_all()
@@ -114,15 +119,18 @@ class CoherenceGlobaleTestCase(unittest.TestCase):
         self.client = self.app.test_client()
 
     def tearDown(self):
+        """Nettoie le contexte de test et la session SQLAlchemy."""
         db.session.remove()
         self.context.pop()
 
     def connecter(self, user):
+        """Connecte l'utilisateur spécifié dans la session de test."""
         with self.client.session_transaction() as session:
             session["_user_id"] = str(user.id)
             session["_fresh"] = True
 
     def test_coherence_activite_client_kpi_et_points_attention(self):
+        """Vérifie la cohérence croisée entre l'activité client calculée, les KPI globaux et les points d'attention."""
         today = date.today()
         # 1. Nombre de clients actifs
         nb_actifs = nombre_clients_actifs(today)
@@ -139,6 +147,7 @@ class CoherenceGlobaleTestCase(unittest.TestCase):
         self.assertEqual(len(clients_inactifs_points), 0)
 
     def test_coherence_dashboard_filtres_et_sessions_api(self):
+        """Vérifie l'alignement strict entre les données KPI filtrées et les résultats de l'API /api/sessions."""
         self.connecter(self.admin)
 
         # 1. KPI filtrés sur le domaine Web
@@ -152,6 +161,7 @@ class CoherenceGlobaleTestCase(unittest.TestCase):
         self.assertEqual(kpi_web["sessions_actives"], 1)
 
     def test_coherence_isolation_rbac_multi_ressources(self):
+        """Vérifie l'étanchéité des périmètres RBAC : un formateur ne peut accéder aux sessions d'un autre formateur."""
         self.connecter(self.user_f1)
 
         # Formateur 1 ne voit que la session Web
@@ -166,6 +176,7 @@ class CoherenceGlobaleTestCase(unittest.TestCase):
         self.assertEqual(res_p2.status_code, 403)
 
     def test_execution_reelle_et_chargement_du_seed_sql(self):
+        """Valide la génération et l'exécution sans erreur du script SQL de démonstration."""
         # Exécution du générateur de seed
         generer_donnees_seed()
         sql_content = OUTPUT_FILE.read_text(encoding="utf-8")

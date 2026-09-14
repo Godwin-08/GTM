@@ -21,8 +21,11 @@ from app.models import (
 
 
 class FiltersTestCase(unittest.TestCase):
+    """Suite de tests unitaires pour le filtrage multi-critères (domaine, date, statut, type) sur les routes et KPI."""
+
     @classmethod
     def setUpClass(cls):
+        """Configure la base SQLite en mémoire pour les tests de filtrage."""
         cls.original_database_uri = Config.SQLALCHEMY_DATABASE_URI
         Config.SQLALCHEMY_DATABASE_URI = "sqlite://"
         cls.app = create_app()
@@ -30,9 +33,11 @@ class FiltersTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """Restaure la configuration originale de la base de données."""
         Config.SQLALCHEMY_DATABASE_URI = cls.original_database_uri
 
     def setUp(self):
+        """Initialise le jeu d'essai complet avec sessions et formations multi-domaines pour le filtrage."""
         self.context = self.app.app_context()
         self.context.push()
         db.drop_all()

@@ -1,30 +1,55 @@
+/**
+ * @file clients.js
+ * @description Composant Alpine.js pour la liste des entreprises clientes.
+ * Gère la recherche multicritère (nom, secteur, statut d'activité), le tri côté client,
+ * la synchronisation URL, les modales de création et d'édition, et l'exportation CSV/XLSX.
+ */
+
+/** @type {Object<string, string>} Correspondance statut d'activité → classes CSS Tailwind */
 const COULEURS_STATUT_ACTIVITE = {
     actif: 'bg-success/10 text-success',
     inactif: 'bg-warning/10 text-warning',
     aucune: 'bg-gray-100 text-gray-600',
 };
 
-// État Alpine de la page /clients : liste, recherche et création par modale.
+/**
+ * Composant Alpine.js pour la page liste des clients (/clients).
+ * @returns {object} État réactif et méthodes de la page.
+ */
 function pageClientsData() {
     return {
+        /** @type {Array} Clients chargés depuis l'API */
         clients: [],
+
+        /** @type {boolean} Indicateur de chargement réseau */
         chargementEnCours: true,
+
+        /** @type {string|null} Message d'erreur de chargement */
         erreur: null,
+
+        /** @type {{q: string, secteur: string, statut_activite: string, tri: string}} Critères de filtrage actifs */
         filtres: {
             q: '',
             secteur: '',
             statut_activite: '',
             tri: '',
         },
+
+        // --- État de la modale de création ---
         modaleOuverte: false,
         envoiEnCours: false,
         erreurFormulaire: null,
         formulaire: { nom_entreprise: '', secteur: '', contact_email: '' },
+
+        // --- État de la modale d'édition ---
         modaleEditionOuverte: false,
         editionEnCours: false,
         erreurEdition: null,
         edition: { id: null, nom_entreprise: '', secteur: '', contact_email: '' },
 
+        /**
+         * Enregistre l'écouteur popstate pour la navigation arrière/avant avec filtres persistés dans l'URL.
+         */
         init() {
             window.addEventListener('popstate', () => {
                 this.lireFiltresDepuisUrl();
@@ -32,6 +57,9 @@ function pageClientsData() {
             });
         },
 
+        /**
+         * Lit les paramètres GET de l'URL courante et hydrate l'état des filtres.
+         */
         lireFiltresDepuisUrl() {
             const params = new URLSearchParams(window.location.search);
             this.filtres.q = params.get('q') || '';
@@ -40,6 +68,10 @@ function pageClientsData() {
             this.filtres.tri = params.get('tri') || '';
         },
 
+        /**
+         * Écrit les filtres actifs dans l'URL du navigateur via History API sans rechargement.
+         * @param {boolean} reinitialiser Si vrai, efface tous les paramètres.
+         */
         synchroniserUrlNavigateur(reinitialiser = false) {
             if (reinitialiser) {
                 if (window.location.search) {
@@ -67,6 +99,10 @@ function pageClientsData() {
             }
         },
 
+        /**
+         * Construit l'URL de l'API avec les filtres actifs pour la requête fetch.
+         * @returns {string} URL complète avec paramètres GET.
+         */
         construireUrlFiltree() {
             const params = new URLSearchParams();
             if (this.filtres.q && this.filtres.q.trim()) {
@@ -82,6 +118,11 @@ function pageClientsData() {
             return query ? `${urlClients}?${query}` : urlClients;
         },
 
+        /**
+         * Construit l'URL d'export (CSV ou XLSX) avec les filtres actifs.
+         * @param {'csv'|'xlsx'} format Format souhaité.
+         * @returns {string}
+         */
         urlExport(format = 'csv') {
             const params = new URLSearchParams();
             if (this.filtres.q && this.filtres.q.trim()) params.set('q', this.filtres.q.trim());
@@ -91,6 +132,10 @@ function pageClientsData() {
             return `/api/clients/export/${format}${qs ? '?' + qs : ''}`;
         },
 
+        /**
+         * Initialisation : lit les filtres URL puis charge les données.
+         * @returns {Promise<void>}
+         */
         async charger() {
             this.chargementEnCours = true;
             this.erreur = null;
@@ -106,6 +151,12 @@ function pageClientsData() {
             }
         },
 
+        /**
+         * Exécute la requête API avec les filtres actifs et met à jour la liste clients.
+         * @param {boolean} gererChargement Affiche/masque l'overlay de chargement.
+         * @param {boolean} majHistorique Synchronise l'URL navigateur.
+         * @returns {Promise<void>}
+         */
         async appliquerFiltres(gererChargement = true, majHistorique = true) {
             if (gererChargement) this.chargementEnCours = true;
             this.erreur = null;
@@ -127,12 +178,19 @@ function pageClientsData() {
             }
         },
 
+        /**
+         * Réinitialise tous les filtres et recharge la liste sans paramètre.
+         */
         reinitialiserFiltres() {
             this.filtres = { q: '', secteur: '', statut_activite: '', tri: '' };
             this.synchroniserUrlNavigateur(true);
             this.appliquerFiltres(true, false);
         },
 
+        /**
+         * Applique le tri client-side sur la liste déjà chargée.
+         * @returns {Array} Liste de clients triée.
+         */
         clientsFiltres() {
             const copie = [...this.clients];
             const t = this.filtres.tri;
@@ -146,14 +204,22 @@ function pageClientsData() {
                 const ordre = { actif: 0, inactif: 1, aucune: 2 };
                 return copie.sort((a, b) => (ordre[a.statut_activite] ?? 3) - (ordre[b.statut_activite] ?? 3));
             }
-            // Par défaut (nom_asc) : nom A → Z
+            // Tri par défaut : nom A → Z
             return copie.sort((a, b) => (a.nom_entreprise || '').localeCompare(b.nom_entreprise || '', 'fr'));
         },
 
+        /**
+         * Renvoie les classes CSS du badge selon le statut d'activité du client.
+         * @param {string} statut 'actif' | 'inactif' | 'aucune'.
+         * @returns {string}
+         */
         classeStatut(statut) {
             return COULEURS_STATUT_ACTIVITE[statut] || 'bg-gray-100 text-gray-600';
         },
 
+        /**
+         * Ouvre la modale de création et réinitialise le formulaire.
+         */
         ouvrirModaleCreation() {
             this.formulaire = { nom_entreprise: '', secteur: '', contact_email: '' };
             this.erreurFormulaire = null;
@@ -161,10 +227,18 @@ function pageClientsData() {
             this.$nextTick(() => lucide.createIcons());
         },
 
+        /**
+         * Ferme la modale de création si aucun envoi n'est en cours.
+         */
         fermerModaleCreation() {
             if (!this.envoiEnCours) this.modaleOuverte = false;
         },
 
+        /**
+         * Soumet le formulaire de création d'un nouveau client via POST.
+         * En cas de succès, ajoute le client à la liste locale sans rechargement complet.
+         * @returns {Promise<void>}
+         */
         async soumettreCreation() {
             this.envoiEnCours = true;
             this.erreurFormulaire = null;
@@ -196,6 +270,10 @@ function pageClientsData() {
             }
         },
 
+        /**
+         * Ouvre la modale d'édition pré-remplie avec les données du client sélectionné.
+         * @param {object} client Objet client provenant de la liste.
+         */
         ouvrirModaleEdition(client) {
             this.edition = {
                 id: client.id,
@@ -208,10 +286,17 @@ function pageClientsData() {
             this.$nextTick(() => lucide.createIcons());
         },
 
+        /**
+         * Ferme la modale d'édition si aucun enregistrement n'est en cours.
+         */
         fermerModaleEdition() {
             if (!this.editionEnCours) this.modaleEditionOuverte = false;
         },
 
+        /**
+         * Soumet les modifications du client via PUT et met à jour l'entrée dans la liste locale.
+         * @returns {Promise<void>}
+         */
         async soumettreEdition() {
             this.editionEnCours = true;
             this.erreurEdition = null;
@@ -240,6 +325,7 @@ function pageClientsData() {
                     return;
                 }
 
+                // Mise à jour optimiste dans la liste locale
                 const index = this.clients.findIndex(c => c.id === this.edition.id);
                 if (index !== -1) this.clients[index] = { ...data, nb_participants: this.clients[index].nb_participants ?? 0 };
                 this.modaleEditionOuverte = false;

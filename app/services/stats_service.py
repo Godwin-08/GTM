@@ -1,5 +1,19 @@
-from datetime import date
+"""
+==============================================================================
+Service des Statistiques & Indicateurs Clés (KPI) — Galaxy Training Manager
+==============================================================================
+Ce module centralise l'ensemble des requêtes d'agrégation et calculs de métriques
+pour le tableau de bord décisionnel de Galaxy Solutions :
+- KPI globaux (sessions actives, clients actifs, participants, taux de remplissage)
+- Remplissage global et classement des sessions
+- Répartition de l'activité par domaine thématique
+- Suivi de l'activité et de l'inactivité par entreprise cliente
+- Performance et volume de sessions par formateur
+- Évolution temporelle mensuelle des inscriptions
+- Tableau de bord personnel du formateur connecté
+"""
 
+from datetime import date
 from sqlalchemy import func, extract
 
 from app.extensions import db
@@ -11,9 +25,15 @@ from app.services.client_activity_service import (
 
 
 def kpi_globaux(reference_date=None, annee=None, domaine_id=None, client_id=None, formateur_id=None):
-    """Retourne les six indicateurs globaux du tableau de bord avec filtres optionnels."""
+    """
+    Calcule les 6 indicateurs synthétiques affichés en haut du tableau de bord.
+    Prend en compte tous les filtres actifs (année, domaine, client, formateur).
+    
+    :return: Dictionnaire des 6 KPIs
+    """
     reference_date = reference_date or date.today()
 
+    # 1. Nombre de sessions non annulées
     query_sessions = Session.query.join(Formation, Session.formation_id == Formation.id).filter(Session.statut != "annulee")
     if annee:
         query_sessions = query_sessions.filter(extract("year", Session.date_debut) == annee)
@@ -25,8 +45,11 @@ def kpi_globaux(reference_date=None, annee=None, domaine_id=None, client_id=None
         query_sessions = query_sessions.join(Session.inscriptions).join(Inscription.participant).filter(Participant.client_id == client_id)
 
     sessions_actives_count = query_sessions.distinct().count()
+
+    # 2. Nombre de clients actifs (au moins 1 inscription sur les 6 derniers mois)
     clients_actifs = nombre_clients_actifs(reference_date, annee=annee, domaine_id=domaine_id, client_id=client_id, formateur_id=formateur_id)
 
+    # 3. Nombre de participants distincts formés (inscriptions confirmées uniquement)
     query_participants = (
         db.session.query(func.count(func.distinct(Inscription.participant_id)))
         .select_from(Inscription)
@@ -50,6 +73,7 @@ def kpi_globaux(reference_date=None, annee=None, domaine_id=None, client_id=None
 
     participants_distincts = query_participants.scalar() or 0
 
+    # 4. Taux moyen de remplissage des sessions (%)
     query_taux = (
         db.session.query(
             Session.id,
@@ -85,6 +109,7 @@ def kpi_globaux(reference_date=None, annee=None, domaine_id=None, client_id=None
         else 0
     )
 
+    # 5. Nombre de formateurs distincts mobilisés
     query_formateurs = query_sessions.filter(Session.formateur_id.isnot(None))
     formateurs_mobilises = (
         query_formateurs.with_entities(func.count(func.distinct(Session.formateur_id)))
@@ -92,6 +117,7 @@ def kpi_globaux(reference_date=None, annee=None, domaine_id=None, client_id=None
         or 0
     )
 
+    # 6. Nombre de formations au catalogue dans le périmètre
     if client_id or formateur_id or annee:
         formations_catalogue = query_sessions.with_entities(func.count(func.distinct(Session.formation_id))).scalar() or 0
     elif domaine_id:
@@ -111,7 +137,8 @@ def kpi_globaux(reference_date=None, annee=None, domaine_id=None, client_id=None
 
 def taux_remplissage_global(annee=None, domaine_id=None, client_id=None, formateur_id=None):
     """
-    Calcule le taux de remplissage moyen sur toutes les sessions avec filtres.
+    Calcule le taux de remplissage moyen et extrait le top 5 des sessions
+    les plus et les moins remplies pour pilotage pédagogique.
     """
     query = Session.query.join(Formation, Session.formation_id == Formation.id).filter(Session.statut != "annulee")
     if annee:
@@ -165,8 +192,8 @@ def taux_remplissage_global(annee=None, domaine_id=None, client_id=None, formate
 
 def activite_par_domaine(annee=None, domaine_id=None, client_id=None, formateur_id=None):
     """
-    Pour chaque domaine : nombre de sessions organisées et nombre total d'inscriptions confirmées.
-    Applique le contexte de filtrage.
+    Calcule pour chaque domaine thématique le nombre de sessions organisées
+    et le volume total d'inscriptions confirmées.
     """
     domaines = Domaine.query.all()
     if domaine_id:
@@ -218,7 +245,8 @@ def activite_par_domaine(annee=None, domaine_id=None, client_id=None, formateur_
 
 def activite_par_client(annee=None, domaine_id=None, client_id=None, formateur_id=None):
     """
-    Pour chaque client : métriques d'inscriptions et d'inactivité sous filtres.
+    Analyse l'engagement de chaque entreprise cliente : nombre de salariés formés,
+    date de dernière formation et calcul précis du nombre de mois d'inactivité.
     """
     aujourd_hui = date.today()
     clients = Client.query.all()
@@ -276,7 +304,8 @@ def activite_par_client(annee=None, domaine_id=None, client_id=None, formateur_i
 
 def activite_par_formateur(annee=None, domaine_id=None, client_id=None, formateur_id=None):
     """
-    Pour chaque formateur : nombre de sessions animées et remplissage sous filtres.
+    Évalue la charge et l'efficacité de chaque formateur : nombre de sessions animées
+    et taux de remplissage moyen obtenu.
     """
     formateurs = Formateur.query.all()
     if formateur_id:
@@ -318,8 +347,8 @@ def activite_par_formateur(annee=None, domaine_id=None, client_id=None, formateu
 
 def evolution_inscriptions(annee=None, domaine_id=None, client_id=None, formateur_id=None):
     """
-    Nombre d'inscriptions confirmées par mois avec filtres.
-    Si annee est fourni, retourne impérativement les 12 mois (avec 0 si absent).
+    Retourne la chronologie mensuelle des inscriptions confirmées.
+    Si une année est spécifiée, garantit la présence des 12 mois (avec 0 pour les mois sans activité).
     """
     query = (
         db.session.query(
@@ -357,17 +386,15 @@ def evolution_inscriptions(annee=None, domaine_id=None, client_id=None, formateu
     ]
 
 
-
 def kpi_formateur(formateur_id):
     """
-    Retourne les indicateurs personnels d'un formateur :
-    - Nombre total de sessions animées (non annulées)
-    - Nombre de sessions à venir
-    - Nombre de sessions terminées
+    Calcule le tableau de bord personnel pour l'espace dédié du Formateur connecté :
+    - Volume total de sessions animées
+    - Sessions à venir vs sessions terminées
     - Taux de remplissage moyen de ses sessions
-    - Nombre total de participants distincts formés
-    - Répartition de ses sessions par domaine
-    - Ses prochaines sessions planifiées
+    - Nombre de salariés uniques formés
+    - Répartition par domaine
+    - Liste des 5 prochaines sessions planifiées
     """
     from datetime import date as date_cls
 
@@ -436,3 +463,4 @@ def kpi_formateur(formateur_id):
         "repartition_domaines": repartition_domaines,
         "prochaines_sessions": prochaines_data,
     }
+

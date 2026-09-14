@@ -1,14 +1,17 @@
 """
-Service centralisant le calcul des "Points d'attention" de GTM.
-Toute la logique métier (seuils, règles) vit ici, dans le backend.
-Le frontend (dashboard, cloche) ne fait qu'afficher ce que ce service renvoie.
+==============================================================================
+Service de Détection des Points d'Attention & Alertes de Gestion
+==============================================================================
+Ce module centralise la logique algorithmique de surveillance proactive de GTM :
+1. Sessions à risque : Sessions débutant dans les 7 prochains jours avec un taux
+   de remplissage strictement inférieur à 40% (hors sessions complètes ou annulées).
+2. Clients inactifs : Entreprises clientes dont la dernière participation remonte
+   à 6 mois ou plus.
+3. Tendances d'inscriptions : Évolution comparative entre les 3 derniers mois
+   et les 3 mois précédents (hausse/baisse significative > 5%).
 """
 
 from datetime import date, timedelta
-from app.models import Session
-from app.services.stats_service import activite_par_client, evolution_inscriptions
-
-
 from sqlalchemy import extract
 from app.models import Session, Formation, Inscription, Participant
 from app.services.stats_service import activite_par_client, evolution_inscriptions
@@ -16,12 +19,17 @@ from app.services.stats_service import activite_par_client, evolution_inscriptio
 
 def get_points_attention(annee=None, domaine_id=None, client_id=None, formateur_id=None):
     """
-    Calcule l'ensemble des points d'attention actuels de GTM sous filtres.
+    Calcule et agrège l'ensemble des points d'attention sous le contexte de filtres actif.
+    
+    :return: Dictionnaire avec le nombre total et la liste des alertes
     """
     items = []
 
+    # 1. Détection des sessions critiques à court terme
     items += _sessions_a_risque(annee=annee, domaine_id=domaine_id, client_id=client_id, formateur_id=formateur_id)
+    # 2. Détection des comptes clients en sommeil
     items += _clients_inactifs(annee=annee, domaine_id=domaine_id, client_id=client_id, formateur_id=formateur_id)
+    # 3. Évaluation de la tendance globale d'activité
     items += _tendance_globale(annee=annee, domaine_id=domaine_id, client_id=client_id, formateur_id=formateur_id)
 
     return {
@@ -32,9 +40,8 @@ def get_points_attention(annee=None, domaine_id=None, client_id=None, formateur_
 
 def _sessions_a_risque(annee=None, domaine_id=None, client_id=None, formateur_id=None):
     """
-    Règle : une session est à risque si elle démarre dans les 7 prochains jours
-    ET que son taux de remplissage est inférieur à 40%.
-    Exclut les sessions complètes ou annulées.
+    Règle : Une session est à risque (danger) si date_debut ∈ [aujourd'hui, aujourd'hui + 7 jours]
+    ET taux_remplissage < 0.40.
     """
     aujourdhui = date.today()
     dans_sept_jours = aujourdhui + timedelta(days=7)
@@ -76,8 +83,8 @@ def _sessions_a_risque(annee=None, domaine_id=None, client_id=None, formateur_id
 
 def _clients_inactifs(annee=None, domaine_id=None, client_id=None, formateur_id=None):
     """
-    Règle : un client est inactif si sa dernière inscription confirmée
-    date de 6 mois ou plus.
+    Règle : Un client est qualifié d'inactif (warning) si son délai de carence
+    dépasse le seuil des 6 mois.
     """
     clients = activite_par_client(annee=annee, domaine_id=domaine_id, client_id=client_id, formateur_id=formateur_id)
 
@@ -99,7 +106,8 @@ def _clients_inactifs(annee=None, domaine_id=None, client_id=None, formateur_id=
 
 def _tendance_globale(annee=None, domaine_id=None, client_id=None, formateur_id=None):
     """
-    Règle : compare la somme des inscriptions des 3 derniers mois disponibles à celle des 3 mois précédents.
+    Règle : Compare la somme des inscriptions des 3 derniers mois disponibles à celle
+    des 3 mois antérieurs pour dégager la dynamique commerciale (info).
     """
     evolution = evolution_inscriptions(annee=annee, domaine_id=domaine_id, client_id=client_id, formateur_id=formateur_id)
 
@@ -129,4 +137,5 @@ def _tendance_globale(annee=None, domaine_id=None, client_id=None, formateur_id=
         "message": f"Les inscriptions {direction} de {abs(variation)}% sur les 3 derniers mois.",
         "url": "/dashboard",
     }]
+
 

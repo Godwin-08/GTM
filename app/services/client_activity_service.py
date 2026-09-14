@@ -1,17 +1,16 @@
 """
-Définition unique et centralisée de l'activité d'un client dans GTM.
-
-Règles métier :
-- Un client est considéré actif lorsqu'il possède au moins une inscription confirmée
-  associée à une session non annulée dont la date de début se situe entre aujourd'hui et les six derniers mois.
-- Un client ayant une activité passée, mais aucune activité répondant à cette règle sur les six derniers mois,
-  est considéré comme inactif.
-- Un client sans aucune inscription confirmée enregistrée est classé 'aucune' (Aucune activité).
+==============================================================================
+Service d'Évaluation de l'Activité Client (Règle Métier des 6 Mois)
+==============================================================================
+Définit la règle métier unique et centralisée pour classifier l'état d'un Client :
+- 'actif'   : Possède au moins une inscription confirmée à une session non annulée
+              dont la date de début se situe dans les 6 derniers mois (aujourd'hui - 6 mois).
+- 'inactif' : A déjà suivi des formations par le passé, mais aucune dans les 6 derniers mois.
+- 'aucune'  : Nouveau client n'ayant jamais participé à la moindre formation.
 """
 
 from calendar import monthrange
 from datetime import date
-
 from sqlalchemy import func
 
 from app.extensions import db
@@ -19,6 +18,10 @@ from app.models import Client, Inscription, Participant, Session, Formation
 
 
 def six_mois_avant(reference_date):
+    """
+    Calcule la date exacte située 6 mois avant la date de référence en gérant
+    les passages d'années et les fins de mois (ex: 31 mars -> 30 septembre).
+    """
     mois = reference_date.month - 6
     annee = reference_date.year
     if mois <= 0:
@@ -28,7 +31,12 @@ def six_mois_avant(reference_date):
 
 
 def filtres_activite(reference_date=None):
-    """Filtre SQL : Inscription confirmée à une session non annulée dont la date de début est entre (aujourd'hui - 6 mois) et aujourd'hui."""
+    """
+    Construit les clauses de filtrage SQLAlchemy traduisant la règle des 6 mois :
+    - Inscription confirmée
+    - Session non annulée
+    - Date de début comprise entre [reference_date - 6 mois] et reference_date
+    """
     reference_date = reference_date or date.today()
     return (
         Inscription.statut == "confirmee",
@@ -38,9 +46,10 @@ def filtres_activite(reference_date=None):
     )
 
 
-from app.models import Formation
-
 def nombre_clients_actifs(reference_date=None, annee=None, domaine_id=None, client_id=None, formateur_id=None):
+    """
+    Compte le nombre d'entreprises clientes actives selon les filtres appliqués.
+    """
     query = (
         db.session.query(func.count(func.distinct(Participant.client_id)))
         .select_from(Inscription)
@@ -61,7 +70,10 @@ def nombre_clients_actifs(reference_date=None, annee=None, domaine_id=None, clie
 
 
 def derniere_session_client(client_id, reference_date=None):
-    """Date de début de la dernière session passée ou en cours (non annulée) à laquelle le client a participé."""
+    """
+    Identifie la date de début de la session la plus récente à laquelle les salariés
+    du client ont participé (inscriptions confirmées uniquement).
+    """
     reference_date = reference_date or date.today()
     return (
         db.session.query(func.max(Session.date_debut))
@@ -78,10 +90,20 @@ def derniere_session_client(client_id, reference_date=None):
     )
 
 
+# Alias pour la lisibilité
 derniere_activite_client = derniere_session_client
 
 
 def statut_activite_client(client_id, reference_date=None):
+    """
+    Détermine l'état d'activité détaillé d'un client et calcule le nombre de mois d'inactivité.
+    
+    :return: Dictionnaire avec les clés :
+             - statut : 'actif', 'inactif', 'aucune'
+             - label : Libellé affichable dans l'interface
+             - derniere_activite : date ou None
+             - mois_inactivite : int ou None
+    """
     reference_date = reference_date or date.today()
     date_derniere = derniere_session_client(client_id, reference_date)
     if date_derniere is None:
@@ -92,6 +114,7 @@ def statut_activite_client(client_id, reference_date=None):
             "mois_inactivite": None,
         }
 
+    # Calcul de l'écart en mois
     mois_inactivite = (
         (reference_date.year - date_derniere.year) * 12
         + (reference_date.month - date_derniere.month)
@@ -111,4 +134,5 @@ def statut_activite_client(client_id, reference_date=None):
             "derniere_activite": date_derniere,
             "mois_inactivite": mois_inactivite,
         }
+
 

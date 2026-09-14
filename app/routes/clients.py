@@ -1,22 +1,37 @@
+"""
+==============================================================================
+Contrôleur API Entreprises Clientes (/api/clients)
+==============================================================================
+Gère le cycle de vie du portefeuille clients de Galaxy Solutions :
+- GET    /api/clients             : Liste paginée/filtrée avec statut d'activité
+- GET    /api/clients/export/csv  : Export CSV UTF-8 BOM
+- GET    /api/clients/export/xlsx : Export Excel stylisé
+- GET    /api/clients/<id>        : Fiche client détaillée et historique des sessions
+- POST   /api/clients             : Création d'un nouveau client
+- PUT    /api/clients/<id>        : Mise à jour des coordonnées
+- DELETE /api/clients/<id>        : Suppression sécurisée (bloquée si participants liés)
+"""
+
 from datetime import date
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy import or_
 from app.extensions import db
 from app.models import Client, Participant, Inscription, Session
 from app.services.permissions import gestionnaire_ou_admin_required
-from app.services.access_service import clients_visibles, exiger_acces
+from app.services.access_service import clients_visibles, exiger_acces, est_formateur, _formateur_id
 from app.services.client_activity_service import statut_activite_client
+from app.services.export_service import generer_csv_response, generer_xlsx_response
 
 clients_bp = Blueprint("clients", __name__, url_prefix="/api/clients")
 
 
-from app.services.access_service import est_formateur, _formateur_id, inscriptions_visibles
-
 def client_vers_dict(client, user=None):
     """
-    Transforme un objet Client en dictionnaire JSON pour les vues liste et détail.
-    Si user est un Formateur, restreint l'historique et le nombre de participants/sessions
-    à son périmètre d'habilitation strict.
+    Transforme une entité Client en dictionnaire JSON structuré.
+    - Intègre le statut d'activité calculé (règle des 6 mois).
+    - Agrège l'historique complet des sessions suivies par les collaborateurs.
+    - Cloisonne les données si l'utilisateur est un formateur.
     """
     query_inscriptions = (
         Inscription.query
@@ -85,9 +100,9 @@ def client_vers_dict(client, user=None):
         "sessions_historique": sessions_historique,
     }
 
-from sqlalchemy import or_
 
 def obtenir_clients_filtres(user, args):
+    """Applique les filtres de recherche textuelle, de secteur et de statut d'activité."""
     query = clients_visibles(user)
 
     q = args.get("q", "").strip()
@@ -115,18 +130,21 @@ def obtenir_clients_filtres(user, args):
 
     return dicts, None
 
+
 @clients_bp.route("", methods=["GET"])
 @login_required
 def liste_clients():
+    """Renvoie la liste des clients filtrés selon les critères de la requête."""
     dicts, err = obtenir_clients_filtres(current_user, request.args)
     if err:
         return err
     return jsonify(dicts), 200
 
+
 @clients_bp.route("/export/csv", methods=["GET"])
 @login_required
 def export_clients_csv():
-    from app.services.export_service import generer_csv_response
+    """Génère un export CSV de la liste courante des clients."""
     dicts, err = obtenir_clients_filtres(current_user, request.args)
     if err:
         return err
@@ -159,10 +177,11 @@ def export_clients_csv():
     date_str = date.today().isoformat()
     return generer_csv_response(f"clients_export_{date_str}.csv", en_tetes, lignes)
 
+
 @clients_bp.route("/export/xlsx", methods=["GET"])
 @login_required
 def export_clients_xlsx():
-    from app.services.export_service import generer_xlsx_response
+    """Génère un export Excel (.xlsx) stylisé des clients."""
     dicts, err = obtenir_clients_filtres(current_user, request.args)
     if err:
         return err
@@ -193,15 +212,19 @@ def export_clients_xlsx():
     date_str = date.today().isoformat()
     return generer_xlsx_response(f"clients_export_{date_str}.xlsx", en_tetes, lignes, titre_feuille="Clients")
 
+
 @clients_bp.route("/<int:client_id>", methods=["GET"])
 @login_required
 def detail_client(client_id):
+    """Renvoie la fiche détaillée d'un client."""
     client = exiger_acces(clients_visibles(current_user), client_id, current_user)
     return jsonify(client_vers_dict(client, current_user)), 200
+
 
 @clients_bp.route("", methods=["POST"])
 @gestionnaire_ou_admin_required
 def creer_client():
+    """Crée une nouvelle entreprise cliente."""
     donnees = request.get_json()
     nom_entreprise = donnees.get("nom_entreprise")
 
@@ -220,9 +243,11 @@ def creer_client():
     db.session.commit()
     return jsonify(client_vers_dict(client)), 201
 
+
 @clients_bp.route("/<int:client_id>", methods=["PUT"])
 @gestionnaire_ou_admin_required
 def modifier_client(client_id):
+    """Met à jour les informations d'une entreprise cliente."""
     client = db.get_or_404(Client, client_id)
     donnees = request.get_json()
 
@@ -236,9 +261,11 @@ def modifier_client(client_id):
     db.session.commit()
     return jsonify(client_vers_dict(client)), 200
 
+
 @clients_bp.route("/<int:client_id>", methods=["DELETE"])
 @gestionnaire_ou_admin_required
 def supprimer_client(client_id):
+    """Supprime un client si aucun participant n'y est rattaché (garantie d'intégrité)."""
     client = db.get_or_404(Client, client_id)
 
     participant_existant = Participant.query.filter_by(client_id=client_id).first()
@@ -251,3 +278,4 @@ def supprimer_client(client_id):
     db.session.delete(client)
     db.session.commit()
     return "", 204
+

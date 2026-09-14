@@ -34,27 +34,32 @@ MOTS_DE_PASSE_DEMO = {
 
 
 def hash_pour(email):
+    """Génère le hash PBKDF2:SHA256 du mot de passe de démonstration associé à un e-mail."""
     mdp = MOTS_DE_PASSE_DEMO.get(email, "MotDePasse@2026")
     return generate_password_hash(mdp, method="pbkdf2:sha256")
 
 
 def esc(texte):
+    """Échappe les chaînes de caractères pour l'injection sécurisée dans les requêtes SQL."""
     if texte is None:
         return "NULL"
     return "'" + str(texte).replace("'", "''") + "'"
 
 
 def sans_accents(texte):
+    """Supprime les accents et diacritiques d'une chaîne UTF-8 (pour la génération d'e-mails)."""
     nfkd = unicodedata.normalize("NFKD", texte)
     return "".join(c for c in nfkd if not unicodedata.combining(c))
 
 
 def email_depuis_nom(nom, domaine_email, suffixe=""):
+    """Construit une adresse e-mail normalisée au format prenom.nom@domaine."""
     base = sans_accents(nom).lower().replace(" ", ".").replace("'", "")
     return f"{base}{suffixe}@{domaine_email}"
 
 
 def telephone_maroc():
+    """Génère un numéro de téléphone mobile marocain réaliste (+212 6... ou +212 7...)."""
     prefixe = random.choice(["6", "7"])
     reste = "".join(str(random.randint(0, 9)) for _ in range(8))
     return f"+212 {prefixe}{reste[:1]}-{reste[1:]}"
@@ -80,6 +85,7 @@ NOMS_FAMILLE = [
 
 
 def nom_marocain(utilises):
+    """Génère un nom et prénom marocain unique non encore présent dans l'ensemble 'utilises'."""
     while True:
         genre = random.choice(["M", "F"])
         prenom = random.choice(PRENOMS_M if genre == "M" else PRENOMS_F)
@@ -91,6 +97,7 @@ def nom_marocain(utilises):
 
 
 def generer_donnees_seed():
+    """Génère le script SQL complet avec 30 clients, 150 participants, 60 sessions et 400+ inscriptions."""
     random.seed(42)
     AUJOURDHUI = date(2026, 8, 24)
 

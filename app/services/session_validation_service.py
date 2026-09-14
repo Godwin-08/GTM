@@ -1,16 +1,32 @@
-"""Validation centralisée des dates et statuts de session."""
+"""
+==============================================================================
+Service de Validation des Sessions (Cohérence des Dates et Statuts)
+==============================================================================
+Ce module garantit la cohérence chronologique et temporelle des sessions de formation :
+- date_fin >= date_debut
+- Statuts autorisés : 'planifiee', 'en_cours', 'terminee', 'annulee'
+- Cohérence temporelle avec la date du jour :
+  * 'planifiee' : doit débuter strictement après aujourd'hui
+  * 'en_cours'  : doit englober aujourd'hui (date_debut <= aujourd'hui <= date_fin)
+  * 'terminee'  : doit avoir pris fin avant aujourd'hui (date_fin < aujourd'hui)
+"""
 
 from datetime import date
-
 
 STATUTS_VALIDES = {"planifiee", "en_cours", "terminee", "annulee"}
 
 
 class ErreurValidationSession(ValueError):
+    """Exception levée en cas de violation des règles chronologiques d'une session."""
     pass
 
 
 def convertir_date(valeur, nom_champ):
+    """
+    Convertit une chaîne en objet date Python (format AAAA-MM-JJ).
+    
+    :raises ErreurValidationSession: Si le format ou le type est invalide
+    """
     if not isinstance(valeur, str):
         raise ErreurValidationSession(f"{nom_champ} doit être une date au format AAAA-MM-JJ")
     try:
@@ -22,6 +38,9 @@ def convertir_date(valeur, nom_champ):
 
 
 def valider_dates_et_statut(date_debut, date_fin, statut, reference_date=None):
+    """
+    Vérifie la conformité logique entre les dates de début/fin et le statut de la session.
+    """
     if date_fin < date_debut:
         raise ErreurValidationSession("date_fin doit être postérieure ou égale à date_debut")
     if statut not in STATUTS_VALIDES:
@@ -37,7 +56,12 @@ def valider_dates_et_statut(date_debut, date_fin, statut, reference_date=None):
 
 
 def valeurs_session_validees(donnees, session=None):
-    """Retourne les dates et le statut validés pour une création ou modification."""
+    """
+    Parse et valide les données de session soumises en création (session=None)
+    ou en mise à jour partielle (session existante fournie).
+    
+    :return: Tuple (date_debut, date_fin, statut)
+    """
     if session is None:
         champs_manquants = [cle for cle in ("date_debut", "date_fin") if not donnees.get(cle)]
         if champs_manquants:
@@ -54,3 +78,4 @@ def valeurs_session_validees(donnees, session=None):
 
     valider_dates_et_statut(date_debut, date_fin, statut)
     return date_debut, date_fin, statut
+

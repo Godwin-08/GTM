@@ -7,7 +7,10 @@ from scripts.generate_seed_data import generer_donnees_seed, OUTPUT_FILE
 
 
 class SeedGeneratorTestCase(unittest.TestCase):
+    """Vérifie la génération déterministe du seed SQL et le respect des volumes et contraintes d'intégrité."""
+
     def test_generation_seed_fichier_et_invariants(self):
+        """Vérifie que le script SQL produit respecte scrupuleusement les 30 clients, 150 participants et l'unicité des inscriptions."""
         resultats = generer_donnees_seed()
 
         # 1. Vérification de l'existence du fichier SQL produit

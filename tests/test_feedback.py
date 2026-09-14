@@ -12,8 +12,11 @@ from app.models import Role, Utilisateur, Client, Participant
 
 
 class FeedbackTestCase(unittest.TestCase):
+    """Suite de tests unitaires pour la gestion des retours d'évaluation (feedbacks) sur les sessions."""
+
     @classmethod
     def setUpClass(cls):
+        """Initialise la configuration du test avec SQLite en mémoire."""
         cls.original_database_uri = Config.SQLALCHEMY_DATABASE_URI
         Config.SQLALCHEMY_DATABASE_URI = "sqlite://"
         cls.app = create_app()
@@ -21,9 +24,11 @@ class FeedbackTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """Restaure la configuration initiale de la base de données."""
         Config.SQLALCHEMY_DATABASE_URI = cls.original_database_uri
 
     def setUp(self):
+        """Initialise le contexte et le jeu de données pour tester les feedbacks."""
         self.context = self.app.app_context()
         self.context.push()
         db.drop_all()

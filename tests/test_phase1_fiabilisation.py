@@ -21,8 +21,11 @@ from app.models import (
 
 
 class Phase1FiabilisationTestCase(unittest.TestCase):
+    """Suite de tests validant l'ensemble des exigences de fiabilisation de la Phase 1."""
+
     @classmethod
     def setUpClass(cls):
+        """Configure la base SQLite en mémoire pour les tests de fiabilisation."""
         cls.original_database_uri = Config.SQLALCHEMY_DATABASE_URI
         Config.SQLALCHEMY_DATABASE_URI = "sqlite://"
         cls.app = create_app()
@@ -30,9 +33,11 @@ class Phase1FiabilisationTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """Restaure la configuration originale de la base de données."""
         Config.SQLALCHEMY_DATABASE_URI = cls.original_database_uri
 
     def setUp(self):
+        """Initialise les tables et le jeu d'utilisateurs de test."""
         self.context = self.app.app_context()
         self.context.push()
         db.drop_all()

@@ -12,8 +12,11 @@ from app.services.acp_service import get_acp_complete
 
 
 class AcpTestCase(unittest.TestCase):
+    """Tests unitaires pour les calculs d'ACP et le point d'accès API /api/stats/pca."""
+
     @classmethod
     def setUpClass(cls):
+        """Initialise la configuration du test avec une base de données SQLite en mémoire."""
         cls.original_database_uri = Config.SQLALCHEMY_DATABASE_URI
         Config.SQLALCHEMY_DATABASE_URI = "sqlite://"
         cls.app = create_app()
@@ -21,9 +24,11 @@ class AcpTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """Restaure la configuration originale de la base de données après exécution."""
         Config.SQLALCHEMY_DATABASE_URI = cls.original_database_uri
 
     def setUp(self):
+        """Initialise le contexte applicatif et crée les tables et données de base."""
         self.context = self.app.app_context()
         self.context.push()
         db.drop_all()
@@ -46,15 +51,18 @@ class AcpTestCase(unittest.TestCase):
         self.client = self.app.test_client()
 
     def tearDown(self):
+        """Nettoie la session et le contexte applicatif après chaque test."""
         db.session.remove()
         self.context.pop()
 
     def connecter(self):
+        """Simule la connexion d'un administrateur dans la session de test."""
         with self.client.session_transaction() as session:
             session["_user_id"] = str(self.admin.id)
             session["_fresh"] = True
 
     def test_acp_matrice_vide_ou_donnees_insuffisantes(self):
+        """Vérifie le comportement de repli sécurisé lorsque la base ne contient pas assez de données pour l'ACP."""
         # 0 clients et 0 formations -> Fallback sécurisé sans exception
         res = get_acp_complete()
         self.assertEqual(res["nb_clients"], 0)
@@ -62,6 +70,7 @@ class AcpTestCase(unittest.TestCase):
         self.assertFalse(res["interpretation"]["peut_conclure"])
 
     def test_acp_donnees_normales_et_structure_json(self):
+        """Vérifie le calcul complet de l'ACP avec une matrice valide (clients, formations, variances, cos², ctr)."""
         domaine = Domaine.query.first()
 
         c1 = Client(nom_entreprise="Client A")
@@ -103,6 +112,7 @@ class AcpTestCase(unittest.TestCase):
         self.assertIn("interpretation", res)
 
     def test_acp_endpoint_api(self):
+        """Vérifie la réponse HTTP 200 et le format JSON retourné par le point de terminaison /api/stats/pca."""
         self.connecter()
         response = self.client.get("/api/stats/pca")
         self.assertEqual(response.status_code, 200)

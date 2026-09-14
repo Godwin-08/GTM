@@ -23,8 +23,11 @@ from app.models import (
 
 
 class ExportsTestCase(unittest.TestCase):
+    """Suite de tests unitaires pour la génération et le téléchargement des exports CSV."""
+
     @classmethod
     def setUpClass(cls):
+        """Configure SQLite en mémoire pour les tests d'exportation."""
         cls.original_database_uri = Config.SQLALCHEMY_DATABASE_URI
         Config.SQLALCHEMY_DATABASE_URI = "sqlite://"
         cls.app = create_app()
@@ -32,9 +35,11 @@ class ExportsTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """Restaure la configuration initiale de la base de données."""
         Config.SQLALCHEMY_DATABASE_URI = cls.original_database_uri
 
     def setUp(self):
+        """Initialise les tables et les enregistrements nécessaires aux tests d'exports."""
         self.context = self.app.app_context()
         self.context.push()
         db.drop_all()

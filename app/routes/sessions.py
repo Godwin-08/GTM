@@ -1,3 +1,14 @@
+"""
+Routes API pour la gestion du cycle de vie des sessions de formation.
+
+Ce module expose les endpoints RESTful permettant :
+- La recherche avancée et le filtrage multicritère (formateur, formation, domaine,
+  type intra/inter, statut temporel, plage de dates, palier de remplissage).
+- L'exportation des sessions aux formats CSV, Excel (XLSX) et PDF (fiche session imprimable).
+- La création, la modification et la suppression de sessions avec validation stricte
+  des contraintes calendaires, de la concordance de domaine formateur/formation et de l'intégrité relationnelle.
+"""
+
 from datetime import date
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
@@ -11,12 +22,21 @@ from app.services.session_validation_service import (
     valeurs_session_validees,
 )
 
+# Déclaration du Blueprint Flask pour l'API des sessions
 sessions_bp = Blueprint("sessions", __name__, url_prefix="/api/sessions")
 
+# Listes des valeurs énumérées autorisées pour les sessions
 STATUTS_VALIDES = ["planifiee", "en_cours", "terminee", "annulee"]
 TYPES_VALIDES = ["intra", "inter"]
 
+
 def session_vers_dict(session):
+    """
+    Convertit une instance SQLAlchemy de Session en dictionnaire avec calcul des ratios d'occupation.
+
+    :param session: Instance du modèle Session.
+    :return: Dictionnaire JSON représentant la session et ses entités associées.
+    """
     return {
         "id": session.id,
         "date_debut": session.date_debut.isoformat(),
@@ -38,29 +58,43 @@ def session_vers_dict(session):
         "est_complete": session.est_complete(),
     }
 
+
 def obtenir_sessions_filtrees(user, args):
+    """
+    Construit la requête SQL SQLAlchemy avec application des filtres dynamiques combinés (AND).
+
+    :param user: Utilisateur connecté (contrôle du périmètre RBAC).
+    :param args: Paramètres de requête HTTP (request.args).
+    :return: Liste des sessions correspondantes.
+    """
     query = sessions_visibles(user)
 
+    # Filtrage par identifiant de formateur
     formateur_id = args.get("formateur_id", type=int)
     if formateur_id:
         query = query.filter(Session.formateur_id == formateur_id)
 
+    # Filtrage par identifiant de formation
     formation_id = args.get("formation_id", type=int)
     if formation_id:
         query = query.filter(Session.formation_id == formation_id)
 
+    # Filtrage par domaine pédagogique
     domaine_id = args.get("domaine_id", type=int)
     if domaine_id:
         query = query.join(Session.formation).filter(Formation.domaine_id == domaine_id)
 
+    # Filtrage par type de session (intra ou inter-entreprise)
     type_session = args.get("type")
     if type_session in TYPES_VALIDES:
         query = query.filter(Session.type == type_session)
 
+    # Filtrage par statut de déroulement
     statut = args.get("statut")
     if statut in STATUTS_VALIDES:
         query = query.filter(Session.statut == statut)
 
+    # Filtrage par bornes de dates de début
     date_debut_min = args.get("date_debut_min")
     if date_debut_min:
         try:
@@ -75,6 +109,7 @@ def obtenir_sessions_filtrees(user, args):
         except ValueError:
             pass
 
+    # Recherche globale sur titre formation, nom formateur ou lieu
     q = args.get("q", "").strip()
     if q:
         pattern = f"%{q}%"
@@ -86,6 +121,7 @@ def obtenir_sessions_filtrees(user, args):
             )
         )
 
+    # Filtrage par tranche de taux de remplissage (sous-requête SQL)
     remplissage = args.get("remplissage")
     if remplissage in ["sous_remplie", "nominale", "complete"]:
         subq_confirmes = (
@@ -109,18 +145,23 @@ def obtenir_sessions_filtrees(user, args):
 
     return query.distinct().all()
 
+
 @sessions_bp.route("", methods=["GET"])
 @login_required
 def liste_sessions():
     """
-    Liste les sessions avec filtres SQL combinables (AND).
+    Renvoie la liste des sessions avec filtres SQL combinables (AND).
     """
     sessions = obtenir_sessions_filtrees(current_user, request.args)
     return jsonify([session_vers_dict(s) for s in sessions]), 200
 
+
 @sessions_bp.route("/export/csv", methods=["GET"])
 @login_required
 def export_sessions_csv():
+    """
+    Génère un export CSV des sessions selon les filtres actifs et les droits d'accès.
+    """
     from app.services.export_service import generer_csv_response
     sessions = obtenir_sessions_filtrees(current_user, request.args)
     en_tetes = {
@@ -154,9 +195,13 @@ def export_sessions_csv():
     date_str = date.today().isoformat()
     return generer_csv_response(f"sessions_export_{date_str}.csv", en_tetes, lignes)
 
+
 @sessions_bp.route("/export/xlsx", methods=["GET"])
 @login_required
 def export_sessions_xlsx():
+    """
+    Génère un classeur Excel des sessions selon les filtres actifs et les droits d'accès.
+    """
     from app.services.export_service import generer_xlsx_response
     sessions = obtenir_sessions_filtrees(current_user, request.args)
     en_tetes = {
@@ -190,24 +235,39 @@ def export_sessions_xlsx():
     date_str = date.today().isoformat()
     return generer_xlsx_response(f"sessions_export_{date_str}.xlsx", en_tetes, lignes, titre_feuille="Sessions")
 
+
 @sessions_bp.route("/<int:session_id>/export/pdf", methods=["GET"])
 @login_required
 def export_session_pdf(session_id):
+    """
+    Génère la fiche récapitulative PDF complète d'une session avec la liste d'émargement des stagiaires.
+    """
     from app.services.export_service import generer_fiche_session_pdf
     from app.routes.inscriptions import inscription_vers_dict
     session_obj = exiger_acces(sessions_visibles(current_user), session_id, current_user)
     inscriptions = [inscription_vers_dict(i) for i in session_obj.inscriptions]
     return generer_fiche_session_pdf(session_vers_dict(session_obj), inscriptions)
 
+
 @sessions_bp.route("/<int:session_id>", methods=["GET"])
 @login_required
 def detail_session(session_id):
+    """
+    Renvoie le détail complet d'une session après vérification des droits d'accès.
+    """
     session = exiger_acces(sessions_visibles(current_user), session_id, current_user)
     return jsonify(session_vers_dict(session)), 200
+
 
 @sessions_bp.route("", methods=["POST"])
 @gestionnaire_ou_admin_required
 def creer_session():
+    """
+    Crée une nouvelle session de formation après validation métier :
+    - Présence de tous les champs obligatoires.
+    - Cohérence temporelle des dates.
+    - Concordance de domaine entre le formateur assigné et la formation.
+    """
     donnees = request.get_json(silent=True) or {}
 
     formation_id = donnees.get("formation_id")
@@ -241,6 +301,7 @@ def creer_session():
     if not formateur:
         return jsonify({"erreur": "formateur_id invalide"}), 400
 
+    # Règle métier : le formateur doit obligatoirement appartenir au même domaine d'expertise que la formation
     if formateur.domaine_id != formation.domaine_id:
         return jsonify({"erreur": "Le formateur sélectionné n'appartient pas au domaine de cette formation"}), 400
 
@@ -258,9 +319,13 @@ def creer_session():
     db.session.commit()
     return jsonify(session_vers_dict(session)), 201
 
+
 @sessions_bp.route("/<int:session_id>", methods=["PUT"])
 @gestionnaire_ou_admin_required
 def modifier_session(session_id):
+    """
+    Met à jour les informations logistiques ou le statut d'une session.
+    """
     session = db.get_or_404(Session, session_id)
     donnees = request.get_json(silent=True) or {}
 
@@ -282,13 +347,16 @@ def modifier_session(session_id):
     db.session.commit()
     return jsonify(session_vers_dict(session)), 200
 
+
 @sessions_bp.route("/<int:session_id>", methods=["DELETE"])
 @gestionnaire_ou_admin_required
 def supprimer_session(session_id):
+    """
+    Supprime une session si aucun stagiaire n'y est inscrit (intégrité relationnelle).
+    """
     session_obj = db.get_or_404(Session, session_id)
 
     inscription_existante = Inscription.query.filter_by(session_id=session_id).first()
-
     if inscription_existante is not None:
         nb_inscriptions = Inscription.query.filter_by(session_id=session_id).count()
         return jsonify({
@@ -299,4 +367,3 @@ def supprimer_session(session_id):
     db.session.commit()
 
     return "", 204
-

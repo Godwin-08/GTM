@@ -14,6 +14,10 @@ from app.extensions import db
 
 
 def appliquer_migration():
+    """
+    Vérifie l'existence des colonnes d'onboarding sur la table 'utilisateur'
+    et applique les requêtes ALTER TABLE nécessaires sans perturber les données existantes.
+    """
     print(">>> Verification et migration du schema MySQL pour l'Onboarding...")
     app = create_app()
     with app.app_context():

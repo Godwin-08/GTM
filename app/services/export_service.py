@@ -1,3 +1,18 @@
+"""
+==============================================================================
+Service de Génération des Exports (CSV, Excel XLSX & Rapports PDF)
+==============================================================================
+Ce module gère l'ensemble des fonctionnalités d'exportation de Galaxy Solutions :
+1. CSV : Format universel encodé en UTF-8 avec BOM (utf-8-sig) pour ouverture
+   immédiate et sans altération d'accents dans Microsoft Excel.
+2. Excel (.xlsx) : Génération de classeurs stylisés via openpyxl respectant
+   la charte graphique Emerald Graphite (en-têtes émeraude, lignes alternées,
+   largeurs automatiques de colonnes).
+3. PDF ReportLab :
+   - Rapport de Synthèse & Pilotage Décisionnel A4 (KPIs et Points d'attention).
+   - Fiche de Session & Feuille d'Émargement officielle (avec zones d'émargement matin/après-midi).
+"""
+
 import csv
 import io
 from datetime import datetime
@@ -13,15 +28,21 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether, HRFlowable
 
 
-# ============================================================
+# =============================================================================
 # 1. EXPORT CSV (UTF-8 avec BOM)
-# ============================================================
+# =============================================================================
 
 def generer_csv_response(nom_fichier, en_tetes, lignes):
     """
-    Génère une Flask Response au format CSV avec encodage UTF-8 + BOM (utf-8-sig).
+    Génère un flux binaire CSV téléchargeable avec en-têtes et encodage UTF-8 + BOM.
+    
+    :param nom_fichier: Nom du fichier à télécharger (ex: 'formations_export.csv')
+    :param en_tetes: Dictionnaire {cle_dict: 'Libellé En-tête'} ou liste de clés
+    :param lignes: Liste de dictionnaires contenant les données
+    :return: Objet Response Flask configuré avec Content-Disposition attachment
     """
     output_bytes = io.BytesIO()
+    # utf-8-sig insère le marqueur Byte Order Mark (BOM) indispensable pour Excel Windows
     text_stream = io.TextIOWrapper(output_bytes, encoding="utf-8-sig", newline="")
 
     if isinstance(en_tetes, dict):
@@ -32,8 +53,10 @@ def generer_csv_response(nom_fichier, en_tetes, lignes):
         header_map = {f: f for f in fieldnames}
 
     writer = csv.DictWriter(text_stream, fieldnames=fieldnames, extrasaction="ignore")
+    # Écriture de la ligne d'en-tête personnalisée
     writer.writerow(header_map)
 
+    # Écriture des lignes de données
     for ligne in lignes:
         writer.writerow(ligne)
 
@@ -46,23 +69,27 @@ def generer_csv_response(nom_fichier, en_tetes, lignes):
     return response
 
 
-# ============================================================
-# 2. EXPORT EXCEL (XLSX Stilisé Emerald Graphite)
-# ============================================================
+# =============================================================================
+# 2. EXPORT EXCEL (XLSX Stylisé Emerald Graphite)
+# =============================================================================
 
 def generer_xlsx_response(nom_fichier, en_tetes, lignes, titre_feuille="Données"):
     """
-    Génère une Flask Response au format XLSX avec mise en forme professionnelle
-    (en-têtes Emerald, bordures fines, largeurs de colonnes ajustées).
+    Génère un classeur Excel .xlsx avec mise en forme professionnelle :
+    - En-tête vert émeraude (#047857) avec texte blanc en gras.
+    - Lignes alternées avec fond ardoise clair (#F8FAFC).
+    - Alignement automatique (nombres à droite, dates au centre, textes à gauche).
+    - Calcul automatique de la largeur des colonnes.
     
-    :param nom_fichier: Nom du fichier XLSX (ex: 'sessions.xlsx')
-    :param en_tetes: Dict {cle_dict: 'Libellé En-tête'} ou liste de clés
+    :param nom_fichier: Nom du fichier XLSX cible (ex: 'sessions.xlsx')
+    :param en_tetes: Dictionnaire {cle: 'Libellé'} ou liste
     :param lignes: Liste de dictionnaires de données
-    :param titre_feuille: Titre de l'onglet Excel
+    :param titre_feuille: Nom de l'onglet Excel (limité à 31 caractères)
+    :return: Objet Response Flask
     """
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = titre_feuille[:31]  # Limite Excel de 31 caractères pour les onglets
+    ws.title = titre_feuille[:31]  # Contrainte Excel : nom d'onglet <= 31 car.
 
     if isinstance(en_tetes, dict):
         keys = list(en_tetes.keys())
@@ -71,12 +98,12 @@ def generer_xlsx_response(nom_fichier, en_tetes, lignes, titre_feuille="Données
         keys = list(en_tetes)
         header_labels = list(en_tetes)
 
-    # Styles
-    header_fill = PatternFill(start_color="047857", end_color="047857", fill_type="solid") # Emerald 700
+    # Définition de la charte de styles openpyxl
+    header_fill = PatternFill(start_color="047857", end_color="047857", fill_type="solid")  # Emerald 700
     header_font = Font(name="Segoe UI", size=10, bold=True, color="FFFFFF")
     header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-    row_alt_fill = PatternFill(start_color="F8FAFC", end_color="F8FAFC", fill_type="solid") # Slate 50
+    row_alt_fill = PatternFill(start_color="F8FAFC", end_color="F8FAFC", fill_type="solid")  # Slate 50
     data_font = Font(name="Segoe UI", size=9, color="0F172A")
     data_align_left = Alignment(horizontal="left", vertical="center")
     data_align_right = Alignment(horizontal="right", vertical="center")
@@ -120,7 +147,7 @@ def generer_xlsx_response(nom_fichier, en_tetes, lignes, titre_feuille="Données
             if is_alt:
                 cell.fill = row_alt_fill
 
-            # Alignement selon le type de valeur
+            # Formatage de l'alignement selon le type de contenu
             if isinstance(val, (int, float)):
                 cell.alignment = data_align_right
             elif isinstance(val, str) and (val.startswith("202") and len(val) == 10):
@@ -151,20 +178,19 @@ def generer_xlsx_response(nom_fichier, en_tetes, lignes, titre_feuille="Données
     return response
 
 
-# ============================================================
+# =============================================================================
 # 3. EXPORT RAPPORT DE DÉCISION PDF (Dashboard & Alertes)
-# ============================================================
-
-class NumberedCanvas:
-    """Canvas personnalisé pour ajouter pied de page et numérotation X/Y."""
-    def __init__(self, *args, **kwargs):
-        pass
-
+# =============================================================================
 
 def generer_rapport_dashboard_pdf(kpis, points_attention, filtres_libelles, nom_fichier="rapport_gtm_dashboard.pdf"):
     """
-    Génère un rapport de décision PDF professionnel A4 résumant l'activité,
-    les indicateurs clés (KPI) et les points d'attention détectés.
+    Génère un rapport exécutif PDF A4 récapitulant les KPI globaux et les alertes de gestion.
+    
+    :param kpis: Dictionnaire des KPI calculés par stats_service
+    :param points_attention: Dictionnaire des alertes générées par points_attention_service
+    :param filtres_libelles: Libellé textuel du périmètre de filtre actif
+    :param nom_fichier: Nom du document PDF généré
+    :return: Objet Response Flask
     """
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -178,7 +204,7 @@ def generer_rapport_dashboard_pdf(kpis, points_attention, filtres_libelles, nom_
 
     styles = getSampleStyleSheet()
     
-    # Styles personnalisés
+    # Définition des styles typographiques du rapport
     style_titre = ParagraphStyle(
         'DocTitre',
         parent=styles['Normal'],
@@ -240,7 +266,7 @@ def generer_rapport_dashboard_pdf(kpis, points_attention, filtres_libelles, nom_
 
     elements = []
 
-    # 1. En-tête de Document
+    # 1. En-tête officiel du Document
     now_str = datetime.now().strftime("%d/%m/%Y à %H:%M")
     header_data = [
         [
@@ -313,16 +339,13 @@ def generer_rapport_dashboard_pdf(kpis, points_attention, filtres_libelles, nom_
                 Paragraph("Détail & Recommandation", style_cell_header)
             ]
         ]
-        for a in items_alertes[:12]:  # Top 12 alertes
+        for a in items_alertes[:12]:  # Affichage des 12 premières alertes
             niveau = a.get("niveau", "info")
             if niveau == "danger":
-                badge_bg = colors.HexColor('#FEE2E2')
                 badge_text = "<font color='#991B1B'><b>CRITIQUE</b></font>"
             elif niveau == "warning":
-                badge_bg = colors.HexColor('#FEF3C7')
                 badge_text = "<font color='#92400E'><b>ATTENTION</b></font>"
             else:
-                badge_bg = colors.HexColor('#E0F2FE')
                 badge_text = "<font color='#075985'><b>INFO</b></font>"
 
             alert_data.append([
@@ -343,7 +366,7 @@ def generer_rapport_dashboard_pdf(kpis, points_attention, filtres_libelles, nom_
 
     elements.append(Spacer(1, 0.6 * cm))
 
-    # 4. Pied de page & Note d'authenticité
+    # 4. Pied de page
     elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#CBD5E1'), spaceBefore=8, spaceAfter=8))
     elements.append(Paragraph(
         "Ce document est une synthèse décisionnelle automatisée issue du progiciel Galaxy Training Manager (GTM). "
@@ -360,14 +383,19 @@ def generer_rapport_dashboard_pdf(kpis, points_attention, filtres_libelles, nom_
     return response
 
 
-# ============================================================
-# 4. EXPORT FICHE SESSION / ÉMARGEMENT PDF
-# ============================================================
+# =============================================================================
+# 4. EXPORT FICHE SESSION / FEUILLE D'ÉMARGEMENT PDF
+# =============================================================================
 
 def generer_fiche_session_pdf(session_dict, participants_inscrits, nom_fichier=None):
     """
-    Génère la fiche détaillée d'une session de formation en PDF, utilisable comme
-    feuille d'émargement officielle avec colonnes de signature.
+    Génère la feuille d'émargement officielle d'une session au format PDF A4.
+    Comprend le tableau complet des participants inscrits avec colonnes de signature matin et après-midi.
+    
+    :param session_dict: Dictionnaire décrivant la session (dates, formateur, lieu, etc.)
+    :param participants_inscrits: Liste des inscriptions confirmées
+    :param nom_fichier: Nom du fichier généré
+    :return: Objet Response Flask
     """
     if not nom_fichier:
         nom_fichier = f"session_{session_dict.get('id', 'details')}_emargement.pdf"
@@ -421,13 +449,13 @@ def generer_fiche_session_pdf(session_dict, participants_inscrits, nom_fichier=N
 
     elements = []
 
-    # En-tête Session
+    # En-tête de la session
     elements.append(Paragraph("<b>GALAXY TRAINING MANAGER</b> • Feuille d'Émargement & Fiche Session", ParagraphStyle('PHeader', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor('#047857'))))
     elements.append(Spacer(1, 0.2 * cm))
     elements.append(Paragraph(session_dict.get('formation', {}).get('titre', 'Formation Professionnelle'), style_titre))
     elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#047857'), spaceBefore=4, spaceAfter=8))
 
-    # Détails de la Session
+    # Détails logistiques de la session
     info_data = [
         [
             Paragraph(f"<b>Session N° :</b> {session_dict.get('id', '')}", style_cell),
@@ -452,7 +480,7 @@ def generer_fiche_session_pdf(session_dict, participants_inscrits, nom_fichier=N
     elements.append(t_info)
     elements.append(Spacer(1, 0.4 * cm))
 
-    # Tableau des Participants Inscrits
+    # Tableau des Participants avec zones d'émargement
     elements.append(Paragraph(f"Liste des Participants Inscrits ({len(participants_inscrits)})", style_section))
 
     table_part = [
@@ -473,8 +501,8 @@ def generer_fiche_session_pdf(session_dict, participants_inscrits, nom_fichier=N
             Paragraph(f"<b>{p.get('participant', {}).get('nom', '')}</b><br/>{p.get('participant', {}).get('email', '')}", style_cell),
             Paragraph(p.get('participant', {}).get('client', {}).get('nom_entreprise', 'Indépendant'), style_cell),
             Paragraph(statut_label, style_cell),
-            Paragraph("", style_cell),  # Zone signature matin
-            Paragraph("", style_cell)   # Zone signature après-midi
+            Paragraph("", style_cell),  # Zone de signature matinale
+            Paragraph("", style_cell)   # Zone de signature de l'après-midi
         ])
 
     t_participants = Table(table_part, colWidths=[1 * cm, 5 * cm, 4.5 * cm, 2.5 * cm, 2.5 * cm, 2.5 * cm])
@@ -494,3 +522,4 @@ def generer_fiche_session_pdf(session_dict, participants_inscrits, nom_fichier=N
     response.headers["Content-Disposition"] = f'attachment; filename="{nom_fichier}"'
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return response
+

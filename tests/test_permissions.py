@@ -21,8 +21,11 @@ from app.models import (
 
 
 class PermissionsTestCase(unittest.TestCase):
+    """Suite de tests unitaires pour les permissions RBAC et l'isolation des données formateurs."""
+
     @classmethod
     def setUpClass(cls):
+        """Initialise la configuration du test avec SQLite en mémoire."""
         cls.original_database_uri = Config.SQLALCHEMY_DATABASE_URI
         Config.SQLALCHEMY_DATABASE_URI = "sqlite://"
         cls.app = create_app()
@@ -30,9 +33,11 @@ class PermissionsTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """Restaure la configuration initiale de la base de données."""
         Config.SQLALCHEMY_DATABASE_URI = cls.original_database_uri
 
     def setUp(self):
+        """Initialise le jeu d'utilisateurs avec différents rôles (admin, gestionnaire, formateurs)."""
         self.context = self.app.app_context()
         self.context.push()
         db.drop_all()

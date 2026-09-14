@@ -12,8 +12,11 @@ from app.services.client_activity_service import nombre_clients_actifs, statut_a
 
 
 class ClientActivityTestCase(unittest.TestCase):
+    """Suite de tests validant la qualification de l'activité client (actif, inactif > 6 mois, aucune)."""
+
     @classmethod
     def setUpClass(cls):
+        """Initialise la configuration du test avec SQLite en mémoire."""
         cls.original_database_uri = Config.SQLALCHEMY_DATABASE_URI
         Config.SQLALCHEMY_DATABASE_URI = "sqlite://"
         cls.app = create_app()
@@ -21,9 +24,11 @@ class ClientActivityTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """Restaure la configuration originale de la base de données."""
         Config.SQLALCHEMY_DATABASE_URI = cls.original_database_uri
 
     def setUp(self):
+        """Initialise la base de test avec des profils clients aux statuts d'activité variés."""
         self.context = self.app.app_context()
         self.context.push()
         db.drop_all()
@@ -102,10 +107,12 @@ class ClientActivityTestCase(unittest.TestCase):
         db.session.commit()
 
     def tearDown(self):
+        """Nettoie le contexte de test et la base de données."""
         db.session.remove()
         self.context.pop()
 
     def test_regle_client_actif_et_comptage(self):
+        """Vérifie le calcul unifié des statuts d'activité client et le comptage des clients actifs."""
         today = date.today()
         # Seul client_actif doit compter
         self.assertEqual(nombre_clients_actifs(today), 1)

@@ -1,3 +1,12 @@
+"""
+Routes API pour la gestion des formateurs (internes et externes).
+
+Ce module expose les endpoints RESTful permettant :
+- La consultation et le filtrage des formateurs (par domaine, type interne/externe, nom/email).
+- Le calcul dynamique des volumes d'activité (sessions planifiées, en cours, terminées).
+- La création et mise à jour des fiches formateurs avec liaison optionnelle à un compte utilisateur.
+"""
+
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import or_
@@ -7,13 +16,23 @@ from app.services.permissions import gestionnaire_ou_admin_required, admin_requi
 from app.services.access_service import formateurs_visibles, exiger_acces
 from app.services.query_validation_service import ErreurFiltre, entier_positif, valeur_parmi
 
+# Déclaration du Blueprint Flask pour l'API des formateurs
 formateurs_bp = Blueprint("formateurs", __name__, url_prefix="/api/formateurs")
 
+
 def formateur_vers_dict(formateur):
+    """
+    Convertit un objet Formateur en dictionnaire avec calcul des métriques de sessions.
+
+    :param formateur: Instance SQLAlchemy de Formateur.
+    :return: Dictionnaire contenant les coordonnées, le domaine, le rattachement utilisateur et les stats de sessions.
+    """
+    # Exclure les sessions annulées du décompte d'activité opérationnelle
     sessions_valides = [s for s in formateur.sessions if s.statut != "annulee"]
     nb_sessions = len(sessions_valides)
     nb_planifiees = len([s for s in sessions_valides if s.statut in ["planifiee", "en_cours"]])
     nb_terminees = len([s for s in sessions_valides if s.statut == "terminee"])
+
     return {
         "id": formateur.id,
         "nom": formateur.nom,
@@ -29,27 +48,33 @@ def formateur_vers_dict(formateur):
         "a_un_compte": formateur.utilisateur_id is not None,
     }
 
+
 @formateurs_bp.route("", methods=["GET"])
 @login_required
 def liste_formateurs():
     """
-    Renvoie les formateurs avec filtres optionnels combinés (AND) :
+    Renvoie la liste des formateurs avec filtres optionnels combinables (AND) :
     /api/formateurs?domaine_id=1&type=interne&q=youssef
     """
     query = formateurs_visibles(current_user)
 
+    # Validation des filtres typés
     try:
         domaine_id = entier_positif(request.args, "domaine_id")
         type_formateur = valeur_parmi(request.args, "type", {"interne", "externe"})
     except ErreurFiltre as erreur:
         return jsonify({"erreur": str(erreur)}), 400
+
     if domaine_id is not None:
         query = query.filter(Formateur.domaine_id == domaine_id)
+
+    # Filtrage par statut de compte : interne (associé à un compte utilisateur) vs externe
     if type_formateur == "interne":
         query = query.filter(Formateur.utilisateur_id.isnot(None))
     elif type_formateur == "externe":
         query = query.filter(Formateur.utilisateur_id.is_(None))
 
+    # Recherche textuelle insensible à la casse
     q = request.args.get("q", "").strip()
     if q:
         pattern = f"%{q}%"
@@ -63,16 +88,25 @@ def liste_formateurs():
     formateurs = query.all()
     return jsonify([formateur_vers_dict(f) for f in formateurs]), 200
 
+
 @formateurs_bp.route("/<int:formateur_id>", methods=["GET"])
 @login_required
 def detail_formateur(formateur_id):
+    """
+    Renvoie le détail d'un formateur précis sous réserve des habilitations de l'utilisateur connecté.
+    """
     formateur = exiger_acces(formateurs_visibles(current_user), formateur_id, current_user)
     return jsonify(formateur_vers_dict(formateur)), 200
+
 
 @formateurs_bp.route("", methods=["POST"])
 @gestionnaire_ou_admin_required
 def creer_formateur():
-    donnees = request.get_json()
+    """
+    Enregistre un nouveau formateur dans la base de données.
+    Vérifie l'existence du domaine et l'unicité de la liaison utilisateur éventuelle.
+    """
+    donnees = request.get_json() or {}
     nom = donnees.get("nom")
     domaine_id = donnees.get("domaine_id")
 
@@ -100,11 +134,15 @@ def creer_formateur():
     db.session.commit()
     return jsonify(formateur_vers_dict(formateur)), 201
 
+
 @formateurs_bp.route("/<int:formateur_id>", methods=["PUT"])
 @gestionnaire_ou_admin_required
 def modifier_formateur(formateur_id):
+    """
+    Met à jour les informations de contact ou le domaine d'un formateur existant.
+    """
     formateur = db.get_or_404(Formateur, formateur_id)
-    donnees = request.get_json()
+    donnees = request.get_json() or {}
 
     if "nom" in donnees:
         formateur.nom = donnees["nom"]

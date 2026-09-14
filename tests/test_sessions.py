@@ -16,8 +16,11 @@ from app.services.session_validation_service import (
 
 
 class SessionsValidationTestCase(unittest.TestCase):
+    """Suite de tests unitaires pour la validation des dates et contraintes de sessions de formation."""
+
     @classmethod
     def setUpClass(cls):
+        """Configure l'environnement de test avec base de données SQLite en mémoire."""
         cls.original_database_uri = Config.SQLALCHEMY_DATABASE_URI
         Config.SQLALCHEMY_DATABASE_URI = "sqlite://"
         cls.app = create_app()
@@ -25,9 +28,11 @@ class SessionsValidationTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """Restaure la configuration initiale de la base de données."""
         Config.SQLALCHEMY_DATABASE_URI = cls.original_database_uri
 
     def setUp(self):
+        """Initialise le contexte et le jeu de données pour tester la création de sessions."""
         self.context = self.app.app_context()
         self.context.push()
         db.drop_all()

@@ -1,3 +1,8 @@
+"""
+Tests de bout en bout (E2E) — Cycle de vie complet de l'Onboarding et cloisonnement RBAC.
+Valide l'invitation, l'activation du compte par token sécurisé et les permissions selon le rôle.
+"""
+
 import sys
 import os
 sys.path.insert(0, os.path.abspath("."))
@@ -22,11 +27,22 @@ from app.services.mail_service import (
 
 
 class E2EOnboardingLifecycleTestCase(unittest.TestCase):
+    """Suite de tests unitaires exécutant le scénario complet E2E d'onboarding."""
+
     def test_e2e_lifecycle(self):
+        """Exécute la validation fonctionnelle complète du cycle de vie de l'onboarding."""
         run_e2e_validation()
 
 
 def run_e2e_validation():
+    """
+    Scénario d'exécution pas à pas du cycle d'onboarding :
+    1. Connexion admin & création des profils (admin, gestionnaire, formateur)
+    2. Tentative de connexion avant activation (rejet 401)
+    3. Validation des liens, tokens et gestion de l'expiration
+    4. Activation des comptes avec définition du mot de passe
+    5. Vérification du respect strict du cloisonnement RBAC
+    """
     print("\n" + "=" * 80)
     print(">>> LANCEMENT DE LA VALIDATION FONCTIONNELLE E2E GTM (ONBOARDING & RBAC)")
     print("=" * 80 + "\n")

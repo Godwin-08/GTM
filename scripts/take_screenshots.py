@@ -17,6 +17,7 @@ CREDS_FORMATEUR = {"email": "karim.bensouda@galaxysolutions.ma", "password": "Ka
 
 
 def login(page, creds):
+    """Effectue la soumission du formulaire de connexion pour un ensemble d'identifiants donné."""
     page.goto(f"{BASE_URL}/")
     page.fill('input[name="email"]', creds["email"])
     page.fill('input[name="mot_de_passe"]', creds["password"])
@@ -26,12 +27,14 @@ def login(page, creds):
 
 
 def save(page, name, full_page=False):
+    """Enregistre une capture d'écran de la page actuelle dans le dossier de destination."""
     path = os.path.join(OUT_DIR, name)
     page.screenshot(path=path, full_page=full_page)
     print(f"  ✅  {name}")
 
 
 def run():
+    """Exécute la séquence complète de capture d'écran sur l'ensemble des 9 vues clés de l'application."""
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         ctx = browser.new_context(viewport={"width": 1440, "height": 900})

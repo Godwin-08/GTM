@@ -1,20 +1,36 @@
+"""
+Routes API pour la gestion des participants aux formations.
+
+Ce module expose les endpoints RESTful permettant :
+- La recherche et le filtrage des stagiaires/participants par entreprise cliente ou mot-clé.
+- L'exportation de l'annuaire des participants en formats CSV et Excel (XLSX).
+- La consultation du profil individuel avec métriques d'inscriptions filtrées par habilitation.
+- La création, modification et suppression sécurisée des participants.
+"""
+
+from datetime import date
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import or_
 from app.extensions import db
 from app.models import Participant, Client, Inscription
 from app.services.permissions import gestionnaire_ou_admin_required
-from app.services.access_service import participants_visibles, exiger_acces
+from app.services.access_service import participants_visibles, exiger_acces, est_formateur, _formateur_id
+from app.services.query_validation_service import ErreurFiltre, entier_positif
 
+# Déclaration du Blueprint Flask pour l'API des participants
 participants_bp = Blueprint("participants", __name__, url_prefix="/api/participants")
 
-from app.services.access_service import est_formateur, _formateur_id
 
 def participant_vers_dict(participant, user=None):
     """
-    Transforme un objet Participant en dict JSON avec métriques d'activité.
-    Si user est un Formateur, restreint les inscriptions et formations calculées
+    Transforme une instance de Participant en dictionnaire avec calcul des métriques de parcours.
+    Si l'utilisateur connecté est un formateur, restreint les statistiques de suivi
     à son périmètre d'habilitation strict.
+
+    :param participant: Instance SQLAlchemy de Participant.
+    :param user: Utilisateur connecté pour le filtrage contextualisé des inscriptions.
+    :return: Dictionnaire JSON représentant le participant.
     """
     inscriptions = participant.inscriptions
     if user and est_formateur(user):
@@ -23,8 +39,8 @@ def participant_vers_dict(participant, user=None):
 
     inscriptions_valides = [i for i in inscriptions if i.statut != "annulee"]
     nb_inscriptions = len(inscriptions_valides)
-    
-    # Formations distinctes suivies via les sessions des inscriptions valides
+
+    # Décompte des formations distinctes suivies au travers des sessions valides
     formations_ids = {
         i.session.formation_id for i in inscriptions_valides if i.session and i.session.formation_id
     }
@@ -42,9 +58,15 @@ def participant_vers_dict(participant, user=None):
         "nb_formations": nb_formations,
     }
 
-from app.services.query_validation_service import ErreurFiltre, entier_positif
 
 def obtenir_participants_filtres(user, args):
+    """
+    Construit et exécute la requête filtrée des participants autorisés.
+
+    :param user: Utilisateur actuel.
+    :param args: Dictionnaire des paramètres de requête.
+    :return: Tuple (liste_participants, erreur_reponse_ou_None).
+    """
     query = participants_visibles(user)
 
     try:
@@ -68,11 +90,12 @@ def obtenir_participants_filtres(user, args):
     participants = query.order_by(Participant.nom.asc()).all()
     return participants, None
 
+
 @participants_bp.route("", methods=["GET"])
 @login_required
 def liste_participants():
     """
-    Renvoie tous les participants, avec filtres optionnels :
+    Renvoie tous les participants accessibles avec filtres optionnels :
     /api/participants?client_id=3&q=alex
     """
     participants, err = obtenir_participants_filtres(current_user, request.args)
@@ -80,11 +103,13 @@ def liste_participants():
         return err
     return jsonify([participant_vers_dict(p, current_user) for p in participants]), 200
 
-from datetime import date
 
 @participants_bp.route("/export/csv", methods=["GET"])
 @login_required
 def export_participants_csv():
+    """
+    Génère un fichier d'export CSV de l'annuaire des participants selon le périmètre RBAC.
+    """
     from app.services.export_service import generer_csv_response
     participants, err = obtenir_participants_filtres(current_user, request.args)
     if err:
@@ -111,9 +136,13 @@ def export_participants_csv():
     date_str = date.today().isoformat()
     return generer_csv_response(f"participants_export_{date_str}.csv", en_tetes, lignes)
 
+
 @participants_bp.route("/export/xlsx", methods=["GET"])
 @login_required
 def export_participants_xlsx():
+    """
+    Génère un classeur Excel de l'annuaire des participants selon le périmètre RBAC.
+    """
     from app.services.export_service import generer_xlsx_response
     participants, err = obtenir_participants_filtres(current_user, request.args)
     if err:
@@ -140,16 +169,24 @@ def export_participants_xlsx():
     date_str = date.today().isoformat()
     return generer_xlsx_response(f"participants_export_{date_str}.xlsx", en_tetes, lignes, titre_feuille="Participants")
 
+
 @participants_bp.route("/<int:participant_id>", methods=["GET"])
 @login_required
 def detail_participant(participant_id):
+    """
+    Renvoie le profil détaillé d'un participant après contrôle d'habilitation.
+    """
     participant = exiger_acces(participants_visibles(current_user), participant_id, current_user)
     return jsonify(participant_vers_dict(participant, current_user)), 200
+
 
 @participants_bp.route("", methods=["POST"])
 @gestionnaire_ou_admin_required
 def creer_participant():
-    donnees = request.get_json()
+    """
+    Enregistre un nouveau participant et le lie à son entreprise cliente.
+    """
+    donnees = request.get_json() or {}
     nom = donnees.get("nom")
     email = donnees.get("email")
     client_id = donnees.get("client_id")
@@ -168,11 +205,15 @@ def creer_participant():
     db.session.commit()
     return jsonify(participant_vers_dict(participant)), 201
 
+
 @participants_bp.route("/<int:participant_id>", methods=["PUT"])
 @gestionnaire_ou_admin_required
 def modifier_participant(participant_id):
+    """
+    Met à jour les coordonnées ou l'entreprise de rattachement d'un participant.
+    """
     participant = db.get_or_404(Participant, participant_id)
-    donnees = request.get_json()
+    donnees = request.get_json() or {}
 
     if "nom" in donnees:
         participant.nom = donnees["nom"]
@@ -186,13 +227,17 @@ def modifier_participant(participant_id):
     db.session.commit()
     return jsonify(participant_vers_dict(participant)), 200
 
+
 @participants_bp.route("/<int:participant_id>", methods=["DELETE"])
 @gestionnaire_ou_admin_required
 def supprimer_participant(participant_id):
+    """
+    Supprime un participant si aucune inscription historique ne lui est rattachée.
+    """
     participant = db.get_or_404(Participant, participant_id)
 
+    # Intégrité référentielle : vérification de l'existence d'inscriptions
     inscription_existante = Inscription.query.filter_by(participant_id=participant_id).first()
-
     if inscription_existante is not None:
         nb_inscriptions = Inscription.query.filter_by(participant_id=participant_id).count()
         return jsonify({

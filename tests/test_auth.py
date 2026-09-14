@@ -10,8 +10,11 @@ from app.models import Utilisateur, Role
 
 
 class AuthTestCase(unittest.TestCase):
+    """Tests unitaires pour les flux d'authentification, de déconnexion et de changement de mot de passe."""
+
     @classmethod
     def setUpClass(cls):
+        """Initialise la configuration du test avec une base SQLite en mémoire."""
         cls.original_database_uri = Config.SQLALCHEMY_DATABASE_URI
         Config.SQLALCHEMY_DATABASE_URI = "sqlite://"
         cls.app = create_app()
@@ -19,9 +22,11 @@ class AuthTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """Restaure la configuration initiale de la base de données."""
         Config.SQLALCHEMY_DATABASE_URI = cls.original_database_uri
 
     def setUp(self):
+        """Initialise la base de données de test et crée un compte administrateur actif."""
         self.context = self.app.app_context()
         self.context.push()
         db.drop_all()
@@ -43,15 +48,18 @@ class AuthTestCase(unittest.TestCase):
         self.client = self.app.test_client()
 
     def tearDown(self):
+        """Nettoie la session et détruit le contexte de test."""
         db.session.remove()
         self.context.pop()
 
     def connecter(self):
+        """Simule une session connectée pour l'utilisateur de test."""
         with self.client.session_transaction() as session:
             session["_user_id"] = str(self.user.id)
             session["_fresh"] = True
 
     def test_deconnexion_post_valide(self):
+        """Vérifie la déconnexion par requête POST, l'invalidation de la session et le blocage 401 ultérieur."""
         self.connecter()
 
         # POST /api/auth/logout -> 200 OK
@@ -70,12 +78,14 @@ class AuthTestCase(unittest.TestCase):
         self.assertIn("/login", acces_web.headers["Location"])
 
     def test_deconnexion_get_refusee(self):
+        """Vérifie que la déconnexion par GET est rejetée (HTTP 405 Method Not Allowed)."""
         self.connecter()
         # GET /api/auth/logout -> 405 Method Not Allowed
         response = self.client.get("/api/auth/logout")
         self.assertEqual(response.status_code, 405)
 
     def test_changer_mot_de_passe_succes(self):
+        """Vérifie la modification de mot de passe réussie lorsque l'ancien mot de passe est correct."""
         self.connecter()
         res = self.client.post("/api/auth/changer-mot-de-passe", json={
             "ancien_mot_de_passe": "Secret123",
@@ -85,6 +95,7 @@ class AuthTestCase(unittest.TestCase):
         self.assertIn("modifié avec succès", res.get_json()["message"])
 
     def test_changer_mot_de_passe_erreurs(self):
+        """Vérifie les erreurs lors de la saisie d'un ancien mot de passe invalide ou d'un nouveau trop court."""
         self.connecter()
         # Ancien mot de passe faux
         res = self.client.post("/api/auth/changer-mot-de-passe", json={

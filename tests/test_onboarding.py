@@ -16,8 +16,11 @@ from app.services.activation_service import (
 
 
 class OnboardingTestCase(unittest.TestCase):
+    """Suite de tests unitaires pour le mécanisme complet d'onboarding utilisateur."""
+
     @classmethod
     def setUpClass(cls):
+        """Initialise la configuration de test avec SQLite en mémoire."""
         cls.original_database_uri = Config.SQLALCHEMY_DATABASE_URI
         Config.SQLALCHEMY_DATABASE_URI = "sqlite://"
         cls.app = create_app()
@@ -25,9 +28,11 @@ class OnboardingTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """Restaure la configuration initiale de la base de données."""
         Config.SQLALCHEMY_DATABASE_URI = cls.original_database_uri
 
     def setUp(self):
+        """Initialise les tables, les 3 rôles de référence et un administrateur connecté."""
         self.context = self.app.app_context()
         self.context.push()
         db.drop_all()
@@ -51,10 +56,12 @@ class OnboardingTestCase(unittest.TestCase):
         self.client = self.app.test_client()
 
     def tearDown(self):
+        """Nettoie le contexte de test et la session SQLAlchemy."""
         db.session.remove()
         self.context.pop()
 
     def connecter_admin(self):
+        """Simule la connexion de l'administrateur dans la session de test."""
         with self.client.session_transaction() as session:
             session["_user_id"] = str(self.admin.id)
             session["_fresh"] = True

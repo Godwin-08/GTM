@@ -11,8 +11,11 @@ from app.models import Client, Domaine, Formateur, Formation, Inscription, Parti
 
 
 class ApiErrorsAndIntegrityTestCase(unittest.TestCase):
+    """Suite de tests validant la gestion des erreurs HTTP, les contraintes d'intégrité et la logique d'inscription."""
+
     @classmethod
     def setUpClass(cls):
+        """Configure la base SQLite en mémoire pour l'environnement de test."""
         cls.original_database_uri = Config.SQLALCHEMY_DATABASE_URI
         Config.SQLALCHEMY_DATABASE_URI = "sqlite://"
         cls.app = create_app()
@@ -20,9 +23,11 @@ class ApiErrorsAndIntegrityTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        """Restaure la configuration initiale de la base de données."""
         Config.SQLALCHEMY_DATABASE_URI = cls.original_database_uri
 
     def setUp(self):
+        """Crée le schéma et initialise le jeu de données pour les tests d'erreurs et d'intégrité."""
         self.context = self.app.app_context()
         self.context.push()
         db.drop_all()
@@ -93,15 +98,18 @@ class ApiErrorsAndIntegrityTestCase(unittest.TestCase):
         self.client = self.app.test_client()
 
     def tearDown(self):
+        """Nettoie la session et le contexte de test."""
         db.session.remove()
         self.context.pop()
 
     def connecter(self):
+        """Connecte l'administrateur dans la session de test."""
         with self.client.session_transaction() as session:
             session["_user_id"] = str(self.admin.id)
             session["_fresh"] = True
 
     def test_erreurs_json_sur_api(self):
+        """Vérifie qu'une ressource introuvable sur l'API retourne une structure JSON {erreur: ...} (404)."""
         self.connecter()
 
         # 1. 404 sur API -> JSON avec "erreur"
@@ -111,6 +119,7 @@ class ApiErrorsAndIntegrityTestCase(unittest.TestCase):
         self.assertEqual(res_404.get_json()["erreur"], "Ressource introuvable.")
 
     def test_suppression_client_avec_participants_renvoie_409(self):
+        """Vérifie qu'un client ayant des salariés rattachés ne peut être supprimé (conflit d'intégrité 409)."""
         self.connecter()
 
         # Suppression d'un client possédant encore un participant -> 409 Conflict
@@ -119,6 +128,7 @@ class ApiErrorsAndIntegrityTestCase(unittest.TestCase):
         self.assertIn("participant", res_del.get_json()["erreur"].lower())
 
     def test_doublon_inscription_renvoie_409(self):
+        """Vérifie qu'un même participant ne peut être inscrit deux fois à la même session (409)."""
         self.connecter()
 
         donnees = {
@@ -136,6 +146,7 @@ class ApiErrorsAndIntegrityTestCase(unittest.TestCase):
         self.assertEqual(res2.status_code, 409)
 
     def test_inscription_session_terminee_renvoie_409(self):
+        """Vérifie le blocage de toute nouvelle inscription sur une session déjà terminée (409)."""
         self.connecter()
 
         res = self.client.post("/api/inscriptions", json={
@@ -147,6 +158,7 @@ class ApiErrorsAndIntegrityTestCase(unittest.TestCase):
         self.assertIn("terminée", res.get_json()["erreur"])
 
     def test_inscription_session_annulee_renvoie_409(self):
+        """Vérifie le blocage de toute nouvelle inscription sur une session annulée (409)."""
         self.connecter()
 
         res = self.client.post("/api/inscriptions", json={
@@ -226,6 +238,7 @@ class ApiErrorsAndIntegrityTestCase(unittest.TestCase):
         self.assertEqual(res_put.get_json()["statut"], "annulee")
 
     def test_put_statut_invalide_renvoie_400(self):
+        """Vérifie qu'une mise à jour avec un statut non reconnu renvoie une erreur 400."""
         self.connecter()
 
         res_post = self.client.post("/api/inscriptions", json={
@@ -241,6 +254,7 @@ class ApiErrorsAndIntegrityTestCase(unittest.TestCase):
         self.assertEqual(res_put.status_code, 400)
 
     def test_put_inscription_inexistante_renvoie_404(self):
+        """Vérifie qu'une tentative de mise à jour d'un ID d'inscription inconnu renvoie 404."""
         self.connecter()
 
         res = self.client.put("/api/inscriptions/99999", json={"statut": "annulee"})
@@ -292,6 +306,7 @@ class ApiErrorsAndIntegrityTestCase(unittest.TestCase):
         self.assertEqual(data["session_id"], self.session_planifiee.id)
 
     def test_inscription_participant_inexistant_renvoie_400(self):
+        """Vérifie le rejet 400 d'une inscription ciblant un participant inexistant."""
         self.connecter()
 
         res = self.client.post("/api/inscriptions", json={
@@ -302,6 +317,7 @@ class ApiErrorsAndIntegrityTestCase(unittest.TestCase):
         self.assertIn("participant_id", res.get_json()["erreur"])
 
     def test_inscription_session_inexistante_renvoie_400(self):
+        """Vérifie le rejet 400 d'une inscription ciblant une session inexistante."""
         self.connecter()
 
         res = self.client.post("/api/inscriptions", json={
