@@ -72,7 +72,15 @@ Ce document constitue le **script de scène officiel** pour la démonstration or
 - **À EXPLIQUER AU JURY** : « L'ACP est un outil d'analyse exploratoire et de synthèse descriptive calculé avec NumPy et Pandas. Elle permet d'identifier visuellement la proximité des profils d'activité clients et l'orientation des formations. »
 - **RÉSULTAT ATTENDU** : Restitution claire des axes factoriels et de la synthèse descriptive.
 
-### Étape 7 : Déconnexion
+### Étape 7 : Gestion du Référentiel des Domaines & Formations associées
+- **ACTION** : Naviguer sur `/domaines` (accessible Admin & Gestionnaire).
+- **À OBSERVER** : Liste des domaines d'expertise, compteurs de formations et formateurs rattachés.
+- **ACTION** : Cliquer sur le badge *4 formations* d'un domaine (ex: Web & Data).
+- **À OBSERVER** : Ouverture de la modale avec les fiches détaillées des formations de ce domaine et lien de pré-filtrage vers le catalogue.
+- **À EXPLIQUER AU JURY** : « L'architecture REST est optimisée : la liste globale est légère, et le détail complet des formations/formateurs est chargé à la demande via `/api/domaines/<id>`. »
+- **RÉSULTAT ATTENDU** : Navigation fluide et consultation interactive des entités rattachées.
+
+### Étape 8 : Déconnexion
 - **ACTION** : Cliquer sur le profil en bas de la sidebar puis sur **Déconnexion**.
 - **À OBSERVER** : Fermeture de session et redirection vers `/`.
 - **RÉSULTAT ATTENDU** : Déconnexion sécurisée.
@@ -119,8 +127,10 @@ Ce document constitue le **script de scène officiel** pour la démonstration or
 - [x] Connexion & déconnexion des 3 rôles validées.
 - [x] Filtres Dashboard et URL state réactifs (Admin/Gestionnaire).
 - [x] **Dashboard Formateur personnalisé** (`/dashboard-formateur`) — 4 KPIs, répartition domaines, prochaines sessions.
+- [x] **Gestion des Domaines** (`/domaines`) — CRUD, référentiel indépendant et consultation des formations liées.
+- [x] **Gestion des Utilisateurs** (`/utilisateurs`) — Création découplée des rôles (`/api/roles`) et onboarding sécurisé.
 - [x] Inscription dynamique avec filtrage `client_id` testée.
 - [x] Inscription sur session complète (liste d'attente / refus 409) démontrée.
 - [x] Bouton `✓` anti-double-clic et rollback Alpine.js validés.
 - [x] Sécurité RBAC Formateur (UI + API 403) testée — isolation hermétique vérifiée.
-- [x] 120 tests automatisés exécutés et verts.
+- [x] 124 tests automatisés exécutés et 100% verts.
