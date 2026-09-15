@@ -144,6 +144,10 @@ def create_app():
 	from app.routes.utilisateurs import utilisateurs_bp
 	app.register_blueprint(utilisateurs_bp)
 
+	# API Référentiel des Rôles (/api/roles)
+	from app.routes.roles import roles_bp
+	app.register_blueprint(roles_bp)
+
 	# API Statistiques décisionnelles et Analyse ACP (/api/stats)
 	from app.routes.stats import stats_bp
 	app.register_blueprint(stats_bp)

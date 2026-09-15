@@ -241,12 +241,13 @@
                     </a>
                 </div>
 
-                {% if current_user.is_authenticated and current_user.role.nom == 'admin' %}
+                {% if current_user.is_authenticated and current_user.role.nom in ['admin', 'gestionnaire'] %}
                 <!-- Administration -->
                 <div>
                     <p class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
                         Administration
                     </p>
+                    {% if current_user.role.nom == 'admin' %}
                     <a href="{{ url_for('pages.utilisateurs') }}"
                        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 mb-1
                               {% if request.endpoint in ['pages.utilisateurs', 'pages.utilisateur_detail'] %}
@@ -256,6 +257,17 @@
                               {% endif %}">
                         <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i>
                         Utilisateurs
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('pages.domaines') }}"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 mb-1
+                              {% if request.endpoint == 'pages.domaines' %}
+                                  bg-slate-800 text-white border-l-4 border-[#047857] shadow-xs pl-2.5
+                              {% else %}
+                                  text-slate-300 hover:bg-slate-800/60 hover:text-white
+                              {% endif %}">
+                        <i data-lucide="layers" class="w-4 h-4 text-slate-400"></i>
+                        Domaines
                     </a>
                 </div>
                 {% endif %}

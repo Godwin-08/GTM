@@ -170,6 +170,15 @@ def utilisateur_detail(utilisateur_id):
     return render_template('utilisateurs/detail.html', utilisateur_id=utilisateur_id)
 
 
+@pages_bp.route('/domaines')
+@login_required
+def domaines():
+    """Page de gestion et d'administration des domaines d'expertise métier."""
+    if current_user.a_role("formateur"):
+        return redirect(url_for('pages.dashboard_formateur'))
+    return render_template('domaines/liste.html')
+
+
 @pages_bp.route('/analytics/acp')
 @login_required
 def analytics_acp():

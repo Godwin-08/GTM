@@ -2,7 +2,7 @@ const COULEURS_ROLE = { admin: 'bg-primary/10 text-primary', gestionnaire: 'bg-i
 
 function pageUtilisateursData() {
     return {
-        utilisateurs: [], recherche: '', filtreRole: '', tri: '', chargementEnCours: true, erreur: null, accesRefuse: false,
+        utilisateurs: [], roles: [], recherche: '', filtreRole: '', tri: '', chargementEnCours: true, erreur: null, accesRefuse: false,
         modaleOuverte: false, envoiEnCours: false, erreurFormulaire: null,
         formulaire: { nom: '', email: '', role_id: '' },
 
@@ -95,10 +95,27 @@ function pageUtilisateursData() {
             this.erreur = null;
             this.accesRefuse = false;
             try {
-                const res = await fetch(urlUtilisateurs);
+                const endpointRoles = typeof urlRoles !== 'undefined' ? urlRoles : '/api/roles';
+
+                // Chargement en parallèle : plus rapide et plus lisible
+                const [res, resRoles] = await Promise.all([
+                    fetch(urlUtilisateurs),
+                    fetch(endpointRoles),
+                ]);
+
                 if (res.status === 403) { this.accesRefuse = true; this.utilisateurs = []; return; }
-                if (!res.ok) throw new Error('Réponse serveur invalide');
+                if (!res.ok) throw new Error('Réponse serveur invalide (utilisateurs)');
+
                 this.utilisateurs = await res.json();
+
+                // Rôles : pas de fallback silencieux.
+                // Si /api/roles échoue, roles reste vide et la modale affiche une erreur visible.
+                if (resRoles.ok) {
+                    this.roles = await resRoles.json();
+                } else {
+                    console.error(`Échec chargement des rôles : HTTP ${resRoles.status}`);
+                    this.roles = [];
+                }
             } catch (err) {
                 console.error('Erreur chargement utilisateurs :', err);
                 this.erreur = 'Impossible de charger les utilisateurs.';
@@ -134,11 +151,20 @@ function pageUtilisateursData() {
             // Par défaut (nom_asc) : nom A → Z
             return copie.sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'));
         },
-        rolesDisponibles() { return [...new Set(this.utilisateurs.map(utilisateur => this.nomRole(utilisateur)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr')); },
+        rolesDisponibles() {
+            if (this.roles && this.roles.length > 0) {
+                return this.roles.map(r => r.nom).sort((a, b) => a.localeCompare(b, 'fr'));
+            }
+            return [...new Set(this.utilisateurs.map(utilisateur => this.nomRole(utilisateur)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
+        },
+        // Formulaire de création : AUCUN fallback.
+        // Si /api/roles a échoué, on retourne [] et la modale affiche un message d'erreur
+        // explicite grâce à erreurFormulaire, plutôt que de revenir silencieusement
+        // à l'ancien comportement qui reproduirait le bug de l'encadrant.
         rolesPourFormulaire() {
-            const roles = new Map();
-            this.utilisateurs.forEach(utilisateur => { if (utilisateur.role?.id) roles.set(utilisateur.role.id, utilisateur.role); });
-            return [...roles.values()].sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+            return this.roles && this.roles.length > 0
+                ? [...this.roles].sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
+                : [];
         },
         couleurRole(nomRole) { return COULEURS_ROLE[nomRole] || 'bg-gray-100 text-gray-600'; },
         formaterDate(dateStr) { const date = new Date(dateStr); return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('fr-FR'); },

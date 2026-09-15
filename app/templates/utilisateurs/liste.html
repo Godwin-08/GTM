@@ -240,12 +240,20 @@
                 </div>
                 <div>
                     <label for="utilisateur-role" class="gtm-label">Rôle système</label>
-                    <select id="utilisateur-role" x-model.number="formulaire.role_id" required class="gtm-select">
+                    <select id="utilisateur-role" x-model.number="formulaire.role_id" required class="gtm-select"
+                            :disabled="rolesPourFormulaire().length === 0">
                         <option value="" disabled>Sélectionner un rôle</option>
                         <template x-for="role in rolesPourFormulaire()" :key="role.id">
                             <option :value="role.id" x-text="role.nom"></option>
                         </template>
                     </select>
+                    <!-- Message d'erreur explicite si /api/roles a échoué -->
+                    <template x-if="rolesPourFormulaire().length === 0">
+                        <p class="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                            <i data-lucide="alert-circle" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                            Impossible de charger les rôles disponibles. Rechargez la page.
+                        </p>
+                    </template>
                 </div>
 
                 <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 flex items-start gap-2">
@@ -418,6 +426,7 @@
 {% block extra_scripts %}
 <script>
     const urlUtilisateurs = "{{ url_for('utilisateurs.liste_utilisateurs') }}";
+    const urlRoles = "{{ url_for('roles.liste_roles') }}";
     const utilisateurConnecteId = {{ current_user.id if current_user.is_authenticated else 'null' }};
 </script>
 <script src="{{ url_for('static', filename='js/utilisateurs.js') }}"></script>

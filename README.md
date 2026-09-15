@@ -212,6 +212,20 @@ Une inscription annulée n'est pas supprimée physiquement de la base de donnée
 
 ---
 
+### 4.7 Gestion des domaines d'expertise métier
+Les domaines structurent l'ensemble du catalogue pédagogique et des compétences formateurs.
+
+L'application permet aux Administrateurs et Gestionnaires de :
+- consulter la liste des domaines (compteurs de formations et formateurs rattachés) ;
+- rechercher un domaine par nom en temps réel ;
+- créer un nouveau domaine (nom unique et validé) ;
+- modifier l'intitulé d'un domaine existant ;
+- supprimer un domaine de manière sécurisée (rejet 409 si des formations ou formateurs y sont encore associés) ;
+- afficher instantanément dans une modale dédiée toutes les formations associées avec redirection vers le catalogue filtré ;
+- afficher les formateurs qualifiés rattachés avec redirection vers l'annuaire filtré.
+
+---
+
 ## 5. Architecture générale
 
 L'application suit une architecture MVC/REST propre et modulaire en couches :
@@ -300,7 +314,7 @@ PFA_galaxy_solutions/
 │   ├── extensions.py              # Extensions Flask (db, login_manager, migrate)
 │   │
 │   ├── blueprints/                # Routes pour le rendu des pages HTML Jinja2
-│   │   └── pages.py               # Contrôleur principal des vues web (19 routes)
+│   │   └── pages.py               # Contrôleur principal des vues web (20 routes dont /domaines)
 │   │
 │   ├── models/                    # Modèles SQLAlchemy (9 entités ORM)
 │   │   ├── __init__.py            # Registre des modèles
@@ -316,13 +330,14 @@ PFA_galaxy_solutions/
 │   │
 │   ├── routes/                    # Contrôleurs API REST (Réponses JSON)
 │   │   ├── auth.py                # Authentification, activation, changement de mot de passe
+│   │   ├── roles.py               # Référentiel indépendant des rôles système (/api/roles)
 │   │   ├── sessions.py            # CRUD sessions + exports CSV/XLSX/PDF
 │   │   ├── inscriptions.py        # CRUD inscriptions + exports CSV/XLSX
 │   │   ├── clients.py             # CRUD clients + exports CSV/XLSX
 │   │   ├── participants.py        # CRUD participants + exports CSV/XLSX
 │   │   ├── formateurs.py          # CRUD formateurs
 │   │   ├── formations.py          # CRUD formations + exports CSV/XLSX
-│   │   ├── domaines.py            # Liste des domaines
+│   │   ├── domaines.py            # CRUD domaines d'expertise (/api/domaines)
 │   │   ├── utilisateurs.py        # Gestion des comptes (Admin) + onboarding
 │   │   └── stats.py               # KPI, graphiques, points d'attention, ACP, PDF dashboard
 │   │
@@ -342,25 +357,26 @@ PFA_galaxy_solutions/
 │   ├── static/                    # Ressources statiques
 │   │   ├── css/app.css            # Styles additionnels
 │   │   ├── img/                   # Images et icônes (favicon.svg, gtm-logo.svg)
-│   │   └── js/                    # Scripts JS réactifs Alpine.js (16 modules)
+│   │   └── js/                    # Scripts JS réactifs Alpine.js (17 modules)
 │   │       ├── dashboard.js           # Tableau de bord KPI et graphiques
 │   │       ├── sessions.js            # Page liste des sessions
 │   │       ├── session_detail.js      # Fiche détail session et inscriptions
 │   │       ├── formations.js          # Page liste des formations
 │   │       ├── formation_detail.js    # Fiche détail formation
+│   │       ├── domaines.js            # Page gestion des domaines (CRUD & modales)
 │   │       ├── clients.js             # Page liste des clients
 │   │       ├── client_detail.js       # Fiche détail client
 │   │       ├── participants.js        # Page liste des participants
 │   │       ├── participant_detail.js  # Fiche détail participant
 │   │       ├── formateurs.js          # Page liste des formateurs
 │   │       ├── inscriptions.js        # Page liste des inscriptions
-│   │       ├── utilisateurs.js        # Page gestion des utilisateurs
+│   │       ├── utilisateurs.js        # Page gestion des utilisateurs (rôles découplés)
 │   │       ├── utilisateur_detail.js  # Fiche détail utilisateur
 │   │       ├── notifications.js       # Centre de notifications
 │   │       ├── points_attention.js    # Widget points d'attention
 │   │       └── acp.js                 # Module Analyse en Composantes Principales
 │   │
-│   ├── templates/                 # Templates HTML Jinja2 (20 fichiers)
+│   ├── templates/                 # Templates HTML Jinja2 (21 fichiers)
 │   │   ├── base.html              # Layout principal (Sidebar, Header, Profil, Toasts)
 │   │   ├── login.html             # Page de connexion
 │   │   ├── dashboard.html         # Tableau de bord principal
@@ -372,6 +388,8 @@ PFA_galaxy_solutions/
 │   │   │   └── acp.html                # Module Analyse ACP
 │   │   ├── components/
 │   │   │   └── empty_state.html        # Composant état vide réutilisable
+│   │   ├── domaines/
+│   │   │   └── liste.html              # Gestion des domaines et formations associées
 │   │   ├── sessions/
 │   │   │   ├── liste.html              # Liste des sessions
 │   │   │   └── detail.html             # Fiche détail session
@@ -401,10 +419,13 @@ PFA_galaxy_solutions/
 │
 ├── scripts/
 │   ├── generate_seed_data.py        # Script Python de génération du Seed SQL
-│   └── migrate_onboarding_columns.py  # Migration des colonnes onboarding
+│   ├── migrate_onboarding_columns.py  # Migration des colonnes onboarding
+│   ├── diagnostic_encodage.py       # Diagnostic de la chaîne d'encodage UTF-8 (MySQL / PyMySQL)
+│   └── verifier_donnees_accents.py  # Script de contrôle HEX des données accentuées
 │
-├── tests/                           # Suite de 120 tests unitaires et d'intégration (18 fichiers)
+├── tests/                           # Suite de 124 tests unitaires et d'intégration (19 fichiers)
 │   ├── test_auth.py                 # Authentification et login
+│   ├── test_roles.py                # Référentiel des rôles et création avec base minimale
 │   ├── test_permissions.py          # Autorisations RBAC
 │   ├── test_sessions.py             # CRUD sessions
 │   ├── test_client_activity.py      # Calcul d'activité client
@@ -827,10 +848,20 @@ L'application expose une API REST complète au format JSON sous le préfixe `/ap
 | `GET` | `/api/inscriptions/export/csv` | Export inscriptions filtrées en CSV |
 | `GET` | `/api/inscriptions/export/xlsx` | Export inscriptions filtrées en Excel |
 
+### Rôles (Référentiel indépendant)
+| Méthode | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/roles` | Liste complète des rôles système (indépendante des utilisateurs) |
+| `GET` | `/api/roles/<id>` | Détail d'un rôle système |
+
 ### Domaines
 | Méthode | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/api/domaines` | Liste des domaines d'expertise |
+| `GET` | `/api/domaines` | Liste des domaines (payload optimisé avec compteurs) |
+| `GET` | `/api/domaines/<id>` | Détail complet d'un domaine (avec formations et formateurs liés) |
+| `POST` | `/api/domaines` | Création d'un domaine (Admin / Gestionnaire) |
+| `PUT` | `/api/domaines/<id>` | Modification d'un domaine (Admin / Gestionnaire) |
+| `DELETE` | `/api/domaines/<id>` | Suppression sécurisée (rejet 409 si entités liées) |
 
 ### Statistiques & Dashboard
 | Méthode | Endpoint | Description |
@@ -1022,8 +1053,8 @@ Lancer la suite de tests complète :
 
 Résultat du dernier lancement sur la version finale :
 ```text
-============================ 120 passed in 34.65s =============================
-OK (120 tests validés, 100% de réussite)
+============================ 124 passed in 55.74s =============================
+OK (124 tests validés, 100% de réussite)
 ```
 
 ---

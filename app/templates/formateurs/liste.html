@@ -34,19 +34,22 @@
                 <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
                 <input type="search"
                        x-model.trim="filtres.q"
+                       @input.debounce.300ms="appliquerFiltres()"
                        placeholder="Rechercher un formateur..."
                        class="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
             </div>
 
             <select x-model="filtres.domaine_id"
+                    @change="appliquerFiltres()"
                     class="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
                 <option value="">Tous les domaines</option>
                 <template x-for="domaine in domaines" :key="domaine.id">
-                    <option :value="domaine.id" x-text="domaine.nom"></option>
+                    <option :value="String(domaine.id)" x-text="domaine.nom"></option>
                 </template>
             </select>
 
             <select x-model="filtres.type"
+                    @change="appliquerFiltres()"
                     class="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
                 <option value="">Interne / Externe</option>
                 <option value="interne">Interne</option>
@@ -54,6 +57,7 @@
             </select>
 
             <select x-show="avances" x-model="filtres.tri"
+                    @change="appliquerFiltres()"
                     class="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
                 <option value="">Trier par (par défaut : Nom A-Z)</option>
                 <option value="nom_asc">Nom (A → Z)</option>
