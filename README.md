@@ -180,6 +180,8 @@ L'application permet de :
 - voir son historique d'inscriptions et son statut pour chaque session ;
 - exporter les participants en CSV et Excel.
 
+L'annuaire propose également un **import par lot** depuis un fichier CSV ou XLSX. Un modèle CSV téléchargeable est fourni ; les en-têtes usuels sont reconnus, les encodages et séparateurs courants sont pris en charge, et le résultat détaille chaque ligne refusée (email invalide ou dupliqué, client introuvable, champ obligatoire manquant) sans bloquer les lignes valides.
+
 ---
 
 ### 4.5 Gestion des formateurs
@@ -190,6 +192,7 @@ L'application permet de :
 - créer un nouveau formateur (avec liaison optionnelle à un compte utilisateur) ;
 - modifier un formateur existant ;
 - consulter la fiche d'un formateur (sessions animées, taux de remplissage moyen, domaine).
+- exporter l'annuaire en CSV ou Excel, avec le domaine, le type interne/externe et les statistiques d'activité.
 
 ---
 
@@ -223,6 +226,14 @@ L'application permet aux Administrateurs et Gestionnaires de :
 - supprimer un domaine de manière sécurisée (rejet 409 si des formations ou formateurs y sont encore associés) ;
 - afficher instantanément dans une modale dédiée toutes les formations associées avec redirection vers le catalogue filtré ;
 - afficher les formateurs qualifiés rattachés avec redirection vers l'annuaire filtré.
+
+---
+
+### 4.8 Opérations groupées et gestion des comptes
+
+Les Administrateurs et Gestionnaires peuvent sélectionner et supprimer plusieurs formations, domaines, clients, participants, sessions ou inscriptions en une seule opération. Les contraintes d'intégrité sont vérifiées avant validation et les éléments non supprimables sont signalés.
+
+Les Administrateurs disposent en outre de filtres pour retrouver les utilisateurs par rôle ou les comptes Formateur sans profil Formateur associé, ainsi que d'exports CSV et Excel de l'annuaire des utilisateurs.
 
 ---
 
@@ -511,6 +522,7 @@ L'accès à l'application est gouverné par trois rôles utilisateur.
 ### Formateur
 - Accès restreint en **consultation seule** (mode lecture).
 - Accès limité aux sessions dont il est le formateur référent et aux inscrits rattachés.
+- Aucun accès aux clients ni à l'annuaire des formateurs, y compris en appelant directement les routes web ou API.
 - **Interdiction stricte d'écriture** : Toute tentative d'exécuter un POST, PUT ou DELETE sur l'API renvoie un code HTTP `403 Forbidden`.
 - Dispose d'un **tableau de bord personnalisé** (`/dashboard-formateur`) affichant ses propres indicateurs d'activité (voir section 14.1).
 
@@ -533,7 +545,7 @@ SERVICE MESSAGERIE
 COLLABORATEUR
   ↓ Reçoit l'invitation et clique sur /activation/<token>
   ↓ Vérification de validité et de non-expiration en temps constant
-  ↓ Définit son propre mot de passe sécurisé (min. 8 caractères)
+  ↓ Définit son propre mot de passe sécurisé (min. 8 caractères, majuscule, minuscule, chiffre et caractère spécial)
 GTM
   ↓ Hache le mot de passe (PBKDF2-SHA256), active le compte (actif=True) et purge le token
 COLLABORATEUR
@@ -545,6 +557,7 @@ COLLABORATEUR
 - **Token à usage unique** : Purge irréversible après activation avec protection anti-rejeu.
 - **Durée de vie limitée** : Expiration automatique après 48h (renouvelable en un clic par l'Admin via l'action *« Renvoyer l'invitation »*).
 - **Résilience SMTP** : Si le serveur SMTP est injoignable, le compte reste créé en statut *« En attente »*, l'Admin peut copier le lien direct d'activation et réexpédier l'invitation dès le rétablissement du réseau.
+- **Compte désactivé** : Une tentative de connexion est explicitement refusée et le compte ne peut pas accéder à l'application.
 
 ---
 
@@ -588,6 +601,8 @@ Les suppressions suivent des règles d'intégrité référentielle :
 
 En cas de tentative de suppression violant ces contraintes, l'API retourne un code `409 Conflict` avec un message explicite indiquant le nombre d'entités liées.
 
+Les suppressions groupées appliquent les mêmes règles. Lorsqu'une sélection contient à la fois des éléments supprimables et bloqués, le résultat précise les éléments concernés afin de permettre une correction ciblée.
+
 ---
 
 ## 11. Statuts des sessions
@@ -599,6 +614,8 @@ Les sessions évoluent selon quatre statuts :
 - `annulee` : Session annulée de manière explicite par un gestionnaire.
 
 Les règles temporelles sont calculées automatiquement, sauf pour le statut `annulee` qui résulte d'une décision d'annulation explicite.
+
+À la création d'une session, son statut est systématiquement déduit de ses dates : aucune valeur de statut envoyée par le client ne peut contredire cette règle.
 
 ---
 
@@ -738,14 +755,14 @@ GTM propose un système d'export complet pour l'ensemble des entités métier :
 
 ### 20.1 Export CSV (UTF-8 avec BOM)
 Tous les modules disposent d'un export CSV compatible Excel, LibreOffice et Google Sheets :
-- Sessions, Formations, Clients, Participants, Inscriptions.
+- Sessions, Formations, Clients, Participants, Inscriptions, Formateurs et Utilisateurs.
 - Encodage `utf-8-sig` pour un affichage correct des caractères accentués dans Excel.
 
 ### 20.2 Export Excel (XLSX stylisé)
 Exports Excel avec mise en forme professionnelle (openpyxl) :
 - En-têtes colorés Emerald Galaxy Solutions (`#047857`).
 - Alternance de couleurs de lignes, bordures fines, largeurs de colonnes ajustées.
-- Sessions, Formations, Clients, Participants, Inscriptions.
+- Sessions, Formations, Clients, Participants, Inscriptions, Formateurs et Utilisateurs.
 
 ### 20.3 Export PDF
 - **Feuille d'émargement PDF** : Générée depuis la fiche détail d'une session, contenant la liste des inscrits, les informations de la session et un espace de signature.
@@ -785,6 +802,8 @@ L'application expose une API REST complète au format JSON sous le préfixe `/ap
 | `POST` | `/api/utilisateurs` | Création d'un utilisateur + invitation d'activation |
 | `PUT` | `/api/utilisateurs/<id>` | Modification d'un utilisateur |
 | `POST` | `/api/utilisateurs/<id>/renvoyer-invitation` | Régénération et réexpédition de l'invitation |
+| `GET` | `/api/utilisateurs/export/csv` | Export des utilisateurs en CSV |
+| `GET` | `/api/utilisateurs/export/xlsx` | Export des utilisateurs en Excel |
 
 ### Sessions
 | Méthode | Endpoint | Description |
@@ -793,6 +812,7 @@ L'application expose une API REST complète au format JSON sous le préfixe `/ap
 | `GET` | `/api/sessions/<id>` | Détail d'une session |
 | `POST` | `/api/sessions` | Création d'une session |
 | `PUT` | `/api/sessions/<id>` | Modification d'une session |
+| `DELETE` | `/api/sessions` | Suppression groupée des sessions supprimables |
 | `DELETE` | `/api/sessions/<id>` | Suppression (si aucune inscription) |
 | `GET` | `/api/sessions/export/csv` | Export sessions filtrées en CSV |
 | `GET` | `/api/sessions/export/xlsx` | Export sessions filtrées en Excel |
@@ -805,6 +825,7 @@ L'application expose une API REST complète au format JSON sous le préfixe `/ap
 | `GET` | `/api/formations/<id>` | Détail d'une formation |
 | `POST` | `/api/formations` | Création d'une formation |
 | `PUT` | `/api/formations/<id>` | Modification d'une formation |
+| `DELETE` | `/api/formations` | Suppression groupée des formations supprimables |
 | `DELETE` | `/api/formations/<id>` | Suppression (si aucune session) |
 | `GET` | `/api/formations/export/csv` | Export catalogue en CSV |
 | `GET` | `/api/formations/export/xlsx` | Export catalogue en Excel |
@@ -816,6 +837,7 @@ L'application expose une API REST complète au format JSON sous le préfixe `/ap
 | `GET` | `/api/clients/<id>` | Détail d'un client |
 | `POST` | `/api/clients` | Création d'un client |
 | `PUT` | `/api/clients/<id>` | Modification d'un client |
+| `DELETE` | `/api/clients` | Suppression groupée des clients supprimables |
 | `DELETE` | `/api/clients/<id>` | Suppression (si aucun participant) |
 | `GET` | `/api/clients/export/csv` | Export clients filtrés en CSV |
 | `GET` | `/api/clients/export/xlsx` | Export clients filtrés en Excel |
@@ -827,9 +849,12 @@ L'application expose une API REST complète au format JSON sous le préfixe `/ap
 | `GET` | `/api/participants/<id>` | Détail d'un participant |
 | `POST` | `/api/participants` | Création d'un participant |
 | `PUT` | `/api/participants/<id>` | Modification d'un participant |
+| `DELETE` | `/api/participants` | Suppression groupée des participants supprimables |
 | `DELETE` | `/api/participants/<id>` | Suppression (si aucune inscription) |
 | `GET` | `/api/participants/export/csv` | Export participants en CSV |
 | `GET` | `/api/participants/export/xlsx` | Export participants en Excel |
+| `POST` | `/api/participants/import` | Import de participants depuis un fichier CSV ou XLSX |
+| `GET` | `/api/participants/import/template` | Téléchargement du modèle d'import CSV |
 
 ### Formateurs
 | Méthode | Endpoint | Description |
@@ -838,6 +863,8 @@ L'application expose une API REST complète au format JSON sous le préfixe `/ap
 | `GET` | `/api/formateurs/<id>` | Détail d'un formateur |
 | `POST` | `/api/formateurs` | Création d'un formateur |
 | `PUT` | `/api/formateurs/<id>` | Modification d'un formateur |
+| `GET` | `/api/formateurs/export/csv` | Export des formateurs en CSV |
+| `GET` | `/api/formateurs/export/xlsx` | Export des formateurs en Excel |
 
 ### Inscriptions
 | Méthode | Endpoint | Description |
@@ -845,6 +872,8 @@ L'application expose une API REST complète au format JSON sous le préfixe `/ap
 | `GET` | `/api/inscriptions` | Liste des inscriptions (avec filtres combinables) |
 | `POST` | `/api/inscriptions` | Création d'une inscription |
 | `PUT` | `/api/inscriptions/<id>` | Modification du statut d'une inscription |
+| `DELETE` | `/api/inscriptions` | Suppression groupée des inscriptions |
+| `DELETE` | `/api/inscriptions/<id>` | Suppression d'une inscription |
 | `GET` | `/api/inscriptions/export/csv` | Export inscriptions filtrées en CSV |
 | `GET` | `/api/inscriptions/export/xlsx` | Export inscriptions filtrées en Excel |
 
