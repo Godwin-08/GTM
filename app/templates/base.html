@@ -199,6 +199,7 @@
                     <p class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
                         Gestion
                     </p>
+                    {% if current_user.is_authenticated and current_user.role and current_user.role.nom != 'formateur' %}
                     <a href="{{ url_for('pages.clients') }}"
                        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 mb-1
                               {% if request.endpoint in ['pages.clients', 'pages.client_detail'] %}
@@ -219,6 +220,7 @@
                         <i data-lucide="user-check" class="w-4 h-4 text-slate-400"></i>
                         Formateurs
                     </a>
+                    {% endif %}
                     <a href="{{ url_for('pages.participants') }}"
                        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 mb-1
                               {% if request.endpoint in ['pages.participants', 'pages.participant_detail'] %}
@@ -617,38 +619,73 @@
     <!-- Conteneur Global pour les Toasts (Notifications réactives) -->
     <div x-data="toastContainerData()"
          @afficher-toast.window="ajouterToast($event.detail)"
-         class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+         class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 max-w-md w-full pointer-events-none">
         <template x-for="t in toasts" :key="t.id">
-            <div class="pointer-events-auto p-4 rounded-xl shadow-lg border text-sm flex items-start gap-3 transition-all duration-200 ease-in-out hover:shadow-xl bg-white"
+            <div role="status" aria-live="polite" class="pointer-events-auto flex items-start gap-3 rounded-2xl border shadow-lg backdrop-blur-sm px-4 py-3 transition-all duration-200 ease-in-out hover:translate-x-[-2px]"
                  :class="{
-                     'border-emerald-200 text-emerald-900 bg-emerald-50/95': t.type === 'success' || t.type === 'succes',
-                     'border-red-200 text-red-900 bg-red-50/95': t.type === 'erreur' || t.type === 'error' || t.type === 'danger',
-                     'border-amber-200 text-amber-900 bg-amber-50/95': t.type === 'warning',
-                     'border-blue-200 text-blue-900 bg-blue-50/95': t.type === 'info'
+                     'border-emerald-200 bg-emerald-50/95 text-emerald-900 shadow-emerald-100/60': t.type === 'success' || t.type === 'succes',
+                     'border-red-200 bg-red-50/95 text-red-900 shadow-red-100/60': t.type === 'erreur' || t.type === 'error' || t.type === 'danger',
+                     'border-amber-200 bg-amber-50/95 text-amber-900 shadow-amber-100/60': t.type === 'warning',
+                     'border-blue-200 bg-blue-50/95 text-blue-900 shadow-blue-100/60': t.type === 'info'
                  }">
-                <div class="flex-shrink-0 mt-0.5">
+                <div class="flex-shrink-0 mt-0.5 rounded-full p-1.5"
+                     :class="{
+                         'bg-emerald-100 text-emerald-600': t.type === 'success' || t.type === 'succes',
+                         'bg-red-100 text-red-600': t.type === 'erreur' || t.type === 'error' || t.type === 'danger',
+                         'bg-amber-100 text-amber-600': t.type === 'warning',
+                         'bg-blue-100 text-blue-600': t.type === 'info'
+                     }">
                     <template x-if="t.type === 'success' || t.type === 'succes'">
-                        <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-600"></i>
+                        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
                     </template>
                     <template x-if="t.type === 'erreur' || t.type === 'error' || t.type === 'danger'">
-                        <i data-lucide="alert-circle" class="w-5 h-5 text-red-600"></i>
+                        <i data-lucide="alert-circle" class="w-4 h-4"></i>
                     </template>
                     <template x-if="t.type === 'warning'">
-                        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600"></i>
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
                     </template>
                     <template x-if="t.type === 'info'">
-                        <i data-lucide="info" class="w-5 h-5 text-blue-600"></i>
+                        <i data-lucide="info" class="w-4 h-4"></i>
                     </template>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-xs text-gray-900 capitalize" x-text="t.titre"></p>
-                    <p class="text-xs mt-0.5 leading-relaxed text-gray-700" x-text="t.message"></p>
+                    <p class="font-bold text-[11px] uppercase tracking-[0.08em] opacity-75" x-text="t.titre"></p>
+                    <p class="text-sm mt-1 leading-relaxed" x-text="t.message"></p>
                 </div>
-                <button @click="supprimer(t.id)" class="text-gray-400 hover:text-gray-600 flex-shrink-0 transition-colors duration-150" aria-label="Fermer la notification">
+                <button @click="supprimer(t.id)" class="text-current/60 hover:text-current flex-shrink-0 transition-colors duration-150 rounded focus:outline-none focus:ring-2 focus:ring-current" aria-label="Fermer la notification">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
         </template>
+    </div>
+
+    <!-- Modale globale de confirmation -->
+    <div x-data="confirmationDialogData()"
+         @demander-confirmation.window="ouvrir($event.detail)"
+         x-show="ouverte"
+         x-cloak
+         @keydown.escape.window="fermer(false)"
+         class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+        <div class="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl" @click.stop>
+            <div class="p-5 sm:p-6">
+                <div class="gtm-alert-danger">
+                    <div class="gtm-alert-danger-icon">
+                        <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="gtm-alert-danger-title" x-text="titre"></h3>
+                        <p class="gtm-alert-danger-text" x-text="message"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 border-t border-slate-100 bg-slate-50 px-5 py-4">
+                <button type="button" @click="fermer(false)" class="gtm-btn gtm-btn-ghost text-sm">Annuler</button>
+                <button type="button" @click="fermer(true)" class="gtm-btn gtm-btn-danger text-sm">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    Confirmer la suppression
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -663,6 +700,35 @@
                 detail: { type, message, titre }
             }));
         };
+
+        window.demanderConfirmation = function(message, titre = 'Confirmer la suppression') {
+            return new Promise(resolve => {
+                window.dispatchEvent(new CustomEvent('demander-confirmation', {
+                    detail: { message, titre, resolve }
+                }));
+            });
+        };
+
+        function confirmationDialogData() {
+            return {
+                ouverte: false,
+                message: '',
+                titre: 'Confirmer la suppression',
+                resolution: null,
+                ouvrir(detail) {
+                    this.message = detail.message || 'Cette action est définitive.';
+                    this.titre = detail.titre || 'Confirmer la suppression';
+                    this.resolution = detail.resolve;
+                    this.ouverte = true;
+                    this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
+                },
+                fermer(valeur) {
+                    if (this.resolution) this.resolution(valeur);
+                    this.resolution = null;
+                    this.ouverte = false;
+                }
+            };
+        }
 
         function toastContainerData() {
             return {
@@ -818,6 +884,45 @@
                 }
             };
         }
+
+        function initialiserProtectionFormulaires() {
+            const formulaires = document.querySelectorAll('form[data-protect-unsaved]');
+            formulaires.forEach(formulaire => {
+                let modifie = false;
+                formulaire.addEventListener('input', () => { modifie = true; });
+                formulaire.addEventListener('change', () => { modifie = true; });
+                formulaire.addEventListener('submit', () => { modifie = false; });
+                formulaire.addEventListener('reset', () => { modifie = false; });
+                formulaire.dataset.protectionActive = 'true';
+                formulaire._estModifie = () => modifie;
+            });
+
+            window.addEventListener('beforeunload', evenement => {
+                const formulaireModifie = [...formulaires].some(formulaire => formulaire._estModifie?.());
+                if (formulaireModifie) {
+                    evenement.preventDefault();
+                    evenement.returnValue = '';
+                }
+            });
+        }
+
+        initialiserProtectionFormulaires();
+
+        document.addEventListener('keydown', evenement => {
+            const elementActif = document.activeElement;
+            const saisieEnCours = elementActif && (
+                ['INPUT', 'TEXTAREA', 'SELECT'].includes(elementActif.tagName) ||
+                elementActif.isContentEditable
+            );
+            if (evenement.key !== '/' || saisieEnCours || evenement.ctrlKey || evenement.metaKey || evenement.altKey) return;
+
+            const champRecherche = [...document.querySelectorAll('input[type="search"], input[placeholder*="Rechercher"]')]
+                .find(champ => champ.offsetParent !== null);
+            if (!champRecherche) return;
+            evenement.preventDefault();
+            champRecherche.focus();
+            champRecherche.select();
+        });
     </script>
 
     {% block extra_scripts %}{% endblock %}

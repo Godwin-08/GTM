@@ -299,3 +299,41 @@ def modifier_inscription(inscription_id):
 
     db.session.commit()
     return jsonify(inscription_vers_dict(inscription)), 200
+
+
+@inscriptions_bp.route("", methods=["DELETE"])
+@gestionnaire_ou_admin_required
+def supprimer_inscriptions_en_lot():
+    """Supprime plusieurs inscriptions cochées en une seule action."""
+    donnees = request.get_json(silent=True) or {}
+    ids = donnees.get("ids")
+
+    if not isinstance(ids, list) or not ids:
+        return jsonify({"erreur": "Aucune inscription sélectionnée."}), 400
+
+    ids_valides = []
+    for raw_id in ids:
+        try:
+            ids_valides.append(int(raw_id))
+        except (TypeError, ValueError):
+            return jsonify({"erreur": "Identifiants d'inscription invalides."}), 400
+
+    inscriptions = Inscription.query.filter(Inscription.id.in_(ids_valides)).all()
+    if not inscriptions:
+        return jsonify({"erreur": "Aucune inscription correspondante trouvée."}), 404
+
+    for inscription in inscriptions:
+        db.session.delete(inscription)
+    db.session.commit()
+
+    return jsonify({"supprimees": [inscription.id for inscription in inscriptions]}), 200
+
+
+@inscriptions_bp.route("/<int:inscription_id>", methods=["DELETE"])
+@gestionnaire_ou_admin_required
+def supprimer_inscription(inscription_id):
+    """Supprime une inscription et la relation participant-session associée."""
+    inscription = db.get_or_404(Inscription, inscription_id)
+    db.session.delete(inscription)
+    db.session.commit()
+    return "", 204

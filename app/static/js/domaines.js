@@ -6,7 +6,10 @@
 function pageDomainesData() {
     return {
         domaines: [],
+        modeSelection: false,
+        selectionnees: [],
         recherche: '',
+        tri: 'nom_asc',
         chargementEnCours: true,
         erreur: null,
 
@@ -21,6 +24,9 @@ function pageDomainesData() {
         editionEnCours: false,
         erreurEdition: null,
         formulaireEdition: { id: null, nom: '' },
+        modaleSuppressionOuverte: false,
+        erreurSuppression: null,
+        aSupprimer: null,
 
         // Modales de consultation des formations et formateurs
         domaineSelectionne: null,
@@ -85,12 +91,40 @@ function pageDomainesData() {
             const filtres = q
                 ? this.domaines.filter(d => (d.nom || '').toLowerCase().includes(q))
                 : [...this.domaines];
-            return filtres.sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'));
+            return filtres.sort((a, b) => {
+                if (this.tri === 'formations_desc') return (b.nb_formations || 0) - (a.nb_formations || 0);
+                if (this.tri === 'formateurs_desc') return (b.nb_formateurs || 0) - (a.nb_formateurs || 0);
+                return (a.nom || '').localeCompare(b.nom || '', 'fr');
+            });
         },
 
         // --------------------------------------------------------
         // Création
         // --------------------------------------------------------
+        basculerModeSelection() {
+            this.modeSelection = !this.modeSelection;
+            this.selectionnees = [];
+        },
+        toggleSelection(id) {
+            this.selectionnees = this.selectionnees.includes(id) ? this.selectionnees.filter(item => item !== id) : [...this.selectionnees, id];
+        },
+        toggleSelectionGlobale() {
+            const visibles = this.domainesFiltres().map(domaine => domaine.id);
+            const tousSelectionnes = visibles.length > 0 && visibles.every(id => this.selectionnees.includes(id));
+            this.selectionnees = tousSelectionnes ? this.selectionnees.filter(id => !visibles.includes(id)) : [...new Set([...this.selectionnees, ...visibles])];
+        },
+        async supprimerSelection() {
+            if (!this.selectionnees.length || !await window.demanderConfirmation(`${this.selectionnees.length} domaine(s) sélectionné(s) seront définitivement supprimé(s).`)) return;
+            try {
+                const res = await fetch(urlDomaines, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ ids: this.selectionnees }) });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.erreur || 'Suppression impossible.');
+                this.domaines = this.domaines.filter(domaine => !this.selectionnees.includes(domaine.id));
+                this.modeSelection = false; this.selectionnees = [];
+                window.afficherToast?.('succes', `${data.supprimees.length} domaine(s) supprimé(s).`);
+            } catch (err) { window.afficherToast?.('erreur', err.message); }
+        },
+
         ouvrirModaleCreation() {
             this.formulaireCreation = { nom: '' };
             this.erreurCreation = null;
@@ -174,10 +208,24 @@ function pageDomainesData() {
         },
 
         // --------------------------------------------------------
-        // Suppression (avec confirmation native)
+        // Suppression avec confirmation visuelle commune
         // --------------------------------------------------------
-        async confirmerSuppression(domaine) {
+        ouvrirModaleSuppression(domaine) {
+            this.aSupprimer = domaine;
+            this.erreurSuppression = null;
+            this.modaleSuppressionOuverte = true;
+        },
+        fermerModaleSuppression() {
+            this.modaleSuppressionOuverte = false;
+            this.aSupprimer = null;
+            this.erreurSuppression = null;
+        },
+        async confirmerSuppression(domaine = this.aSupprimer) {
             const nbLies = (domaine.nb_formations || 0) + (domaine.nb_formateurs || 0);
+            if (nbLies > 0) {
+                this.erreurSuppression = `Impossible de supprimer "${domaine.nom}" : ${domaine.nb_formations} formation(s) et ${domaine.nb_formateurs} formateur(s) sont liés à ce domaine.`;
+                return;
+            }
             if (nbLies > 0) {
                 if (typeof window.afficherToast === 'function') {
                     window.afficherToast('erreur', `Impossible de supprimer "${domaine.nom}" : ${domaine.nb_formations} formation(s) et ${domaine.nb_formateurs} formateur(s) sont liés à ce domaine.`);
@@ -187,7 +235,9 @@ function pageDomainesData() {
                 return;
             }
 
-            const confirme = window.confirm(`Supprimer le domaine "${domaine.nom}" ? Cette action est irréversible.`);
+            const confirme = await window.demanderConfirmation(
+                `Le domaine « ${domaine.nom} » sera définitivement supprimé. Cette action est irréversible.`
+            );
             if (!confirme) return;
 
             try {
@@ -211,4 +261,3 @@ function pageDomainesData() {
         },
     };
 }
-

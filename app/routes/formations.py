@@ -236,6 +236,31 @@ def modifier_formation(formation_id):
     return jsonify(formation_vers_dict(formation)), 200
 
 
+@formations_bp.route("", methods=["DELETE"])
+@gestionnaire_ou_admin_required
+def supprimer_formations_en_lot():
+    """Supprime une sélection de formations sans sessions associées."""
+    ids = (request.get_json(silent=True) or {}).get("ids")
+    if not isinstance(ids, list) or not ids:
+        return jsonify({"erreur": "Aucune formation sélectionnée."}), 400
+    try:
+        ids_valides = list({int(formation_id) for formation_id in ids})
+    except (TypeError, ValueError):
+        return jsonify({"erreur": "Identifiants de formation invalides."}), 400
+
+    formations = Formation.query.filter(Formation.id.in_(ids_valides)).all()
+    if len(formations) != len(ids_valides):
+        return jsonify({"erreur": "Une ou plusieurs formations sont introuvables."}), 404
+    if Session.query.filter(Session.formation_id.in_(ids_valides)).first():
+        return jsonify({"erreur": "Impossible de supprimer la sélection : des sessions y sont associées."}), 409
+
+    supprimees = [formation.id for formation in formations]
+    for formation in formations:
+        db.session.delete(formation)
+    db.session.commit()
+    return jsonify({"supprimees": supprimees}), 200
+
+
 @formations_bp.route("/<int:formation_id>", methods=["DELETE"])
 @gestionnaire_ou_admin_required
 def supprimer_formation(formation_id):

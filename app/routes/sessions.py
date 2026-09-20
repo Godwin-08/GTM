@@ -348,6 +348,59 @@ def modifier_session(session_id):
     return jsonify(session_vers_dict(session)), 200
 
 
+@sessions_bp.route("", methods=["DELETE"])
+@gestionnaire_ou_admin_required
+def supprimer_sessions_en_lot():
+    """Supprime les sessions sélectionnées sans inscription et détaille les blocages."""
+    donnees = request.get_json(silent=True) or {}
+    ids = donnees.get("ids")
+
+    if not isinstance(ids, list) or not ids:
+        return jsonify({"erreur": "Aucune session sélectionnée."}), 400
+
+    ids_valides = []
+    for raw_id in ids:
+        try:
+            ids_valides.append(int(raw_id))
+        except (TypeError, ValueError):
+            return jsonify({"erreur": "Identifiants de session invalides."}), 400
+
+    sessions = Session.query.filter(Session.id.in_(ids_valides)).all()
+    if not sessions:
+        return jsonify({"erreur": "Aucune session correspondante trouvée."}), 404
+
+    sessions_supprimees = []
+    sessions_bloquees = []
+    for session_obj in sessions:
+        nb_inscriptions = Inscription.query.filter_by(session_id=session_obj.id).count()
+        if nb_inscriptions > 0:
+            sessions_bloquees.append({
+                "id": session_obj.id,
+                "nom": session_obj.formation.titre if session_obj.formation else str(session_obj.id),
+                "formation_id": session_obj.formation_id,
+                "inscriptions": nb_inscriptions,
+            })
+        else:
+            sessions_supprimees.append(session_obj)
+
+    if not sessions_supprimees:
+        noms = ', '.join(session["nom"] for session in sessions_bloquees)
+        return jsonify({
+            "erreur": f"Aucune session supprimable : {noms} possède(nt) encore des inscription(s).",
+            "supprimees": [],
+            "bloquees": sessions_bloquees,
+        }), 409
+
+    for session_obj in sessions_supprimees:
+        db.session.delete(session_obj)
+    db.session.commit()
+
+    return jsonify({
+        "supprimees": [session_obj.id for session_obj in sessions_supprimees],
+        "bloquees": sessions_bloquees,
+    }), 200
+
+
 @sessions_bp.route("/<int:session_id>", methods=["DELETE"])
 @gestionnaire_ou_admin_required
 def supprimer_session(session_id):

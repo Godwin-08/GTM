@@ -124,6 +124,31 @@ def modifier_domaine(domaine_id):
     return jsonify(domaine_vers_dict(domaine)), 200
 
 
+@domaines_bp.route("", methods=["DELETE"])
+@gestionnaire_ou_admin_required
+def supprimer_domaines_en_lot():
+    """Supprime une sélection de domaines vides."""
+    ids = (request.get_json(silent=True) or {}).get("ids")
+    if not isinstance(ids, list) or not ids:
+        return jsonify({"erreur": "Aucun domaine sélectionné."}), 400
+    try:
+        ids_valides = list({int(domaine_id) for domaine_id in ids})
+    except (TypeError, ValueError):
+        return jsonify({"erreur": "Identifiants de domaine invalides."}), 400
+
+    domaines = Domaine.query.filter(Domaine.id.in_(ids_valides)).all()
+    if len(domaines) != len(ids_valides):
+        return jsonify({"erreur": "Un ou plusieurs domaines sont introuvables."}), 404
+    if any(domaine.formations or domaine.formateurs for domaine in domaines):
+        return jsonify({"erreur": "Impossible de supprimer la sélection : des formations ou formateurs y sont associés."}), 409
+
+    supprimees = [domaine.id for domaine in domaines]
+    for domaine in domaines:
+        db.session.delete(domaine)
+    db.session.commit()
+    return jsonify({"supprimees": supprimees}), 200
+
+
 @domaines_bp.route("/<int:domaine_id>", methods=["DELETE"])
 @gestionnaire_ou_admin_required
 def supprimer_domaine(domaine_id):

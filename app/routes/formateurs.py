@@ -50,7 +50,7 @@ def formateur_vers_dict(formateur):
 
 
 @formateurs_bp.route("", methods=["GET"])
-@login_required
+@gestionnaire_ou_admin_required
 def liste_formateurs():
     """
     Renvoie la liste des formateurs avec filtres optionnels combinables (AND) :
@@ -157,3 +157,103 @@ def modifier_formateur(formateur_id):
 
     db.session.commit()
     return jsonify(formateur_vers_dict(formateur)), 200
+
+
+# =============================================================================
+# Exports Formateurs (CSV & Excel)
+# =============================================================================
+
+@formateurs_bp.route("/export/csv", methods=["GET"])
+@gestionnaire_ou_admin_required
+def export_formateurs_csv():
+    """Génère un export CSV de la liste des formateurs avec leurs statistiques d'activité."""
+    from datetime import datetime
+    from app.services.export_service import generer_csv_response
+
+    formateurs = Formateur.query.order_by(Formateur.nom.asc()).all()
+
+    en_tetes = {
+        "id": "ID",
+        "nom": "Nom du formateur",
+        "domaine": "Domaine d'expertise",
+        "type": "Type (Interne / Externe)",
+        "email": "Email de contact",
+        "telephone": "Téléphone",
+        "compte_utilisateur": "Compte plateforme lié",
+        "nb_sessions_total": "Total Sessions",
+        "nb_sessions_planifiees": "Sessions Planifiées / En cours",
+        "nb_sessions_terminees": "Sessions Terminées",
+    }
+
+    lignes = []
+    for f in formateurs:
+        sessions_valides = [s for s in f.sessions if s.statut != "annulee"]
+        nb_planifiees = len([s for s in sessions_valides if s.statut in ["planifiee", "en_cours"]])
+        nb_terminees = len([s for s in sessions_valides if s.statut == "terminee"])
+
+        lignes.append({
+            "id": f.id,
+            "nom": f.nom,
+            "domaine": f.domaine.nom if f.domaine else "",
+            "type": "Interne" if f.utilisateur_id else "Externe",
+            "email": f.email or "",
+            "telephone": f.telephone or "",
+            "compte_utilisateur": f.utilisateur.email if f.utilisateur else "Aucun",
+            "nb_sessions_total": len(sessions_valides),
+            "nb_sessions_planifiees": nb_planifiees,
+            "nb_sessions_terminees": nb_terminees,
+        })
+
+    date_str = datetime.now().strftime("%Y%m%d")
+    return generer_csv_response(f"formateurs_export_{date_str}.csv", en_tetes, lignes)
+
+
+@formateurs_bp.route("/export/xlsx", methods=["GET"])
+@gestionnaire_ou_admin_required
+def export_formateurs_xlsx():
+    """Génère un export Excel (.xlsx) stylisé des formateurs."""
+    from datetime import datetime
+    from app.services.export_service import generer_xlsx_response
+
+    formateurs = Formateur.query.order_by(Formateur.nom.asc()).all()
+
+    en_tetes = {
+        "id": "ID",
+        "nom": "Nom du formateur",
+        "domaine": "Domaine d'expertise",
+        "type": "Type (Interne / Externe)",
+        "email": "Email de contact",
+        "telephone": "Téléphone",
+        "compte_utilisateur": "Compte plateforme lié",
+        "nb_sessions_total": "Total Sessions",
+        "nb_sessions_planifiees": "Sessions Planifiées / En cours",
+        "nb_sessions_terminees": "Sessions Terminées",
+    }
+
+    lignes = []
+    for f in formateurs:
+        sessions_valides = [s for s in f.sessions if s.statut != "annulee"]
+        nb_planifiees = len([s for s in sessions_valides if s.statut in ["planifiee", "en_cours"]])
+        nb_terminees = len([s for s in sessions_valides if s.statut == "terminee"])
+
+        lignes.append({
+            "id": f.id,
+            "nom": f.nom,
+            "domaine": f.domaine.nom if f.domaine else "",
+            "type": "Interne" if f.utilisateur_id else "Externe",
+            "email": f.email or "",
+            "telephone": f.telephone or "",
+            "compte_utilisateur": f.utilisateur.email if f.utilisateur else "Aucun",
+            "nb_sessions_total": len(sessions_valides),
+            "nb_sessions_planifiees": nb_planifiees,
+            "nb_sessions_terminees": nb_terminees,
+        })
+
+    date_str = datetime.now().strftime("%Y%m%d")
+    return generer_xlsx_response(
+        f"formateurs_export_{date_str}.xlsx",
+        en_tetes,
+        lignes,
+        titre_feuille="Formateurs"
+    )
+

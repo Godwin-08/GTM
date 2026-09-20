@@ -26,6 +26,8 @@ function pageInscriptionsData() {
         formations: [],
         clients: [],
         participants: [],
+        selectionnees: [],
+        modeSelection: false,
 
         /** @type {boolean} Indicateur de chargement réseau */
         chargementEnCours: true,
@@ -96,6 +98,95 @@ function pageInscriptionsData() {
             const cible = query ? `${window.location.pathname}?${query}` : window.location.pathname;
             if (window.location.pathname + window.location.search !== cible) {
                 window.history.pushState(null, '', cible);
+            }
+        },
+
+        basculerModeSelection() {
+            this.modeSelection = !this.modeSelection;
+            this.selectionnees = [];
+        },
+
+        toggleSelection(id) {
+            if (this.selectionnees.includes(id)) {
+                this.selectionnees = this.selectionnees.filter(item => item !== id);
+            } else {
+                this.selectionnees = [...this.selectionnees, id];
+            }
+        },
+
+        toggleSelectionGlobale() {
+            if (this.selectionnees.length === this.inscriptions.length) {
+                this.selectionnees = [];
+            } else {
+                this.selectionnees = this.inscriptions.map(i => i.id);
+            }
+        },
+
+        async supprimerInscription(inscriptionId) {
+            const ok = await window.demanderConfirmation('Cette inscription sera définitivement supprimée.');
+            if (!ok) return;
+
+            try {
+                const res = await fetch(`${urlInscriptions.replace(/\?.*$/, '')}/${inscriptionId}`, {
+                    method: 'DELETE',
+                    credentials: 'include',
+                });
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    throw new Error(data.erreur || 'Impossible de supprimer cette inscription.');
+                }
+
+                this.inscriptions = this.inscriptions.filter(i => i.id !== inscriptionId);
+                this.selectionnees = this.selectionnees.filter(id => id !== inscriptionId);
+
+                if (typeof window.afficherToast === 'function') {
+                    window.afficherToast('succes', 'Inscription supprimée avec succès.');
+                }
+            } catch (err) {
+                console.error('Erreur suppression inscription :', err);
+                if (typeof window.afficherToast === 'function') {
+                    window.afficherToast('erreur', err.message || 'Erreur lors de la suppression.');
+                } else {
+                    alert(err.message || 'Erreur lors de la suppression.');
+                }
+            }
+        },
+
+        async supprimerSelection() {
+            if (this.selectionnees.length === 0) return;
+
+            const ok = await window.demanderConfirmation(
+                `${this.selectionnees.length} inscription(s) sélectionnée(s) seront définitivement supprimées.`
+            );
+            if (!ok) return;
+
+            try {
+                const res = await fetch(urlInscriptions, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ ids: this.selectionnees }),
+                });
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    throw new Error(data.erreur || 'Impossible de supprimer les inscriptions sélectionnées.');
+                }
+
+                this.inscriptions = this.inscriptions.filter(i => !this.selectionnees.includes(i.id));
+                this.selectionnees = [];
+
+                if (typeof window.afficherToast === 'function') {
+                    window.afficherToast('succes', `${data.supprimees?.length || 0} inscription(s) supprimée(s).`);
+                }
+            } catch (err) {
+                console.error('Erreur suppression sélection inscriptions :', err);
+                if (typeof window.afficherToast === 'function') {
+                    window.afficherToast('erreur', err.message || 'Erreur lors de la suppression.');
+                } else {
+                    alert(err.message || 'Erreur lors de la suppression.');
+                }
             }
         },
 

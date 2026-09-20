@@ -3,7 +3,7 @@
 {% block title %}Gestion des Domaines | GTM{% endblock %}
 
 {% block breadcrumb %}
-<span>Administration</span>
+<a href="{{ url_for('pages.dashboard') }}" class="hover:text-slate-700 hover:underline">Administration</a>
 <span>/</span>
 <span class="text-slate-600">Domaines</span>
 {% endblock %}
@@ -22,10 +22,7 @@
             </p>
         </div>
         {% if current_user.is_authenticated and current_user.role.nom in ['admin', 'gestionnaire'] %}
-        <button @click="ouvrirModaleCreation()" class="gtm-btn gtm-btn-primary text-xs flex-shrink-0">
-            <i data-lucide="plus" class="w-4 h-4"></i>
-            Nouveau domaine
-        </button>
+        <button @click="ouvrirModaleCreation()" class="gtm-btn gtm-btn-primary text-xs flex-shrink-0"><i data-lucide="plus" class="w-4 h-4"></i>Nouveau domaine</button>
         {% endif %}
     </div>
 
@@ -33,18 +30,39 @@
     <div class="flex flex-col sm:flex-row gap-3 mb-5">
         <div class="relative flex-1">
             <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-            <input type="text"
-                   x-model.debounce.200ms="recherche"
-                   placeholder="Rechercher un domaine..."
-                   class="gtm-input pl-9">
+                 <input type="text"
+                     x-model.debounce.200ms="recherche"
+                     placeholder="Rechercher un domaine..."
+                     aria-label="Rechercher un domaine"
+                     class="gtm-input pl-9 pr-9">
+                 <button type="button" x-show="recherche" x-cloak @click="recherche = ''" aria-label="Effacer la recherche" class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <i data-lucide="x" class="w-4 h-4"></i>
+                 </button>
         </div>
+        <label class="sr-only" for="tri-domaines">Trier les domaines</label>
+        <select id="tri-domaines" x-model="tri" class="gtm-select sm:w-64" aria-label="Trier les domaines">
+            <option value="nom_asc">Nom (A à Z)</option>
+            <option value="formations_desc">Formations liées (plus nombreuses)</option>
+            <option value="formateurs_desc">Formateurs associés (plus nombreux)</option>
+        </select>
     </div>
 
     <!-- Table des domaines -->
     <div class="gtm-table-container">
+        {% if current_user.is_authenticated and current_user.role.nom in ['admin', 'gestionnaire'] %}
+        <div class="flex items-center justify-between gap-3 p-3 border-b border-slate-200 bg-slate-50">
+            <button @click="basculerModeSelection()" class="gtm-btn gtm-btn-secondary text-xs"><i data-lucide="check-square" class="w-3.5 h-3.5"></i><span x-text="modeSelection ? 'Annuler' : 'Sélectionner'"></span></button>
+            <div x-show="modeSelection" class="flex items-center gap-2">
+                <input type="checkbox" @click="toggleSelectionGlobale()" :checked="domainesFiltres().length > 0 && domainesFiltres().every(d => selectionnees.includes(d.id))" :indeterminate="selectionnees.length > 0 && !domainesFiltres().every(d => selectionnees.includes(d.id))" class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                <span class="text-xs font-semibold text-slate-600">Tout sélectionner</span>
+            </div>
+            <button type="button" x-show="modeSelection && selectionnees.length > 0" @click="supprimerSelection()" class="inline-flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Supprimer la sélection (<span x-text="selectionnees.length"></span>)</button>
+        </div>
+        {% endif %}
         <table class="gtm-table">
             <thead>
                 <tr>
+                    {% if current_user.is_authenticated and current_user.role.nom in ['admin', 'gestionnaire'] %}<th x-show="modeSelection" class="w-12"></th>{% endif %}
                     <th>Intitulé du Domaine</th>
                     <th class="text-center">Formations liées</th>
                     <th class="text-center">Formateurs associés</th>
@@ -53,14 +71,14 @@
             </thead>
             <tbody>
                 <template x-if="chargementEnCours">
-                    <tr><td colspan="4" class="px-5 py-12 text-center text-slate-400 text-sm">
+                    <tr><td colspan="{{ 5 if current_user.is_authenticated and current_user.role.nom in ['admin', 'gestionnaire'] else 4 }}" class="px-5 py-12 text-center text-slate-400 text-sm">
                         <i data-lucide="loader-2" class="w-6 h-6 mx-auto mb-2 animate-spin text-slate-500"></i>
                         Chargement des domaines...
                     </td></tr>
                 </template>
 
                 <template x-if="erreur">
-                    <tr><td colspan="4" class="px-5 py-12 text-center text-red-600 text-sm">
+                    <tr><td colspan="{{ 5 if current_user.is_authenticated and current_user.role.nom in ['admin', 'gestionnaire'] else 4 }}" class="px-5 py-12 text-center text-red-600 text-sm">
                         <i data-lucide="alert-circle" class="w-6 h-6 mx-auto mb-2"></i>
                         <span x-text="erreur"></span>
                     </td></tr>
@@ -68,7 +86,7 @@
 
                 <template x-if="!chargementEnCours && !erreur && domainesFiltres().length === 0">
                     <tr>
-                        <td colspan="4" class="px-5 py-12 text-center">
+                        <td colspan="{{ 5 if current_user.is_authenticated and current_user.role.nom in ['admin', 'gestionnaire'] else 4 }}" class="px-5 py-12 text-center">
                             <div class="gtm-empty-state border-none p-0 bg-transparent">
                                 <div class="gtm-empty-state-icon">
                                     <i data-lucide="layers" class="w-5 h-5"></i>
@@ -89,7 +107,16 @@
                 </template>
 
                 <template x-for="d in domainesFiltres()" :key="d.id">
-                    <tr>
+                    <tr @click="!modeSelection && ouvrirModaleFormations(d)"
+                        @keydown.enter="!modeSelection && ouvrirModaleFormations(d)"
+                        :class="{ 'cursor-pointer': !modeSelection }"
+                        tabindex="0"
+                        class="gtm-interactive-row">
+                        {% if current_user.is_authenticated and current_user.role.nom in ['admin', 'gestionnaire'] %}
+                        <td x-show="modeSelection" class="px-3 py-4 align-middle">
+                            <input type="checkbox" :value="d.id" :checked="selectionnees.includes(d.id)" @click.stop @change="toggleSelection(d.id)" class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                        </td>
+                        {% endif %}
                         <td class="font-medium text-slate-900">
                             <div class="flex items-center gap-3">
                                 <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center text-xs font-bold">
@@ -101,7 +128,7 @@
                             </div>
                         </td>
                         <td class="text-center">
-                            <button @click="ouvrirModaleFormations(d)"
+                            <button @click.stop="ouvrirModaleFormations(d)"
                                     class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors font-tabular cursor-pointer"
                                     title="Cliquer pour afficher les formations de ce domaine">
                                 <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
@@ -109,7 +136,7 @@
                             </button>
                         </td>
                         <td class="text-center">
-                            <button @click="ouvrirModaleFormateurs(d)"
+                            <button @click.stop="ouvrirModaleFormateurs(d)"
                                     class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors font-tabular cursor-pointer"
                                     title="Cliquer pour afficher les formateurs de ce domaine">
                                 <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
@@ -118,17 +145,17 @@
                         </td>
                         <td class="text-right">
                             <div class="flex items-center justify-end gap-2">
-                                <button @click="ouvrirModaleFormations(d)"
+                                <button @click.stop="ouvrirModaleFormations(d)"
                                         class="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
                                         title="Voir les formations associées">
                                     <i data-lucide="eye" class="w-4 h-4"></i>
                                 </button>
-                                <button @click="ouvrirModaleEdition(d)"
+                                <button @click.stop="ouvrirModaleEdition(d)"
                                         class="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                                         title="Modifier ce domaine">
                                     <i data-lucide="pencil" class="w-4 h-4"></i>
                                 </button>
-                                <button @click="confirmerSuppression(d)"
+                                <button @click.stop="ouvrirModaleSuppression(d)"
                                         class="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
                                         title="Supprimer ce domaine">
                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
@@ -142,6 +169,8 @@
     </div>
 
     <!-- Modale de Création Domaine -->
+    <div x-show="modaleSuppressionOuverte" x-cloak @click.self="fermerModaleSuppression()" class="fixed inset-0 bg-gray-900/50 z-50 flex items-center justify-center p-4"><div class="bg-white rounded-xl w-full max-w-sm p-6" @click.stop><template x-if="!erreurSuppression"><div class="gtm-alert-danger mb-4"><div class="gtm-alert-danger-icon"><i data-lucide="alert-triangle" class="w-5 h-5"></i></div><div><h3 class="gtm-alert-danger-title">Supprimer ce domaine ?</h3><p class="gtm-alert-danger-text" x-text="'« ' + (aSupprimer?.nom || '') + ' » sera définitivement supprimé.'"></p></div></div></template><template x-if="erreurSuppression"><div class="gtm-alert-danger mb-4"><div class="gtm-alert-danger-icon"><i data-lucide="shield-alert" class="w-5 h-5"></i></div><div><h3 class="gtm-alert-danger-title">Suppression impossible</h3><p class="gtm-alert-danger-text" x-text="erreurSuppression"></p></div></div></template><div class="flex justify-end gap-2"><button @click="fermerModaleSuppression()" class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"><span x-text="erreurSuppression ? 'Fermer' : 'Annuler'"></span></button><button x-show="erreurSuppression && (aSupprimer?.nb_formations || 0)" @click="ouvrirModaleFormations(aSupprimer); fermerModaleSuppression()" class="gtm-btn gtm-btn-secondary text-xs">Voir les formations</button><button x-show="erreurSuppression && (aSupprimer?.nb_formateurs || 0)" @click="ouvrirModaleFormateurs(aSupprimer); fermerModaleSuppression()" class="gtm-btn gtm-btn-secondary text-xs">Voir les formateurs</button><button x-show="!erreurSuppression" @click="confirmerSuppression()" class="bg-danger text-white text-sm font-medium px-4 py-2 rounded-lg">Supprimer définitivement</button></div></div></div>
+
     <div x-show="modaleCreationOuverte" x-cloak @click.self="modaleCreationOuverte = false" @keydown.escape.window="modaleCreationOuverte = false"
          class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl border border-slate-200" @click.stop>
@@ -164,7 +193,7 @@
                 </div>
             </template>
 
-            <form @submit.prevent="soumettreCreation()" class="space-y-4">
+            <form @submit.prevent="soumettreCreation()" data-protect-unsaved class="space-y-4">
                 <div>
                     <label for="domaine-nom" class="gtm-label">Intitulé du domaine d'expertise</label>
                     <input id="domaine-nom" type="text" x-model.trim="formulaireCreation.nom" required class="gtm-input" placeholder="Ex: Cloud & DevOps, Intelligence Artificielle...">
@@ -208,7 +237,7 @@
                 </div>
             </template>
 
-            <form @submit.prevent="soumettreEdition()" class="space-y-4">
+            <form @submit.prevent="soumettreEdition()" data-protect-unsaved class="space-y-4">
                 <div>
                     <label for="domaine-edition-nom" class="gtm-label">Intitulé du domaine</label>
                     <input id="domaine-edition-nom" type="text" x-model.trim="formulaireEdition.nom" required class="gtm-input">
@@ -409,4 +438,3 @@
 </script>
 <script src="{{ url_for('static', filename='js/domaines.js') }}"></script>
 {% endblock %}
-

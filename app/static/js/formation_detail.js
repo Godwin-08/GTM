@@ -44,6 +44,9 @@ function pageFormationDetailData(formationId) {
 
         /** @type {Array} Sessions associées à cette formation */
         sessions: [],
+        modeSelection: false,
+        selectionnees: [],
+        suppressionEnCours: false,
 
         /** @type {boolean} Indicateur de chargement réseau */
         chargementEnCours: true,
@@ -135,6 +138,40 @@ function pageFormationDetailData(formationId) {
             if (s.taux_remplissage >= 0.7) return 'bg-success/10 text-success';
             if (s.taux_remplissage >= 0.4) return 'bg-warning/10 text-warning';
             return 'bg-danger/10 text-danger';
+        },
+
+        toggleSelection(id) {
+            this.selectionnees = this.selectionnees.includes(id)
+                ? this.selectionnees.filter(item => item !== id)
+                : [...this.selectionnees, id];
+        },
+
+        toggleSelectionGlobale() {
+            const ids = this.sessions.map(session => session.id);
+            const tousSelectionnes = ids.length > 0 && ids.every(id => this.selectionnees.includes(id));
+            this.selectionnees = tousSelectionnes ? [] : ids;
+        },
+
+        async supprimerSelection() {
+            if (!this.selectionnees.length || !await window.demanderConfirmation(`${this.selectionnees.length} session(s) sélectionnée(s) seront définitivement supprimées.`)) return;
+            this.suppressionEnCours = true;
+            try {
+                const res = await fetch('/api/sessions', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ ids: this.selectionnees }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.erreur || 'Impossible de supprimer les sessions sélectionnées.');
+                this.sessions = this.sessions.filter(session => !this.selectionnees.includes(session.id));
+                this.selectionnees = [];
+                window.afficherToast?.('succes', `${data.supprimees?.length || 0} session(s) supprimée(s).`);
+            } catch (err) {
+                window.afficherToast?.('erreur', err.message || 'Erreur lors de la suppression.');
+            } finally {
+                this.suppressionEnCours = false;
+            }
         },
     };
 }

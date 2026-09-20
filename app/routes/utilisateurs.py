@@ -9,6 +9,7 @@ Ce module expose les endpoints RESTful (strictement réservés aux administrateu
 - La modification des données de profil, statut d'activité et rôles (avec garde anti-auto-désactivation).
 """
 
+from datetime import datetime
 from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
@@ -63,11 +64,26 @@ def utilisateur_vers_dict(utilisateur):
 @admin_required
 def liste_utilisateurs():
     """
-    Renvoie la liste exhaustive des utilisateurs enregistrés dans la plateforme.
+    Renvoie la liste des utilisateurs enregistrés.
     Réservé au rôle Administrateur.
+
+    Paramètres GET optionnels :
+    - role (str)                 : Filtre sur le nom du rôle (ex: 'formateur').
+    - sans_profil_formateur (0|1): Si 1, exclut les utilisateurs déjà liés à un profil Formateur.
     """
-    utilisateurs = Utilisateur.query.all()
+    query = Utilisateur.query
+
+    role_filtre = request.args.get("role", "").strip()
+    if role_filtre:
+        query = query.join(Utilisateur.role).filter(db.text("role.nom = :nom")).params(nom=role_filtre)
+
+    if request.args.get("sans_profil_formateur") == "1":
+        # Exclure les utilisateurs ayant déjà un Formateur associé
+        query = query.filter(~Utilisateur.formateur.has())
+
+    utilisateurs = query.all()
     return jsonify([utilisateur_vers_dict(u) for u in utilisateurs]), 200
+
 
 
 @utilisateurs_bp.route("/<int:utilisateur_id>", methods=["GET"])
@@ -229,3 +245,81 @@ def modifier_utilisateur(utilisateur_id):
 
     db.session.commit()
     return jsonify(utilisateur_vers_dict(utilisateur)), 200
+
+
+# =============================================================================
+# Exports Utilisateurs (CSV & Excel)
+# =============================================================================
+
+@utilisateurs_bp.route("/export/csv", methods=["GET"])
+@admin_required
+def export_utilisateurs_csv():
+    """Génère un export CSV de la liste des comptes utilisateurs."""
+    from app.services.export_service import generer_csv_response
+
+    utilisateurs = Utilisateur.query.order_by(Utilisateur.nom.asc()).all()
+
+    en_tetes = {
+        "id": "ID",
+        "nom": "Nom complet",
+        "email": "Adresse courriel",
+        "role": "Rôle",
+        "statut": "Statut de compte",
+        "formateur_lie": "Profil Formateur",
+        "date_creation": "Date de création",
+    }
+
+    lignes = []
+    for u in utilisateurs:
+        lignes.append({
+            "id": u.id,
+            "nom": u.nom,
+            "email": u.email,
+            "role": u.role.nom if u.role else "",
+            "statut": u.statut.capitalize().replace("_", " "),
+            "formateur_lie": "Oui (Interne)" if u.formateur else "Non",
+            "date_creation": u.date_creation.strftime("%Y-%m-%d %H:%M") if u.date_creation else "",
+        })
+
+    date_str = datetime.now().strftime("%Y%m%d")
+    return generer_csv_response(f"utilisateurs_export_{date_str}.csv", en_tetes, lignes)
+
+
+@utilisateurs_bp.route("/export/xlsx", methods=["GET"])
+@admin_required
+def export_utilisateurs_xlsx():
+    """Génère un export Excel (.xlsx) stylisé des comptes utilisateurs."""
+    from app.services.export_service import generer_xlsx_response
+
+    utilisateurs = Utilisateur.query.order_by(Utilisateur.nom.asc()).all()
+
+    en_tetes = {
+        "id": "ID",
+        "nom": "Nom complet",
+        "email": "Adresse courriel",
+        "role": "Rôle",
+        "statut": "Statut de compte",
+        "formateur_lie": "Profil Formateur",
+        "date_creation": "Date de création",
+    }
+
+    lignes = []
+    for u in utilisateurs:
+        lignes.append({
+            "id": u.id,
+            "nom": u.nom,
+            "email": u.email,
+            "role": u.role.nom if u.role else "",
+            "statut": u.statut.capitalize().replace("_", " "),
+            "formateur_lie": "Oui (Interne)" if u.formateur else "Non",
+            "date_creation": u.date_creation.strftime("%Y-%m-%d %H:%M") if u.date_creation else "",
+        })
+
+    date_str = datetime.now().strftime("%Y%m%d")
+    return generer_xlsx_response(
+        f"utilisateurs_export_{date_str}.xlsx",
+        en_tetes,
+        lignes,
+        titre_feuille="Utilisateurs"
+    )
+

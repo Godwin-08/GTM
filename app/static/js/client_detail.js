@@ -22,6 +22,9 @@ function pageClientDetailData(clientId) {
 
         /** @type {Array} Participants appartenant à cette entreprise cliente */
         participants: [],
+        modeSelection: false,
+        selectionnees: [],
+        suppressionEnCours: false,
 
         /** @type {boolean} Indicateur de chargement réseau */
         chargementEnCours: true,
@@ -88,6 +91,40 @@ function pageClientDetailData(clientId) {
                 annulee: 'Annulée',
             };
             return LABELS[statut] || statut;
+        },
+
+        toggleSelection(id) {
+            this.selectionnees = this.selectionnees.includes(id)
+                ? this.selectionnees.filter(item => item !== id)
+                : [...this.selectionnees, id];
+        },
+
+        toggleSelectionGlobale() {
+            const ids = this.participants.map(participant => participant.id);
+            const tousSelectionnes = ids.length > 0 && ids.every(id => this.selectionnees.includes(id));
+            this.selectionnees = tousSelectionnes ? [] : ids;
+        },
+
+        async supprimerSelection() {
+            if (!this.selectionnees.length || !await window.demanderConfirmation(`${this.selectionnees.length} participant(s) sélectionné(s) seront définitivement supprimé(s).`)) return;
+            this.suppressionEnCours = true;
+            try {
+                const res = await fetch('/api/participants', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ ids: this.selectionnees }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.erreur || 'Impossible de supprimer les participants sélectionnés.');
+                this.participants = this.participants.filter(participant => !this.selectionnees.includes(participant.id));
+                this.selectionnees = [];
+                window.afficherToast?.('succes', `${data.supprimees?.length || 0} participant(s) supprimé(s).`);
+            } catch (err) {
+                window.afficherToast?.('erreur', err.message || 'Erreur lors de la suppression.');
+            } finally {
+                this.suppressionEnCours = false;
+            }
         },
     };
 }

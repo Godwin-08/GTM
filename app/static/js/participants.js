@@ -2,6 +2,8 @@ function pageParticipantsData() {
     return {
         participants: [],
         clients: [],
+        selectionnees: [], bloquees: [],
+        modeSelection: false,
         chargementEnCours: true,
         erreur: null,
         filtres: {
@@ -17,6 +19,21 @@ function pageParticipantsData() {
         editionEnCours: false,
         erreurEdition: null,
         edition: { id: null, nom: '', email: '', client_id: '' },
+
+        // --- État de la modale de suppression ---
+        modaleSuppressionOuverte: false,
+        suppressionEnCours: false,
+        erreurSuppression: null,
+        aSupprimer: null,
+
+        // --- État de la modale d'import par lot (Point 8) ---
+        modaleImportOuverte: false,
+        importEnCours: false,
+        fichierImport: null,
+        nomFichierImport: '',
+        dragOver: false,
+        rapportImport: null,
+        erreurImport: null,
 
         init() {
             window.addEventListener('popstate', () => {
@@ -135,6 +152,80 @@ function pageParticipantsData() {
             return copie.sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'));
         },
 
+        basculerModeSelection() {
+            this.modeSelection = !this.modeSelection;
+            this.selectionnees = [];
+            this.bloquees = [];
+        },
+
+        toggleSelection(id) {
+            if (this.selectionnees.includes(id)) {
+                this.selectionnees = this.selectionnees.filter(item => item !== id);
+            } else {
+                this.selectionnees = [...this.selectionnees, id];
+            }
+        },
+
+        toggleSelectionGlobale() {
+            const visibles = this.participantsFiltres().map(participant => participant.id);
+            const tousVisiblesSelectionnes = visibles.length > 0 && visibles.every(id => this.selectionnees.includes(id));
+            if (tousVisiblesSelectionnes) {
+                this.selectionnees = this.selectionnees.filter(id => !visibles.includes(id));
+            } else {
+                this.selectionnees = [...new Set([...this.selectionnees, ...visibles])];
+            }
+        },
+
+        async supprimerSelection() {
+            if (this.selectionnees.length === 0) return;
+            const ok = await window.demanderConfirmation(
+                `${this.selectionnees.length} participant(s) sélectionné(s) seront définitivement supprimé(s).`
+            );
+            if (!ok) return;
+
+            try {
+                const res = await fetch(urlParticipants, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ ids: this.selectionnees }),
+                });
+                const data = await res.json().catch(() => ({}));
+                this.bloquees = data.bloquees || [];
+                if (!res.ok) {
+                    if (this.bloquees.length) {
+                        const bloque = this.participants.find(participant => participant.id === this.bloquees[0].id) || {};
+                        this.aSupprimer = { ...bloque, id: this.bloquees[0].id, client_id: this.bloquees[0].client_id };
+                        this.erreurSuppression = data.erreur || 'Ce participant possède encore des inscriptions.';
+                        this.modaleSuppressionOuverte = true;
+                        this.$nextTick(() => lucide.createIcons());
+                        return;
+                    }
+                    throw new Error(data.erreur || 'Impossible de supprimer les participants sélectionnés.');
+                }
+
+                const supprimees = data.supprimees || [];
+                const bloquees = data.bloquees || [];
+                this.participants = this.participants.filter(participant => !supprimees.includes(participant.id));
+                this.selectionnees = bloquees.map(participant => participant.id);
+                if (typeof window.afficherToast === 'function') {
+                    if (bloquees.length) {
+                        const bloque = this.participants.find(participant => participant.id === bloquees[0].id) || {};
+                        this.aSupprimer = { ...bloque, id: bloquees[0].id, client_id: bloquees[0].client_id };
+                        this.erreurSuppression = `${supprimees.length} participant(s) supprimé(s). ${bloquees.length} participant(s) conservé(s) car ils ont des inscriptions.`;
+                        this.modaleSuppressionOuverte = true;
+                        this.$nextTick(() => lucide.createIcons());
+                    } else {
+                        window.afficherToast('succes', `${supprimees.length} participant(s) supprimé(s).`);
+                    }
+                }
+            } catch (err) {
+                console.error('Erreur suppression sélection participants :', err);
+                if (typeof window.afficherToast === 'function') window.afficherToast('erreur', err.message);
+                else alert(err.message);
+            }
+        },
+
         ouvrirModaleCreation() {
             this.formulaire = { nom: '', email: '', client_id: '' };
             this.erreurFormulaire = null;
@@ -203,6 +294,161 @@ function pageParticipantsData() {
                 console.error('Erreur modification participant :', err);
                 this.erreurEdition = 'Impossible de contacter le serveur.';
             } finally { this.editionEnCours = false; }
+        },
+
+        /**
+         * Ouvre la modale de confirmation de suppression pour un participant.
+         * @param {object} participant
+         */
+        ouvrirModaleSuppression(participant) {
+            this.aSupprimer = participant;
+            this.erreurSuppression = null;
+            this.modaleSuppressionOuverte = true;
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        /**
+         * Ferme la modale de suppression si aucune opération n'est en cours.
+         */
+        fermerModaleSuppression() {
+            if (!this.suppressionEnCours) {
+                this.modaleSuppressionOuverte = false;
+                this.aSupprimer = null;
+                this.erreurSuppression = null;
+            }
+        },
+
+        /**
+         * Confirme et exécute la suppression du participant via DELETE /api/participants/<id>.
+         */
+        async confirmerSuppression() {
+            if (!this.aSupprimer) return;
+            this.suppressionEnCours = true;
+            this.erreurSuppression = null;
+
+            try {
+                const res = await fetch(`${urlParticipants}/${this.aSupprimer.id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                });
+
+                if (!res.ok) {
+                    let errData = {};
+                    try {
+                        errData = await res.json();
+                    } catch {}
+                    this.erreurSuppression = errData.erreur || 'Erreur lors de la suppression du participant.';
+                    if (typeof window.afficherToast === 'function') {
+                        window.afficherToast('erreur', this.erreurSuppression);
+                    }
+                    return;
+                }
+
+                const nomSupprime = this.aSupprimer.nom;
+                this.participants = this.participants.filter(p => p.id !== this.aSupprimer.id);
+                this.selectionnees = this.selectionnees.filter(id => id !== this.aSupprimer.id);
+                this.modaleSuppressionOuverte = false;
+                this.aSupprimer = null;
+
+                if (typeof window.afficherToast === 'function') {
+                    window.afficherToast('succes', `Participant "${nomSupprime}" supprimé avec succès.`);
+                }
+            } catch (err) {
+                console.error('Erreur suppression participant :', err);
+                this.erreurSuppression = 'Impossible de contacter le serveur.';
+            } finally {
+                this.suppressionEnCours = false;
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+
+        // =========================================================================
+        // Méthodes d'Import par Lot (Point 8)
+        // =========================================================================
+
+        ouvrirModaleImport() {
+            this.reinitialiserImport();
+            this.modaleImportOuverte = true;
+            this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
+        },
+
+        fermerModaleImport() {
+            if (!this.importEnCours) {
+                this.modaleImportOuverte = false;
+                this.reinitialiserImport();
+            }
+        },
+
+        reinitialiserImport() {
+            this.fichierImport = null;
+            this.nomFichierImport = '';
+            this.rapportImport = null;
+            this.erreurImport = null;
+            this.importEnCours = false;
+            this.dragOver = false;
+            const input = document.getElementById('fichier-import-participants');
+            if (input) input.value = '';
+        },
+
+        fichierSelectionne(event) {
+            const files = event.target.files || (event.dataTransfer && event.dataTransfer.files);
+            if (files && files.length > 0) {
+                const f = files[0];
+                const nomLower = f.name.toLowerCase();
+                if (!nomLower.endsWith('.csv') && !nomLower.endsWith('.xlsx')) {
+                    this.erreurImport = 'Format non supporté. Veuillez choisir un fichier .csv ou .xlsx.';
+                    return;
+                }
+                this.fichierImport = f;
+                this.nomFichierImport = f.name;
+                this.erreurImport = null;
+                this.rapportImport = null;
+            }
+        },
+
+        async soumettreImport() {
+            if (!this.fichierImport) {
+                this.erreurImport = 'Veuillez sélectionner un fichier à importer.';
+                return;
+            }
+
+            this.importEnCours = true;
+            this.erreurImport = null;
+            this.rapportImport = null;
+
+            const formData = new FormData();
+            formData.append('fichier', this.fichierImport);
+
+            try {
+                const res = await fetch('/api/participants/import', {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData,
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    this.erreurImport = data.erreur || 'Erreur lors du traitement de l\'import.';
+                    return;
+                }
+
+                this.rapportImport = data;
+
+                if (data.nb_importes > 0) {
+                    if (typeof window.afficherToast === 'function') {
+                        window.afficherToast('succes', `${data.nb_importes} participant(s) importé(s) avec succès.`);
+                    }
+                    // Rafraîchir la liste sans fermer immédiatement pour laisser l'utilisateur voir le compte-rendu
+                    await this.appliquerFiltres(false, false);
+                }
+            } catch (err) {
+                console.error('Erreur import participants :', err);
+                this.erreurImport = 'Impossible de contacter le serveur pour l\'import.';
+            } finally {
+                this.importEnCours = false;
+                this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
+            }
         },
     };
 }

@@ -112,6 +112,27 @@ class SessionsValidationTestCase(unittest.TestCase):
         res = self.client.post("/api/sessions", json=donnees_invalides_format)
         self.assertEqual(res.status_code, 400)
 
+    def test_endpoint_creation_ignore_statut_envoye(self):
+        self.connecter()
+        debut = date.today() + timedelta(days=5)
+        fin = debut + timedelta(days=2)
+
+        res = self.client.post(
+            "/api/sessions",
+            json={
+                "formation_id": self.formation.id,
+                "formateur_id": self.formateur.id,
+                "date_debut": debut.isoformat(),
+                "date_fin": fin.isoformat(),
+                "type": "intra",
+                "capacite_max": 10,
+                "statut": "annulee",
+            },
+        )
+
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(res.get_json()["statut"], "planifiee")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -397,12 +397,13 @@ class FiltersTestCase(unittest.TestCase):
         )
         self.assertEqual(connexion.status_code, 200)
 
-        # Formateur 1 ne voit que ses formations (Python Web), ses formateurs (lui-même), et ses inscriptions
+        # Formateur 1 ne voit que ses formations (Python Web), et ses inscriptions
         formations = self.client.get("/api/formations").get_json()
         self.assertEqual([f["id"] for f in formations], [self.formation_web.id])
 
-        formateurs = self.client.get("/api/formateurs").get_json()
-        self.assertEqual([f["id"] for f in formateurs], [self.formateur_1.id])
+        # Point 5 : Le formateur ne doit pas avoir acces a l'API des formateurs
+        res_formateurs = self.client.get("/api/formateurs")
+        self.assertEqual(res_formateurs.status_code, 403)
 
         # Requête pour session de Formateur 2 -> 0 résultats
         inscriptions_s2 = self.client.get(f"/api/inscriptions?session_id={self.s2.id}").get_json()
@@ -573,9 +574,9 @@ class FiltersTestCase(unittest.TestCase):
         )
         self.assertEqual(connexion.status_code, 200)
 
-        # Formateur 2 ne doit voir que les clients et participants associés à ses sessions (s2 -> parts_s2 sur client_corp)
-        clients = self.client.get("/api/clients").get_json()
-        self.assertEqual([c["id"] for c in clients], [self.client_corp.id])
+        # Point 5 : Formateur 2 ne doit pas avoir acces a la liste des clients
+        res_clients = self.client.get("/api/clients")
+        self.assertEqual(res_clients.status_code, 403)
 
         # Tentative d'accès aux participants du client_other via client_id parameter -> 0 résultat (RBAC préservé)
         res_parts = self.client.get(f"/api/participants?client_id={self.client_other.id}").get_json()

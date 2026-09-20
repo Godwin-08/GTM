@@ -21,6 +21,8 @@ function pageFormationsData() {
     return {
         /** @type {Array} Formations chargées depuis l'API */
         formations: [],
+        modeSelection: false,
+        selectionnees: [],
 
         /** @type {Array} Domaines disponibles pour le sélecteur de filtre */
         domaines: [],
@@ -271,6 +273,30 @@ function pageFormationsData() {
         },
 
         /** Ouvre la modale de création et réinitialise le formulaire. */
+        basculerModeSelection() {
+            this.modeSelection = !this.modeSelection;
+            this.selectionnees = [];
+        },
+        toggleSelection(id) {
+            this.selectionnees = this.selectionnees.includes(id) ? this.selectionnees.filter(item => item !== id) : [...this.selectionnees, id];
+        },
+        toggleSelectionGlobale() {
+            const visibles = this.formationsFiltrees().map(formation => formation.id);
+            const tousSelectionnes = visibles.length > 0 && visibles.every(id => this.selectionnees.includes(id));
+            this.selectionnees = tousSelectionnes ? this.selectionnees.filter(id => !visibles.includes(id)) : [...new Set([...this.selectionnees, ...visibles])];
+        },
+        async supprimerSelection() {
+            if (!this.selectionnees.length || !await window.demanderConfirmation(`${this.selectionnees.length} formation(s) sélectionnée(s) seront définitivement supprimée(s).`)) return;
+            try {
+                const res = await fetch(urlFormations, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ ids: this.selectionnees }) });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.erreur || 'Suppression impossible.');
+                this.formations = this.formations.filter(formation => !this.selectionnees.includes(formation.id));
+                this.modeSelection = false; this.selectionnees = [];
+                window.afficherToast?.('succes', `${data.supprimees.length} formation(s) supprimée(s).`);
+            } catch (err) { window.afficherToast?.('erreur', err.message); }
+        },
+
         ouvrirModaleCreation() {
             this.formulaire = { titre: '', domaine_id: '', duree_jours: 3, description: '' };
             this.erreurFormulaire = null;

@@ -166,13 +166,40 @@
                                        x-model="motDePasse"
                                        required
                                        minlength="8"
-                                       placeholder="8 caractères minimum"
+                                       placeholder="Définir un mot de passe fort"
                                        class="gtm-input pr-10">
                                 <button type="button"
                                         @click="motDePasseVisible = !motDePasseVisible"
                                         class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
                                     <i :data-lucide="motDePasseVisible ? 'eye-off' : 'eye'" class="w-4 h-4"></i>
                                 </button>
+                            </div>
+
+                            <!-- Exigences de sécurité en temps réel -->
+                            <div class="mt-2.5 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1.5">
+                                <p class="font-semibold text-slate-700 mb-1">Critères de sécurité requis :</p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                    <div class="flex items-center gap-1.5" :class="critere8Car ? 'text-emerald-600 font-medium' : 'text-slate-400'">
+                                        <i :data-lucide="critere8Car ? 'check-circle-2' : 'circle'" class="w-3.5 h-3.5"></i>
+                                        <span>8 caractères min.</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5" :class="critereMaj ? 'text-emerald-600 font-medium' : 'text-slate-400'">
+                                        <i :data-lucide="critereMaj ? 'check-circle-2' : 'circle'" class="w-3.5 h-3.5"></i>
+                                        <span>1 majuscule (A-Z)</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5" :class="critereMin ? 'text-emerald-600 font-medium' : 'text-slate-400'">
+                                        <i :data-lucide="critereMin ? 'check-circle-2' : 'circle'" class="w-3.5 h-3.5"></i>
+                                        <span>1 minuscule (a-z)</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5" :class="critereChiffre ? 'text-emerald-600 font-medium' : 'text-slate-400'">
+                                        <i :data-lucide="critereChiffre ? 'check-circle-2' : 'circle'" class="w-3.5 h-3.5"></i>
+                                        <span>1 chiffre (0-9)</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 sm:col-span-2" :class="critereSpecial ? 'text-emerald-600 font-medium' : 'text-slate-400'">
+                                        <i :data-lucide="critereSpecial ? 'check-circle-2' : 'circle'" class="w-3.5 h-3.5"></i>
+                                        <span>1 caractère spécial (@, #, $, !, %, etc.)</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -194,7 +221,7 @@
                         </div>
 
                         <div class="pt-2">
-                            <button type="submit" :disabled="envoiEnCours" class="gtm-btn gtm-btn-primary w-full justify-center py-2.5">
+                            <button type="submit" :disabled="envoiEnCours || !motDePasseValide" class="gtm-btn gtm-btn-primary w-full justify-center py-2.5 disabled:opacity-50">
                                 <span x-show="!envoiEnCours" class="flex items-center gap-2">
                                     <i data-lucide="check" class="w-4 h-4"></i> Activer mon compte
                                 </span>
@@ -225,6 +252,15 @@
                 erreurSoumission: null,
                 activationReussie: false,
 
+                get critere8Car() { return this.motDePasse.length >= 8; },
+                get critereMaj() { return /[A-Z]/.test(this.motDePasse); },
+                get critereMin() { return /[a-z]/.test(this.motDePasse); },
+                get critereChiffre() { return /\d/.test(this.motDePasse); },
+                get critereSpecial() { return /[!@#$%^&*(),.?":{}|<>\-_+=\[\]\\\/~`';]/.test(this.motDePasse); },
+                get motDePasseValide() {
+                    return this.critere8Car && this.critereMaj && this.critereMin && this.critereChiffre && this.critereSpecial;
+                },
+
                 async verifierToken() {
                     this.chargementVerification = true;
                     this.erreurToken = null;
@@ -254,8 +290,8 @@
                         this.erreurSoumission = "Les deux mots de passe ne correspondent pas.";
                         return;
                     }
-                    if (this.motDePasse.length < 8) {
-                        this.erreurSoumission = "Le mot de passe doit comporter au moins 8 caractères.";
+                    if (!this.motDePasseValide) {
+                        this.erreurSoumission = "Le mot de passe ne respecte pas l'ensemble des règles de sécurité (8 car., majuscule, minuscule, chiffre, symbole).";
                         return;
                     }
 

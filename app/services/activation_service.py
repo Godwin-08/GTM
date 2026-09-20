@@ -59,13 +59,30 @@ def est_token_expire(expiration: Optional[datetime]) -> bool:
     return datetime.utcnow() > expiration
 
 
+import re
+
+
 def valider_force_mot_de_passe(mot_de_passe: str) -> Tuple[bool, Optional[str]]:
     """
-    Vérifie la conformité du mot de passe avec la politique minimale de sécurité (au moins 8 caractères).
-    
+    Vérifie la conformité du mot de passe avec la politique de sécurité :
+    - Au moins 8 caractères
+    - Au moins une lettre majuscule (A-Z)
+    - Au moins une lettre minuscule (a-z)
+    - Au moins un chiffre (0-9)
+    - Au moins un caractère spécial (!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/~)
+
+    :param mot_de_passe: Chaîne de caractères en clair.
     :return: Tuple (est_valide, message_erreur_optionnel)
     """
     if not mot_de_passe or len(mot_de_passe) < 8:
-        return False, "Le mot de passe doit contenir au moins 8 caractères."
+        return False, "Le mot de passe doit comporter au moins 8 caractères."
+    if not re.search(r"[A-Z]", mot_de_passe):
+        return False, "Le mot de passe doit comporter au moins une lettre majuscule."
+    if not re.search(r"[a-z]", mot_de_passe):
+        return False, "Le mot de passe doit comporter au moins une lettre minuscule."
+    if not re.search(r"\d", mot_de_passe):
+        return False, "Le mot de passe doit comporter au moins un chiffre."
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>\-_+=\[\]\\\/~`';]", mot_de_passe):
+        return False, "Le mot de passe doit comporter au moins un caractère spécial (ex: @, #, $, !, %, etc.)."
     return True, None
 

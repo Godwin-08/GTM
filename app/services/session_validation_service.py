@@ -55,11 +55,37 @@ def valider_dates_et_statut(date_debut, date_fin, statut, reference_date=None):
         raise ErreurValidationSession("une session terminée doit être finie avant aujourd'hui")
 
 
+def calculer_statut_depuis_dates(date_debut, date_fin, reference_date=None):
+    """
+    Calcule automatiquement le statut d'une session à partir de ses dates.
+    Utilisé à la création quand aucun statut n'est explicitement fourni.
+
+    Règles :
+    - date_debut > aujourd'hui              → 'planifiee'
+    - date_debut <= aujourd'hui <= date_fin → 'en_cours'
+    - date_fin   < aujourd'hui              → 'terminee'
+
+    :param date_debut: Objet date de début.
+    :param date_fin:   Objet date de fin.
+    :param reference_date: Date de référence (default: aujourd'hui).
+    :return: Statut calculé ('planifiee', 'en_cours' ou 'terminee').
+    """
+    today = reference_date or date.today()
+    if date_debut > today:
+        return "planifiee"
+    if date_debut <= today <= date_fin:
+        return "en_cours"
+    return "terminee"
+
+
 def valeurs_session_validees(donnees, session=None):
     """
     Parse et valide les données de session soumises en création (session=None)
     ou en mise à jour partielle (session existante fournie).
-    
+
+    À la création, si aucun statut n'est fourni, il est calculé automatiquement
+    depuis les dates (comportement attendu par l'encadrant — Point 10).
+
     :return: Tuple (date_debut, date_fin, statut)
     """
     if session is None:
@@ -70,7 +96,9 @@ def valeurs_session_validees(donnees, session=None):
             )
         date_debut = convertir_date(donnees["date_debut"], "date_debut")
         date_fin = convertir_date(donnees["date_fin"], "date_fin")
-        statut = donnees.get("statut", "planifiee")
+        # Le statut d'une nouvelle session est toujours déduit de ses dates.
+        # Une annulation est une décision métier qui intervient après la création.
+        statut = calculer_statut_depuis_dates(date_debut, date_fin)
     else:
         date_debut = convertir_date(donnees["date_debut"], "date_debut") if "date_debut" in donnees else session.date_debut
         date_fin = convertir_date(donnees["date_fin"], "date_fin") if "date_fin" in donnees else session.date_fin
@@ -78,4 +106,5 @@ def valeurs_session_validees(donnees, session=None):
 
     valider_dates_et_statut(date_debut, date_fin, statut)
     return date_debut, date_fin, statut
+
 

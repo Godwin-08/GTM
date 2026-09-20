@@ -228,6 +228,55 @@ def modifier_participant(participant_id):
     return jsonify(participant_vers_dict(participant)), 200
 
 
+@participants_bp.route("", methods=["DELETE"])
+@gestionnaire_ou_admin_required
+def supprimer_participants_en_lot():
+    """Supprime plusieurs participants sélectionnés sans inscriptions associées."""
+    donnees = request.get_json(silent=True) or {}
+    ids = donnees.get("ids")
+
+    if not isinstance(ids, list) or not ids:
+        return jsonify({"erreur": "Aucun participant sélectionné."}), 400
+
+    try:
+        ids_valides = list({int(raw_id) for raw_id in ids})
+    except (TypeError, ValueError):
+        return jsonify({"erreur": "Identifiants de participant invalides."}), 400
+
+    if any(participant_id <= 0 for participant_id in ids_valides):
+        return jsonify({"erreur": "Identifiants de participant invalides."}), 400
+
+    participants = Participant.query.filter(Participant.id.in_(ids_valides)).all()
+    if len(participants) != len(ids_valides):
+        return jsonify({"erreur": "Un ou plusieurs participants sont introuvables."}), 404
+
+    participants_avec_inscriptions = (
+        db.session.query(Participant.id, Participant.nom, Participant.client_id, db.func.count(Inscription.id))
+        .join(Inscription, Inscription.participant_id == Participant.id)
+        .filter(Participant.id.in_(ids_valides))
+        .group_by(Participant.id, Participant.nom, Participant.client_id)
+        .all()
+    )
+    ids_bloques = {participant_id for participant_id, _, _, _ in participants_avec_inscriptions}
+    participants_bloques = [
+        {"id": participant_id, "nom": nom, "client_id": client_id, "inscriptions": nb_inscriptions}
+        for participant_id, nom, client_id, nb_inscriptions in participants_avec_inscriptions
+    ]
+    participants_supprimes = [participant.id for participant in participants if participant.id not in ids_bloques]
+    for participant in participants:
+        if participant.id not in ids_bloques:
+            db.session.delete(participant)
+    if not participants_supprimes:
+        return jsonify({
+            "erreur": "Aucun participant supprimable : les participants sélectionnés possèdent encore des inscriptions.",
+            "supprimees": [],
+            "bloquees": participants_bloques,
+        }), 409
+    db.session.commit()
+
+    return jsonify({"supprimees": participants_supprimes, "bloquees": participants_bloques}), 200
+
+
 @participants_bp.route("/<int:participant_id>", methods=["DELETE"])
 @gestionnaire_ou_admin_required
 def supprimer_participant(participant_id):
@@ -241,10 +290,47 @@ def supprimer_participant(participant_id):
     if inscription_existante is not None:
         nb_inscriptions = Inscription.query.filter_by(participant_id=participant_id).count()
         return jsonify({
-            "erreur": f"Impossible de supprimer ce participant : {nb_inscriptions} inscription(s) y sont associée(s)."
+            "erreur": f"Impossible de supprimer ce participant : {nb_inscriptions} inscription(s) y sont associée(s). Veuillez d'abord annuler ou supprimer ses inscriptions."
         }), 409
 
     db.session.delete(participant)
     db.session.commit()
 
     return "", 204
+
+
+# =============================================================================
+# Import par Lot de Participants (Point 8)
+# =============================================================================
+
+@participants_bp.route("/import", methods=["POST"])
+@gestionnaire_ou_admin_required
+def importer_participants():
+    """
+    Importe une liste de participants depuis un fichier CSV ou Excel (.xlsx).
+    Retourne un compte-rendu détaillé des lignes créées et des erreurs éventuelles.
+    """
+    from app.services.participant_import_service import importer_participants_depuis_flux
+
+    if "fichier" not in request.files:
+        return jsonify({"erreur": "Aucun fichier n'a été transmis dans la requête."}), 400
+
+    fichier = request.files["fichier"]
+    if not fichier or not fichier.filename:
+        return jsonify({"erreur": "Fichier invalide ou nom de fichier vide."}), 400
+
+    contenu = fichier.read()
+    if not contenu:
+        return jsonify({"erreur": "Le fichier téléchargé est vide."}), 400
+
+    rapport = importer_participants_depuis_flux(fichier.filename, contenu)
+    status_code = 200 if rapport.get("succes") else 400
+    return jsonify(rapport), status_code
+
+
+@participants_bp.route("/import/template", methods=["GET"])
+@gestionnaire_ou_admin_required
+def telecharger_template_import():
+    """Génère et télécharge le modèle CSV pour l'import de participants."""
+    from app.services.participant_import_service import generer_template_import_csv
+    return generer_template_import_csv()

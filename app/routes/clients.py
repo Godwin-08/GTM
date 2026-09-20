@@ -132,7 +132,7 @@ def obtenir_clients_filtres(user, args):
 
 
 @clients_bp.route("", methods=["GET"])
-@login_required
+@gestionnaire_ou_admin_required
 def liste_clients():
     """Renvoie la liste des clients filtrés selon les critères de la requête."""
     dicts, err = obtenir_clients_filtres(current_user, request.args)
@@ -142,7 +142,7 @@ def liste_clients():
 
 
 @clients_bp.route("/export/csv", methods=["GET"])
-@login_required
+@gestionnaire_ou_admin_required
 def export_clients_csv():
     """Génère un export CSV de la liste courante des clients."""
     dicts, err = obtenir_clients_filtres(current_user, request.args)
@@ -179,7 +179,7 @@ def export_clients_csv():
 
 
 @clients_bp.route("/export/xlsx", methods=["GET"])
-@login_required
+@gestionnaire_ou_admin_required
 def export_clients_xlsx():
     """Génère un export Excel (.xlsx) stylisé des clients."""
     dicts, err = obtenir_clients_filtres(current_user, request.args)
@@ -214,7 +214,7 @@ def export_clients_xlsx():
 
 
 @clients_bp.route("/<int:client_id>", methods=["GET"])
-@login_required
+@gestionnaire_ou_admin_required
 def detail_client(client_id):
     """Renvoie la fiche détaillée d'un client."""
     client = exiger_acces(clients_visibles(current_user), client_id, current_user)
@@ -262,6 +262,36 @@ def modifier_client(client_id):
     return jsonify(client_vers_dict(client)), 200
 
 
+@clients_bp.route("", methods=["DELETE"])
+@gestionnaire_ou_admin_required
+def supprimer_clients_en_lot():
+    """Supprime une sélection de clients sans participants associés."""
+    ids = (request.get_json(silent=True) or {}).get("ids")
+    if not isinstance(ids, list) or not ids:
+        return jsonify({"erreur": "Aucun client sélectionné."}), 400
+    try:
+        ids_valides = list({int(client_id) for client_id in ids})
+    except (TypeError, ValueError):
+        return jsonify({"erreur": "Identifiants de client invalides."}), 400
+
+    clients = Client.query.filter(Client.id.in_(ids_valides)).all()
+    if len(clients) != len(ids_valides):
+        return jsonify({"erreur": "Un ou plusieurs clients sont introuvables."}), 404
+    clients_lies = (
+        db.session.query(Client.nom_entreprise)
+        .join(Participant, Participant.client_id == Client.id)
+        .filter(Client.id.in_(ids_valides)).distinct().all()
+    )
+    if clients_lies:
+        return jsonify({"erreur": "Impossible de supprimer la sélection : des participants y sont associés."}), 409
+
+    supprimees = [client.id for client in clients]
+    for client in clients:
+        db.session.delete(client)
+    db.session.commit()
+    return jsonify({"supprimees": supprimees}), 200
+
+
 @clients_bp.route("/<int:client_id>", methods=["DELETE"])
 @gestionnaire_ou_admin_required
 def supprimer_client(client_id):
@@ -272,10 +302,9 @@ def supprimer_client(client_id):
     if participant_existant is not None:
         nb_participants = Participant.query.filter_by(client_id=client_id).count()
         return jsonify({
-            "erreur": f"Impossible de supprimer ce client : {nb_participants} participant(s) y sont associé(s)."
+            "erreur": f"Impossible de supprimer ce client : {nb_participants} participant(s) y sont associé(s). Veuillez d'abord supprimer ou réassigner ses participants."
         }), 409
 
     db.session.delete(client)
     db.session.commit()
     return "", 204
-

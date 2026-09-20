@@ -121,7 +121,7 @@
                     <tbody>
                         <template x-if="!client.sessions_historique || client.sessions_historique.length === 0">
                             <tr>
-                                <td colspan="5" class="px-5 py-10 text-center text-gray-400 text-sm">
+                                <td colspan="{{ 5 if current_user.role.nom in ['admin', 'gestionnaire'] else 4 }}" class="px-5 py-10 text-center text-gray-400 text-sm">
                                     <i data-lucide="calendar-x" class="w-6 h-6 mx-auto mb-2 text-gray-300"></i>
                                     Aucune session de formation enregistrée pour ce client.
                                 </td>
@@ -129,9 +129,9 @@
                         </template>
 
                         <template x-for="s in client.sessions_historique" :key="s.id">
-                            <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                            <tr @click="window.location.assign('/sessions/' + s.id)" @keydown.enter="window.location.assign('/sessions/' + s.id)" tabindex="0" class="gtm-detail-row border-b border-gray-100 last:border-0">
                                 <td class="px-5 py-4">
-                                    <a :href="`/formations/${s.formation_id}`" class="font-medium text-gray-900 hover:text-primary transition-colors" x-text="s.formation_titre"></a>
+                                    <a @click.stop :href="`/formations/${s.formation_id}`" class="font-medium text-gray-900 hover:text-primary transition-colors" x-text="s.formation_titre"></a>
                                 </td>
                                 <td class="px-5 py-4 text-gray-700 text-xs" x-text="s.date_debut + ' → ' + s.date_fin"></td>
                                 <td class="px-5 py-4 text-right">
@@ -144,7 +144,7 @@
                                           x-text="labelStatutSession(s.statut)"></span>
                                 </td>
                                 <td class="px-5 py-4 text-right">
-                                    <a :href="`/sessions/${s.id}`" class="text-xs font-medium text-primary hover:text-primary-hover inline-flex items-center gap-1">
+                                    <a @click.stop :href="`/sessions/${s.id}`" class="text-xs font-medium text-primary hover:text-primary-hover inline-flex items-center gap-1">
                                         <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                                         Voir la session
                                     </a>
@@ -165,10 +165,27 @@
                     <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary"
                           x-text="participants.length + ' participant' + (participants.length > 1 ? 's' : '')"></span>
                 </div>
+                {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
+                <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-gray-200 bg-slate-50">
+                    <button type="button" @click="modeSelection = !modeSelection; selectionnees = []" class="gtm-btn gtm-btn-secondary text-xs">
+                        <i data-lucide="check-square" class="w-3.5 h-3.5"></i>
+                        <span x-text="modeSelection ? 'Annuler' : 'Sélectionner'"></span>
+                    </button>
+                    <div x-show="modeSelection" class="flex items-center gap-2">
+                        <input type="checkbox" @click="toggleSelectionGlobale()" :checked="selectionnees.length === participants.length && participants.length > 0" :indeterminate="selectionnees.length > 0 && selectionnees.length < participants.length" class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                        <span class="text-xs font-semibold text-slate-600">Tout sélectionner</span>
+                    </div>
+                    <button type="button" x-show="modeSelection && selectionnees.length > 0" @click="supprimerSelection()" :disabled="suppressionEnCours" class="gtm-btn gtm-btn-danger text-xs">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        Supprimer (<span x-text="selectionnees.length"></span>)
+                    </button>
+                </div>
+                {% endif %}
 
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-gray-200 text-left text-gray-500">
+                            {% if current_user.role.nom in ['admin', 'gestionnaire'] %}<th x-show="modeSelection" class="px-3 py-3 w-12"><span class="sr-only">Sélection</span></th>{% endif %}
                             <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Nom</th>
                             <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Email</th>
                             <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Activité</th>
@@ -178,7 +195,7 @@
                     <tbody>
                         <template x-if="participants.length === 0">
                             <tr>
-                                <td colspan="4" class="px-5 py-10 text-center text-gray-400 text-sm">
+                                <td colspan="5" class="px-5 py-10 text-center text-gray-400 text-sm">
                                     <i data-lucide="users" class="w-6 h-6 mx-auto mb-2 text-gray-300"></i>
                                     Aucun salarié enregistré pour ce client.
                                 </td>
@@ -186,7 +203,8 @@
                         </template>
 
                         <template x-for="p in participants" :key="p.id">
-                            <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                            <tr @click="window.location.assign('/participants/' + p.id)" @keydown.enter="window.location.assign('/participants/' + p.id)" tabindex="0" class="gtm-detail-row border-b border-gray-100 last:border-0">
+                                {% if current_user.role.nom in ['admin', 'gestionnaire'] %}<td x-show="modeSelection" class="px-3 py-4"><input type="checkbox" :checked="selectionnees.includes(p.id)" @click.stop @change="toggleSelection(p.id)" class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"></td>{% endif %}
                                 <td class="px-5 py-4 font-medium text-gray-900" x-text="p.nom"></td>
                                 <td class="px-5 py-4 text-gray-500 text-xs" x-text="p.email"></td>
                                 <td class="px-5 py-4 text-right">
@@ -194,7 +212,7 @@
                                           x-text="(p.nb_inscriptions || 0) + ' inscription' + ((p.nb_inscriptions || 0) > 1 ? 's' : '')"></span>
                                 </td>
                                 <td class="px-5 py-4 text-right">
-                                    <a :href="`/participants/${p.id}`" class="text-xs font-medium text-gray-600 hover:text-gray-900 inline-flex items-center gap-1">
+                                    <a @click.stop :href="`/participants/${p.id}`" class="text-xs font-medium text-gray-600 hover:text-gray-900 inline-flex items-center gap-1">
                                         <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                                         Fiche participant
                                     </a>

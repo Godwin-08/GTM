@@ -42,6 +42,12 @@
             </div>
 
             {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
+            <!-- Bouton Importer (Point 8) -->
+            <button @click="ouvrirModaleImport()" type="button" class="gtm-btn gtm-btn-secondary text-xs sm:text-sm font-semibold flex items-center gap-1.5">
+                <i data-lucide="upload" class="w-4 h-4 text-primary"></i>
+                <span>Importer</span>
+            </button>
+
             <button @click="ouvrirModaleCreation()" class="gtm-btn gtm-btn-primary text-sm flex-shrink-0">
                 <i data-lucide="plus" class="w-4 h-4"></i>
                 Nouveau participant
@@ -62,7 +68,11 @@
                 <input type="search"
                        x-model.trim="filtres.q"
                        placeholder="Rechercher un participant (nom, email)..."
-                       class="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                       aria-label="Rechercher un participant par nom ou email"
+                       class="w-full border border-gray-300 rounded-lg pl-9 pr-9 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                <button type="button" x-show="filtres.q" x-cloak @click="filtres.q = ''; appliquerFiltres()" aria-label="Effacer la recherche" class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-primary">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
             </div>
 
             <select x-model="filtres.client_id"
@@ -92,11 +102,35 @@
 
     <div class="gtm-list-context"><div><strong x-text="participantsFiltres().length"></strong> résultat<span x-text="participantsFiltres().length > 1 ? 's' : ''"></span></div></div>
 
-    <div class="gtm-card gtm-table-card"><div class="gtm-table-container border-0 rounded-none shadow-none">
+    <div class="gtm-card gtm-table-card">
+        {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
+        <div class="flex items-center justify-between gap-3 p-3 border-b border-slate-200 bg-slate-50">
+            <button @click="basculerModeSelection()" class="gtm-btn gtm-btn-secondary text-xs"><i data-lucide="check-square" class="w-3.5 h-3.5"></i><span x-text="modeSelection ? 'Annuler' : 'Sélectionner'"></span></button>
+            <div x-show="modeSelection" class="flex items-center gap-2">
+                <input type="checkbox"
+                       @click="toggleSelectionGlobale()"
+                       :checked="participantsFiltres().length > 0 && participantsFiltres().every(p => selectionnees.includes(p.id))"
+                       :indeterminate="selectionnees.length > 0 && !participantsFiltres().every(p => selectionnees.includes(p.id))"
+                       class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                <span class="text-xs font-semibold text-slate-600">Tout sélectionner</span>
+            </div>
+            <button type="button"
+                    x-show="modeSelection && selectionnees.length > 0"
+                    @click="supprimerSelection()"
+                    class="inline-flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 transition-colors">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                Supprimer la sélection (<span x-text="selectionnees.length"></span>)
+            </button>
+        </div>
+        {% endif %}
+        <div class="gtm-table-container border-0 rounded-none shadow-none">
         <table class="gtm-table">
             <thead>
                 <!-- En-têtes en petites capitales pour une lecture homogène entre les pages. -->
                 <tr class="border-b border-gray-200 text-left text-gray-500">
+                    {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
+                    <th x-show="modeSelection" class="px-3 py-3 w-12"><span class="sr-only">Sélection</span></th>
+                    {% endif %}
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Participant</th>
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Email</th>
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Entreprise</th>
@@ -108,7 +142,7 @@
                 <!-- Les états de table sont illustrés pour être repérables immédiatement. -->
                 <template x-if="chargementEnCours">
                     <tr>
-                        <td colspan="5" class="px-5 py-10 text-center text-gray-400 text-sm">
+                        <td colspan="{{ 6 if current_user.role.nom in ['admin', 'gestionnaire'] else 5 }}" class="px-5 py-10 text-center text-gray-400 text-sm">
                             <i data-lucide="loader-2" class="w-5 h-5 mx-auto mb-2 animate-spin"></i>
                             Chargement...
                         </td>
@@ -117,7 +151,7 @@
 
                 <template x-if="erreur">
                     <tr>
-                        <td colspan="5" class="px-5 py-10 text-center text-red-500 text-sm">
+                        <td colspan="{{ 6 if current_user.role.nom in ['admin', 'gestionnaire'] else 5 }}" class="px-5 py-10 text-center text-red-500 text-sm">
                             <i data-lucide="alert-circle" class="w-5 h-5 mx-auto mb-2"></i>
                             <span x-text="erreur"></span>
                         </td>
@@ -126,7 +160,7 @@
 
                 <template x-if="!chargementEnCours && !erreur && participants.length === 0">
                     <tr>
-                        <td colspan="5" class="px-5 py-16 text-center">
+                        <td colspan="{{ 6 if current_user.role.nom in ['admin', 'gestionnaire'] else 5 }}" class="px-5 py-16 text-center">
                             <i data-lucide="search-x" class="w-10 h-10 mx-auto mb-3 text-gray-300"></i>
                             <p class="text-sm font-medium text-gray-900 mb-1">Aucun participant trouvé</p>
                             <p class="text-sm text-gray-500 mb-4">Essayez de modifier vos termes de recherche ou vos filtres.</p>
@@ -142,9 +176,20 @@
 
                 <!-- Lignes plus respirantes, avec effet de survol doux. -->
                 <template x-for="participant in participantsFiltres()" :key="participant.id">
-                    <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                    <tr @click="window.location.assign('/participants/' + participant.id)" @keydown.enter="window.location.assign('/participants/' + participant.id)" tabindex="0" class="gtm-interactive-row border-b border-gray-100 last:border-0">
+                        {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
+                        <td x-show="modeSelection" class="px-3 py-4 align-middle">
+                            <input type="checkbox"
+                                   :value="participant.id"
+                                   :checked="selectionnees.includes(participant.id)"
+                                   @click.stop @change="toggleSelection(participant.id)"
+                                   class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                        </td>
+                        {% endif %}
                         <td class="px-5 py-4">
-                            <p class="font-medium text-gray-900" x-text="participant.nom"></p>
+                            <a @click.stop :href="`/participants/${participant.id}`"
+                               class="font-medium text-gray-900 hover:text-primary hover:underline transition-colors"
+                               x-text="participant.nom"></a>
                         </td>
                         <td class="px-5 py-4 text-gray-500 text-xs" x-text="participant.email"></td>
                         <td class="px-5 py-4">
@@ -160,8 +205,8 @@
                             </template>
                         </td>
                         <td class="px-5 py-4 text-right">
-                            <div class="relative inline-block text-left" x-data="{ menuOuvert: false }">
-                                <button @click="menuOuvert = !menuOuvert"
+                            <div class="relative inline-block text-left" x-data="{ menuOuvert: false, menuVersLeHaut: false }">
+                                <button @click.stop="menuVersLeHaut = ($event.currentTarget.getBoundingClientRect().bottom + 180 > window.innerHeight); menuOuvert = !menuOuvert"
                                         @click.outside="menuOuvert = false"
                                         class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                                         title="Actions sur ce participant">
@@ -176,20 +221,21 @@
                                      x-transition:leave="transition ease-in duration-75"
                                      x-transition:leave-start="transform opacity-100 scale-100"
                                      x-transition:leave-end="transform opacity-0 scale-95"
-                                     class="absolute right-0 mt-1 w-44 rounded-xl bg-white border border-slate-200 shadow-lg py-1 z-30 text-xs">
-                                    <a :href="`/participants/${participant.id}`"
+                                     :class="menuVersLeHaut ? 'bottom-full mb-1' : 'top-full mt-1'"
+                                     class="absolute right-0 w-44 rounded-xl bg-white border border-slate-200 shadow-lg py-1 z-30 text-xs">
+                                    <a @click.stop :href="`/participants/${participant.id}`"
                                        class="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 transition-colors">
                                         <i data-lucide="eye" class="w-3.5 h-3.5 text-slate-400"></i>
                                         Consulter la fiche
                                     </a>
                                     {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
-                                    <button @click="ouvrirModaleEdition(participant); menuOuvert = false"
+                                    <button @click.stop="ouvrirModaleEdition(participant); menuOuvert = false"
                                             class="w-full text-left flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 transition-colors">
                                         <i data-lucide="pencil" class="w-3.5 h-3.5 text-slate-400"></i>
                                         Modifier le participant
                                     </button>
                                     <div class="my-1 border-t border-slate-100"></div>
-                                    <button @click="ouvrirModaleSuppression(participant); menuOuvert = false"
+                                    <button @click.stop="ouvrirModaleSuppression(participant); menuOuvert = false"
                                             class="w-full text-left flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 transition-colors">
                                         <i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-500"></i>
                                         Supprimer
@@ -202,14 +248,15 @@
                 </template>
             </tbody>
         </table>
-    </div></div>
+        </div>
+    </div>
 
     <div x-show="modaleOuverte" x-cloak @click.self="fermerModaleCreation()" @keydown.escape.window="fermerModaleCreation()"
          class="fixed inset-0 bg-gray-900/50 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-xl w-full max-w-md p-6" @click.stop>
             <div class="flex items-center justify-between mb-4"><h3 class="text-base font-semibold text-gray-900">Nouveau participant</h3><button type="button" @click="fermerModaleCreation()" class="text-gray-400 hover:text-gray-600" aria-label="Fermer la modale"><i data-lucide="x" class="w-5 h-5"></i></button></div>
             <template x-if="erreurFormulaire"><p class="text-sm text-red-500 bg-danger/5 rounded-lg px-3 py-2 mb-4" x-text="erreurFormulaire"></p></template>
-            <form @submit.prevent="soumettreCreation()" class="space-y-4">
+            <form @submit.prevent="soumettreCreation()" data-protect-unsaved class="space-y-4">
                 <div><label for="participant-nom" class="block text-sm text-gray-700 mb-1">Nom</label><input id="participant-nom" type="text" x-model.trim="formulaire.nom" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></div>
                 <div><label for="participant-email" class="block text-sm text-gray-700 mb-1">Email</label><input id="participant-email" type="email" x-model.trim="formulaire.email" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></div>
                 <div><label for="participant-client" class="block text-sm text-gray-700 mb-1">Entreprise</label><select id="participant-client" x-model.number="formulaire.client_id" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"><option value="" disabled>Sélectionner une entreprise</option><template x-for="client in clients" :key="client.id"><option :value="client.id" x-text="client.nom_entreprise"></option></template></select></div>
@@ -228,7 +275,7 @@
 
             <template x-if="erreurEdition"><p class="text-sm text-red-500 bg-danger/5 rounded-lg px-3 py-2 mb-4" x-text="erreurEdition"></p></template>
 
-            <form @submit.prevent="soumettreEdition()" class="space-y-4">
+            <form @submit.prevent="soumettreEdition()" data-protect-unsaved class="space-y-4">
                 <div><label class="block text-sm text-gray-700 mb-1">Nom</label><input type="text" x-model="edition.nom" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></div>
                 <div><label class="block text-sm text-gray-700 mb-1">Email</label><input type="email" x-model="edition.email" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"><p class="text-xs text-gray-400 mt-1">Attention : l'unicité de l'email n'est pas vérifiée lors d'une modification.</p></div>
                 <div><label class="block text-sm text-gray-700 mb-1">Entreprise</label><select x-model.number="edition.client_id" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"><template x-for="client in clients" :key="client.id"><option :value="client.id" x-text="client.nom_entreprise"></option></template></select></div>
@@ -249,29 +296,164 @@
          class="fixed inset-0 bg-gray-900/50 z-50 flex items-center justify-center p-4">
 
         <div class="bg-white rounded-xl w-full max-w-sm p-6" @click.stop>
-            <div class="flex items-start gap-3 mb-4">
-                <div class="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center flex-shrink-0">
-                    <i data-lucide="alert-triangle" class="w-5 h-5 text-danger"></i>
+            <template x-if="!erreurSuppression">
+                <div class="gtm-alert-danger mb-4">
+                    <div class="gtm-alert-danger-icon"><i data-lucide="alert-triangle" class="w-5 h-5"></i></div>
+                    <div><h3 class="gtm-alert-danger-title">Supprimer ce participant ?</h3><p class="gtm-alert-danger-text" x-text="'« ' + (aSupprimer?.nom || '') + ' » sera définitivement supprimé.'"></p></div>
                 </div>
-                <div>
-                    <h3 class="text-base font-semibold text-gray-900">Supprimer ce participant ?</h3>
-                    <p class="text-sm text-gray-500 mt-1" x-text="'« ' + (aSupprimer?.nom || '') + ' » sera définitivement supprimé.'"></p>
-                </div>
-            </div>
-
+            </template>
             <template x-if="erreurSuppression">
-                <p class="text-sm text-red-500 bg-danger/5 rounded-lg px-3 py-2 mb-4" x-text="erreurSuppression"></p>
+                <div class="gtm-alert-danger mb-4">
+                    <div class="gtm-alert-danger-icon"><i data-lucide="shield-alert" class="w-5 h-5"></i></div>
+                    <div><h3 class="gtm-alert-danger-title">Suppression impossible</h3><p class="gtm-alert-danger-text" x-text="erreurSuppression"></p></div>
+                </div>
             </template>
 
             <div class="flex justify-end gap-2">
                 <button type="button" @click="fermerModaleSuppression()"
                         class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
-                    Annuler
+                    <span x-text="erreurSuppression ? 'Fermer' : 'Annuler'"></span>
                 </button>
-                <button type="button" @click="confirmerSuppression()" :disabled="suppressionEnCours"
+                     <a x-show="erreurSuppression && aSupprimer"
+                         :href="aSupprimer?.client_id ? '/inscriptions?client_id=' + aSupprimer.client_id : '/inscriptions?participant_id=' + (aSupprimer?.id || '')"
+                   class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-lg transition-colors">
+                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                    <span x-text="aSupprimer?.client_id ? 'Voir les inscriptions du client' : 'Voir ses inscriptions'"></span>
+                </a>
+                <button x-show="!erreurSuppression" type="button" @click="confirmerSuppression()" :disabled="suppressionEnCours"
                         class="bg-danger hover:opacity-90 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg">
                     <span x-show="!suppressionEnCours">Supprimer définitivement</span>
                     <span x-show="suppressionEnCours">Suppression...</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Modale d'Import par Lot (Point 8) -->
+    {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
+    <div x-show="modaleImportOuverte"
+         x-cloak
+         @click.self="fermerModaleImport()"
+         @keydown.escape.window="fermerModaleImport()"
+         class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+
+        <div class="bg-white rounded-xl w-full max-w-xl p-6 shadow-2xl border border-slate-200" @click.stop>
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                        <i data-lucide="upload" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Importer des participants</h3>
+                        <p class="text-xs text-slate-500">Formats supportés : CSV (séparateurs , ou ;) et Excel (.xlsx)</p>
+                    </div>
+                </div>
+                <button type="button" @click="fermerModaleImport()" :disabled="importEnCours" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Message d'erreur globale -->
+            <template x-if="erreurImport">
+                <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 mb-4 flex items-start gap-2">
+                    <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
+                    <span x-text="erreurImport"></span>
+                </div>
+            </template>
+
+            <!-- Zone de sélection / Dropzone (affichée tant qu'aucun rapport n'est produit) -->
+            <div x-show="!rapportImport" class="space-y-4">
+                <div class="border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer"
+                     :class="dragOver ? 'border-primary bg-primary/5' : 'border-slate-300 hover:border-slate-400 bg-slate-50/50'"
+                     @dragover.prevent="dragOver = true"
+                     @dragleave.prevent="dragOver = false"
+                     @drop.prevent="dragOver = false; fichierSelectionne($event)"
+                     @click="$refs.inputFichier.click()">
+                    
+                    <input type="file"
+                           id="fichier-import-participants"
+                           x-ref="inputFichier"
+                           @change="fichierSelectionne($event)"
+                           accept=".csv, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, text/csv"
+                           class="hidden">
+
+                    <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-500 mx-auto flex items-center justify-center mb-3">
+                        <i data-lucide="file-up" class="w-6 h-6"></i>
+                    </div>
+
+                    <p class="text-xs font-semibold text-slate-700 mb-1">
+                        <span x-show="!nomFichierImport">Glissez-déposez votre fichier ici, ou <span class="text-primary hover:underline">parcourez</span></span>
+                        <span x-show="nomFichierImport" class="text-emerald-700 font-bold" x-text="'Fichier sélectionné : ' + nomFichierImport"></span>
+                    </p>
+                    <p class="text-[11px] text-slate-400">Colonnes requises : <strong>Nom</strong>, <strong>Email</strong>, <strong>Entreprise</strong></p>
+                </div>
+
+                <!-- Téléchargement du Template CSV -->
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+                    <div class="flex items-center gap-2 text-slate-600">
+                        <i data-lucide="file-text" class="w-4 h-4 text-slate-400"></i>
+                        <span>Besoin du modèle officiel ?</span>
+                    </div>
+                    <a href="/api/participants/import/template" download class="gtm-btn gtm-btn-secondary text-xs flex items-center gap-1">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                        <span>Télécharger le modèle CSV</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Rapport de résultat d'import -->
+            <div x-show="rapportImport" class="space-y-4">
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <div class="text-xs text-slate-500">Lignes traitées</div>
+                        <div class="text-lg font-bold text-slate-900" x-text="rapportImport?.total_lignes || 0"></div>
+                    </div>
+                    <div class="p-3 bg-emerald-50 rounded-lg border border-emerald-200 text-emerald-800">
+                        <div class="text-xs">Importés</div>
+                        <div class="text-lg font-bold" x-text="rapportImport?.nb_importes || 0"></div>
+                    </div>
+                    <div class="p-3 rounded-lg border text-xs font-bold"
+                         :class="(rapportImport?.nb_erreurs || 0) > 0 ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-slate-50 border-slate-200 text-slate-400'">
+                        <div class="text-xs font-normal">Rejets / Erreurs</div>
+                        <div class="text-lg" x-text="rapportImport?.nb_erreurs || 0"></div>
+                    </div>
+                </div>
+
+                <!-- Détails des erreurs ligne par ligne -->
+                <div x-show="rapportImport?.erreurs?.length > 0" class="space-y-2">
+                    <div class="text-xs font-semibold text-slate-700">Détails des anomalies :</div>
+                    <div class="max-h-48 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100 text-xs">
+                        <template x-for="err in rapportImport?.erreurs || []" :key="err.ligne">
+                            <div class="p-2.5 flex items-start justify-between gap-3 hover:bg-slate-50">
+                                <div>
+                                    <span class="font-semibold text-slate-800" x-text="'Ligne ' + err.ligne + ' (' + err.email + ')'"></span>
+                                    <p class="text-slate-500 text-[11px]" x-text="err.motif"></p>
+                                </div>
+                                <span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-semibold flex-shrink-0">Ignorée</span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="flex justify-end gap-2 pt-4 border-t border-slate-100 mt-5">
+                <button type="button" @click="fermerModaleImport()" :disabled="importEnCours" class="gtm-btn gtm-btn-secondary text-xs">
+                    <span x-show="!rapportImport">Annuler</span>
+                    <span x-show="rapportImport">Fermer</span>
+                </button>
+
+                <button x-show="!rapportImport" type="button" @click="soumettreImport()" :disabled="importEnCours || !fichierImport" class="gtm-btn gtm-btn-primary text-xs flex items-center gap-1.5">
+                    <i data-lucide="upload-cloud" class="w-3.5 h-3.5" x-show="!importEnCours"></i>
+                    <i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin" x-show="importEnCours"></i>
+                    <span x-show="!importEnCours">Lancer l'import</span>
+                    <span x-show="importEnCours">Importation en cours...</span>
+                </button>
+
+                <button x-show="rapportImport" type="button" @click="reinitialiserImport()" class="gtm-btn gtm-btn-secondary text-xs flex items-center gap-1.5">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                    <span>Importer un autre fichier</span>
                 </button>
             </div>
         </div>

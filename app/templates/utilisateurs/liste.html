@@ -3,7 +3,7 @@
 {% block title %}Gestion des Utilisateurs | GTM{% endblock %}
 
 {% block breadcrumb %}
-<span>Administration</span>
+<a href="{{ url_for('pages.dashboard') }}" class="hover:text-slate-700 hover:underline">Administration</a>
 <span>/</span>
 <span class="text-slate-600">Utilisateurs</span>
 {% endblock %}
@@ -21,14 +21,40 @@
                 <span class="font-semibold text-slate-700" x-text="utilisateursFiltres().length"></span> résultat<span x-text="utilisateursFiltres().length > 1 ? 's' : ''"></span>.
             </p>
         </div>
-        {% if current_user.is_authenticated %}
-            {% if current_user.role.nom == 'admin' %}
-            <button @click="ouvrirModaleCreation()" class="gtm-btn gtm-btn-primary text-xs flex-shrink-0">
-                <i data-lucide="plus" class="w-4 h-4"></i>
-                Nouvel utilisateur
-            </button>
+        <div class="flex items-center gap-2.5">
+            <!-- Dropdown Exporter (Point 6) -->
+            <div x-data="{ exportOuvert: false }" class="relative" @click.outside="exportOuvert = false">
+                <button @click="exportOuvert = !exportOuvert"
+                        type="button"
+                        class="gtm-btn gtm-btn-secondary text-xs font-semibold flex items-center gap-1.5">
+                    <i data-lucide="download" class="w-4 h-4 text-emerald-700"></i>
+                    <span>Exporter</span>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                </button>
+                <div x-show="exportOuvert" x-cloak
+                     class="absolute right-0 mt-1.5 w-44 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-20 text-xs">
+                    <a href="/api/utilisateurs/export/xlsx" @click="exportOuvert = false"
+                       class="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 text-slate-700 font-medium transition-colors">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-700"></i>
+                        <span>Excel (.xlsx)</span>
+                    </a>
+                    <a href="/api/utilisateurs/export/csv" @click="exportOuvert = false"
+                       class="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 text-slate-700 font-medium transition-colors">
+                        <i data-lucide="file-text" class="w-4 h-4 text-slate-500"></i>
+                        <span>CSV (UTF-8 BOM)</span>
+                    </a>
+                </div>
+            </div>
+
+            {% if current_user.is_authenticated %}
+                {% if current_user.role.nom == 'admin' %}
+                <button @click="ouvrirModaleCreation()" class="gtm-btn gtm-btn-primary text-xs flex-shrink-0">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    Nouvel utilisateur
+                </button>
+                {% endif %}
             {% endif %}
-        {% endif %}
+        </div>
     </div>
 
     <template x-if="!accesRefuse">
@@ -38,7 +64,11 @@
                 <input type="text"
                        x-model.debounce.300ms="recherche"
                        placeholder="Rechercher par nom ou email..."
-                       class="gtm-input pl-9">
+                       aria-label="Rechercher un utilisateur par nom ou email"
+                       class="gtm-input pl-9 pr-9">
+                <button type="button" x-show="recherche" x-cloak @click="recherche = ''" aria-label="Effacer la recherche" class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
             </div>
 
             <select x-model="filtreRole" class="gtm-select sm:w-48">
@@ -116,13 +146,15 @@
                 </template>
 
                 <template x-for="u in utilisateursFiltres()" :key="u.id">
-                    <tr>
+                    <tr @click="window.location.assign('/utilisateurs/' + u.id)" @keydown.enter="window.location.assign('/utilisateurs/' + u.id)" tabindex="0" class="gtm-interactive-row">
                         <td class="font-medium text-slate-900">
                             <div class="flex items-center gap-3">
                                 <div class="w-7 h-7 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-xs font-bold">
                                     <span x-text="u.nom ? u.nom.substring(0, 2).toUpperCase() : 'U'"></span>
                                 </div>
-                                <span x-text="u.nom"></span>
+                                <a @click.stop :href="`/utilisateurs/${u.id}`"
+                                   class="font-medium text-slate-900 hover:text-emerald-700 hover:underline transition-colors"
+                                   x-text="u.nom"></a>
                             </div>
                         </td>
                         <td class="text-slate-600 text-xs font-tabular" x-text="u.email"></td>
@@ -160,8 +192,8 @@
                         <td class="text-slate-500 text-xs font-tabular" x-text="formaterDate(u.date_creation)"></td>
                         <td class="text-right">
                             {% if current_user.is_authenticated and current_user.role.nom == 'admin' %}
-                            <div class="relative inline-block text-left" x-data="{ menuOuvert: false }">
-                                <button @click="menuOuvert = !menuOuvert"
+                            <div class="relative inline-block text-left" x-data="{ menuOuvert: false, menuVersLeHaut: false }">
+                                <button @click.stop="menuVersLeHaut = ($event.currentTarget.getBoundingClientRect().bottom + 180 > window.innerHeight); menuOuvert = !menuOuvert"
                                         @click.outside="menuOuvert = false"
                                         class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                                         title="Actions sur cet utilisateur">
@@ -176,20 +208,21 @@
                                      x-transition:leave="transition ease-in duration-75"
                                      x-transition:leave-start="transform opacity-100 scale-100"
                                      x-transition:leave-end="transform opacity-0 scale-95"
-                                     class="absolute right-0 mt-1 w-48 rounded-xl bg-white border border-slate-200 shadow-lg py-1 z-30 text-xs">
-                                    <a :href="`/utilisateurs/${u.id}`"
+                                     :class="menuVersLeHaut ? 'bottom-full mb-1' : 'top-full mt-1'"
+                                     class="absolute right-0 w-48 rounded-xl bg-white border border-slate-200 shadow-lg py-1 z-30 text-xs">
+                                    <a @click.stop :href="`/utilisateurs/${u.id}`"
                                        class="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 transition-colors">
                                         <i data-lucide="eye" class="w-3.5 h-3.5 text-slate-400"></i>
                                         Consulter la fiche
                                     </a>
                                     <template x-if="u.statut === 'en_attente' || u.est_en_attente">
-                                        <button @click="renvoyerInvitation(u); menuOuvert = false"
+                                        <button @click.stop="renvoyerInvitation(u); menuOuvert = false"
                                                 class="w-full text-left flex items-center gap-2 px-3 py-2 text-amber-700 hover:bg-amber-50 transition-colors">
                                             <i data-lucide="send" class="w-3.5 h-3.5 text-amber-600"></i>
                                             Renvoyer l'invitation
                                         </button>
                                     </template>
-                                    <button @click="ouvrirModaleEdition(u); menuOuvert = false"
+                                    <button @click.stop="ouvrirModaleEdition(u); menuOuvert = false"
                                             class="w-full text-left flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 transition-colors">
                                         <i data-lucide="pencil" class="w-3.5 h-3.5 text-slate-400"></i>
                                         Modifier le compte
@@ -229,7 +262,7 @@
                 </div>
             </template>
 
-            <form @submit.prevent="soumettreCreation()" class="space-y-4">
+            <form @submit.prevent="soumettreCreation()" data-protect-unsaved class="space-y-4">
                 <div>
                     <label for="utilisateur-nom" class="gtm-label">Nom complet</label>
                     <input id="utilisateur-nom" type="text" x-model.trim="formulaire.nom" required class="gtm-input" placeholder="Ex: Jean Dupont">
@@ -348,7 +381,7 @@
                 </div>
             </template>
 
-            <form @submit.prevent="soumettreEdition()" class="space-y-4">
+            <form @submit.prevent="soumettreEdition()" data-protect-unsaved class="space-y-4">
                 <div>
                     <label class="gtm-label">Nom complet</label>
                     <input type="text" x-model="edition.nom" required class="gtm-input">

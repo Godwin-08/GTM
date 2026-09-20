@@ -39,8 +39,11 @@ def login():
 
     utilisateur = Utilisateur.query.filter_by(email=email).first()
 
-    # Refus si le compte n'existe pas, n'est pas activé ou n'a pas de mot de passe défini
-    if not utilisateur or not utilisateur.actif or not utilisateur.mot_de_passe_hash:
+    if utilisateur and not utilisateur.actif and utilisateur.mot_de_passe_hash:
+        return jsonify({"erreur": "Votre compte a été désactivé. Contactez un administrateur."}), 403
+
+    # Refus générique si le compte n'existe pas ou n'a pas encore de mot de passe défini
+    if not utilisateur or not utilisateur.mot_de_passe_hash:
         return jsonify({"erreur": "Identifiants invalides"}), 401
 
     # Vérification sécurisée du mot de passe via PBKDF2:SHA256

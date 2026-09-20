@@ -137,8 +137,6 @@ class Phase1FiabilisationTestCase(unittest.TestCase):
         endpoints_autorises = [
             "/api/sessions",
             f"/api/sessions/{self.session_unit.id}",
-            "/api/clients",
-            f"/api/clients/{self.client_corp.id}",
             "/api/formations",
             f"/api/formations/{self.formation.id}",
             "/api/participants",
@@ -147,6 +145,16 @@ class Phase1FiabilisationTestCase(unittest.TestCase):
         for ep in endpoints_autorises:
             res = self.client.get(ep)
             self.assertEqual(res.status_code, 200, f"Erreur sur {ep}")
+
+        # Point 5 : Formateurs et Clients sont interdits d'accès
+        endpoints_interdits = [
+            "/api/clients",
+            f"/api/clients/{self.client_corp.id}",
+            "/api/formateurs",
+        ]
+        for ep in endpoints_interdits:
+            res = self.client.get(ep)
+            self.assertEqual(res.status_code, 403, f"Accès non bloqué sur {ep}")
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ de l'API REST et des pages HTML.
 """
 
 from flask import Flask, jsonify, redirect, request, url_for
+from flask_login import current_user, logout_user
 from sqlalchemy.exc import IntegrityError
 from app.config import Config
 from app.extensions import db, login_manager, migrate
@@ -45,6 +46,17 @@ def create_app():
 	def est_requete_api():
 		"""Détermine si la requête courante cible les points de terminaison de l'API (/api/...)."""
 		return request.path.startswith("/api/")
+
+	@app.before_request
+	def invalider_session_compte_desactive():
+		"""Révoque immédiatement les sessions des comptes désactivés."""
+		if not current_user.is_authenticated or current_user.actif:
+			return None
+
+		logout_user()
+		if est_requete_api():
+			return jsonify({"erreur": "Votre compte a été désactivé. Contactez un administrateur."}), 401
+		return redirect(url_for("pages.login_page", compte_desactive=1))
 
 	# -------------------------------------------------------------------------
 	# 2. Gestionnaires d'erreurs d'authentification et HTTP (JSON vs Redirection)

@@ -195,7 +195,13 @@ def envoyer_invitation_activation(
     if config_override:
         config.update(config_override)
 
-    backend = config.get("MAIL_BACKEND", "console").lower()
+    if config_override and "MAIL_BACKEND" in config_override:
+        backend = config_override["MAIL_BACKEND"].lower()
+    elif config.get("TESTING"):
+        backend = "console"
+    else:
+        backend = config.get("MAIL_BACKEND", "console").lower()
+
     expediteur = config.get("MAIL_FROM", "Galaxy Training Manager <no-reply@galaxysolutions.ma>")
 
     sujet, texte_brut, html = generer_contenu_invitation(nom_utilisateur, url_activation)

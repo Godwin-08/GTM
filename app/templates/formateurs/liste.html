@@ -16,12 +16,38 @@
             résultat<span x-text="formateurs.length > 1 ? 's' : ''"></span>.
         </p>
         </div>
-        {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
-        <button @click="ouvrirModaleCreation()" class="gtm-btn gtm-btn-primary text-sm flex-shrink-0">
-            <i data-lucide="plus" class="w-4 h-4"></i>
-            Nouveau formateur
-        </button>
-        {% endif %}
+        <div class="flex items-center gap-2.5">
+            <!-- Dropdown Exporter (Point 6) -->
+            <div x-data="{ exportOuvert: false }" class="relative" @click.outside="exportOuvert = false">
+                <button @click="exportOuvert = !exportOuvert"
+                        type="button"
+                        class="gtm-btn gtm-btn-secondary text-sm font-semibold flex items-center gap-1.5">
+                    <i data-lucide="download" class="w-4 h-4 text-emerald-700"></i>
+                    <span>Exporter</span>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                </button>
+                <div x-show="exportOuvert" x-cloak
+                     class="absolute right-0 mt-1.5 w-44 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-20 text-xs">
+                    <a href="/api/formateurs/export/xlsx" @click="exportOuvert = false"
+                       class="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 text-slate-700 font-medium transition-colors">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-700"></i>
+                        <span>Excel (.xlsx)</span>
+                    </a>
+                    <a href="/api/formateurs/export/csv" @click="exportOuvert = false"
+                       class="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 text-slate-700 font-medium transition-colors">
+                        <i data-lucide="file-text" class="w-4 h-4 text-slate-500"></i>
+                        <span>CSV (UTF-8 BOM)</span>
+                    </a>
+                </div>
+            </div>
+
+            {% if current_user.role.nom in ['admin', 'gestionnaire'] %}
+            <button @click="ouvrirModaleCreation()" class="gtm-btn gtm-btn-primary text-sm flex-shrink-0">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                Nouveau formateur
+            </button>
+            {% endif %}
+        </div>
     </div>
 
     <form @submit.prevent="appliquerFiltres()" class="gtm-card gtm-filter-bar" x-data="{ avances: false }">
@@ -36,7 +62,11 @@
                        x-model.trim="filtres.q"
                        @input.debounce.300ms="appliquerFiltres()"
                        placeholder="Rechercher un formateur..."
-                       class="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                       aria-label="Rechercher un formateur"
+                       class="w-full border border-gray-300 rounded-lg pl-9 pr-9 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                <button type="button" x-show="filtres.q" x-cloak @click="filtres.q = ''; appliquerFiltres()" aria-label="Effacer la recherche" class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-primary">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
             </div>
 
             <select x-model="filtres.domaine_id"
@@ -78,8 +108,8 @@
                 <tr class="border-b border-gray-200 text-left text-gray-500">
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Formateur</th>
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Domaine</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Email</th>
-                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Téléphone</th>
+                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Activité</th>
+                    <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide">Contact</th>
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-center">Compte</th>
                     <th class="px-5 py-3 font-medium text-xs uppercase tracking-wide text-right">Actions</th>
                 </tr>
@@ -121,7 +151,7 @@
 
                 <!-- Espacement vertical accru et transition douce pour les données. -->
                 <template x-for="formateur in formateursFiltres()" :key="formateur.id">
-                    <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                    <tr @click="ouvrirModaleEdition(formateur)" @keydown.enter="ouvrirModaleEdition(formateur)" tabindex="0" class="gtm-interactive-row border-b border-gray-100 last:border-0">
                         <td class="px-5 py-4">
                             <p class="font-medium text-gray-900" x-text="formateur.nom"></p>
                         </td>
@@ -130,7 +160,7 @@
                                   :class="couleurDomaine(nomDomaine(formateur))"
                                   x-text="nomDomaine(formateur)"></span>
                         </td>
-                        <td class="px-5 py-4 text-right">
+                        <td class="px-5 py-4">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800 mb-0.5"
                                   x-text="(formateur.nb_sessions || 0) + ' session' + ((formateur.nb_sessions || 0) > 1 ? 's' : '')"></span>
                             <template x-if="formateur.nb_sessions > 0">
@@ -142,17 +172,18 @@
                             <p x-text="formateur.email || '—'"></p>
                             <p x-text="formateur.telephone || '—'"></p>
                         </td>
-                        <td class="px-5 py-4">
+                        <td class="px-5 py-4 text-center">
                             <span class="text-xs font-medium px-2.5 py-1 rounded-full"
                                   :class="formateur.a_un_compte ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-600'"
                                   x-text="formateur.a_un_compte ? 'Interne' : 'Externe'"></span>
                         </td>
                         <td class="px-5 py-4 text-right">
                             <div class="flex items-center justify-end">
-                            <button @click="ouvrirModaleEdition(formateur)" class="text-xs font-medium text-primary hover:text-primary-hover flex items-center gap-1">
-                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                Modifier
-                            </button>
+                                <button @click.stop="ouvrirModaleEdition(formateur)" class="text-xs font-medium text-primary hover:text-primary-hover flex items-center gap-1">
+                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                    Modifier
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 </template>
@@ -168,13 +199,86 @@
                 <button type="button" @click="fermerModaleCreation()" class="text-gray-400 hover:text-gray-600" aria-label="Fermer la modale"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             <template x-if="erreurFormulaire"><p class="text-sm text-red-500 bg-danger/5 rounded-lg px-3 py-2 mb-4" x-text="erreurFormulaire"></p></template>
-            <form @submit.prevent="soumettreCreation()" class="space-y-4">
-                <div><label for="formateur-nom" class="block text-sm text-gray-700 mb-1">Nom</label><input id="formateur-nom" type="text" x-model.trim="formulaire.nom" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></div>
-                <div><label for="formateur-domaine" class="block text-sm text-gray-700 mb-1">Domaine</label><select id="formateur-domaine" x-model.number="formulaire.domaine_id" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"><option value="" disabled>Sélectionner un domaine</option><template x-for="domaine in domaines" :key="domaine.id"><option :value="domaine.id" x-text="domaine.nom"></option></template></select></div>
-                <div><label for="formateur-email" class="block text-sm text-gray-700 mb-1">Email <span class="text-gray-400">(optionnel)</span></label><input id="formateur-email" type="email" x-model.trim="formulaire.email" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></div>
-                <div><label for="formateur-telephone" class="block text-sm text-gray-700 mb-1">Téléphone <span class="text-gray-400">(optionnel)</span></label><input id="formateur-telephone" type="text" x-model.trim="formulaire.telephone" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></div>
-                <div><label for="formateur-utilisateur" class="block text-sm text-gray-700 mb-1">ID compte utilisateur <span class="text-gray-400">(optionnel — formateur interne)</span></label><input id="formateur-utilisateur" type="number" x-model.number="formulaire.utilisateur_id" min="1" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"><p class="text-xs text-gray-400 mt-1">Laisser vide pour un formateur externe.</p></div>
-                <div class="flex justify-end gap-2 pt-2"><button type="button" @click="fermerModaleCreation()" class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">Annuler</button><button type="submit" :disabled="envoiEnCours" class="bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg"><span x-show="!envoiEnCours">Créer le formateur</span><span x-show="envoiEnCours">Création...</span></button></div>
+            <form @submit.prevent="soumettreCreation()" data-protect-unsaved class="space-y-4">
+                <!-- Sélecteur Type de Formateur (Point 3) -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Type d'intervenant</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="flex items-center gap-2 p-2.5 border rounded-lg cursor-pointer transition-colors"
+                               :class="typeFormateur === 'externe' ? 'border-primary bg-primary/5 text-primary font-medium' : 'border-slate-200 text-slate-600 hover:bg-slate-50'">
+                            <input type="radio" name="type_formateur" value="externe" x-model="typeFormateur" class="text-primary focus:ring-primary">
+                            <span class="text-xs">Externe (Prestataire)</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-2.5 border rounded-lg cursor-pointer transition-colors"
+                               :class="typeFormateur === 'interne' ? 'border-primary bg-primary/5 text-primary font-medium' : 'border-slate-200 text-slate-600 hover:bg-slate-50'">
+                            <input type="radio" name="type_formateur" value="interne" x-model="typeFormateur" @change="chargerUtilisateursFormateurs()" class="text-primary focus:ring-primary">
+                            <span class="text-xs">Interne (Compte Utilisateur)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Cas 1 : Formateur INTERNE -> Sélection parmi les utilisateurs au rôle Formateur -->
+                <div x-show="typeFormateur === 'interne'" class="space-y-3 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+                    <label for="formateur-user-select" class="block text-xs font-semibold text-slate-700">Compte Utilisateur Formateur *</label>
+                    <div x-show="chargementUtilisateurs" class="text-xs text-slate-500 py-1 flex items-center gap-1.5">
+                        <i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Chargement des utilisateurs...
+                    </div>
+                    <div x-show="!chargementUtilisateurs && utilisateursDispo.length > 0">
+                        <select id="formateur-user-select" x-model.number="formulaire.utilisateur_id" :required="typeFormateur === 'interne'"
+                                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                            <option value="" disabled selected>Sélectionner un compte formateur</option>
+                            <template x-for="u in utilisateursDispo" :key="u.id">
+                                <option :value="u.id" :disabled="Boolean(u.formateur)"
+                                        x-text="u.nom + ' (' + u.email + ')' + (u.formateur ? ' — déjà lié' : '')"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div x-show="!chargementUtilisateurs && utilisateursDispo.length === 0" class="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-md border border-amber-200">
+                        Aucun compte utilisateur avec le rôle "Formateur" n'est disponible pour un nouveau profil.
+                    </div>
+                </div>
+
+                <!-- Cas 2 : Formateur EXTERNE -> Saisie libre du nom -->
+                <div x-show="typeFormateur === 'externe'">
+                    <label for="formateur-nom" class="block text-xs font-semibold text-slate-700 mb-1">Nom complet *</label>
+                    <input id="formateur-nom" type="text" x-model.trim="formulaire.nom" :required="typeFormateur === 'externe'" placeholder="Ex: Mohamed Alami"
+                           class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                </div>
+
+                <!-- Domaine de compétence (Commun) -->
+                <div>
+                    <label for="formateur-domaine" class="block text-xs font-semibold text-slate-700 mb-1">Domaine d'expertise *</label>
+                    <select id="formateur-domaine" x-model.number="formulaire.domaine_id" required
+                            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <option value="" disabled selected>Sélectionner un domaine</option>
+                        <template x-for="domaine in domaines" :key="domaine.id">
+                            <option :value="domaine.id" x-text="domaine.nom"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <!-- Coordonnées optionnelles -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label for="formateur-email" class="block text-xs font-semibold text-slate-700 mb-1">Email <span class="text-slate-400 font-normal">(optionnel)</span></label>
+                        <input id="formateur-email" type="email" x-model.trim="formulaire.email" placeholder="contact@email.ma"
+                               class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                    </div>
+                    <div>
+                        <label for="formateur-telephone" class="block text-xs font-semibold text-slate-700 mb-1">Téléphone <span class="text-slate-400 font-normal">(optionnel)</span></label>
+                        <input id="formateur-telephone" type="text" x-model.trim="formulaire.telephone" placeholder="+212 6..."
+                               class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" @click="fermerModaleCreation()" class="px-4 py-2 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">Annuler</button>
+                    <button type="submit" :disabled="envoiEnCours || (typeFormateur === 'interne' && (!formulaire.utilisateur_id || utilisateursDispo.length === 0))"
+                            class="gtm-btn gtm-btn-primary text-xs disabled:opacity-50">
+                        <span x-show="!envoiEnCours">Créer le formateur</span>
+                        <span x-show="envoiEnCours">Création en cours...</span>
+                    </button>
+                </div>
             </form>
         </div>
     </div>
@@ -189,7 +293,7 @@
 
             <template x-if="erreurEdition"><p class="text-sm text-red-500 bg-danger/5 rounded-lg px-3 py-2 mb-4" x-text="erreurEdition"></p></template>
 
-            <form @submit.prevent="soumettreEdition()" class="space-y-4">
+            <form @submit.prevent="soumettreEdition()" data-protect-unsaved class="space-y-4">
                 <div><label class="block text-sm text-gray-700 mb-1">Nom</label><input type="text" x-model="edition.nom" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></div>
                 <div><label class="block text-sm text-gray-700 mb-1">Domaine</label><select x-model.number="edition.domaine_id" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"><template x-for="domaine in domaines" :key="domaine.id"><option :value="domaine.id" x-text="domaine.nom"></option></template></select></div>
                 <div><label class="block text-sm text-gray-700 mb-1">Email <span class="text-gray-400">(optionnel)</span></label><input type="email" x-model="edition.email" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></div>
@@ -218,6 +322,8 @@
 <script>
     const urlFormateurs = "{{ url_for('formateurs.liste_formateurs') }}";
     const urlDomaines = "{{ url_for('domaines.liste_domaines') }}";
+    const urlUtilisateurs = "{{ url_for('utilisateurs.liste_utilisateurs') }}";
 </script>
 <script src="{{ url_for('static', filename='js/formateurs.js') }}"></script>
 {% endblock %}
+

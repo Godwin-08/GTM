@@ -8,7 +8,7 @@ const COULEURS_STATUT = {
 
 function pageSessionsData() {
     return {
-        sessions: [], formations: [], formateurs: [], chargementEnCours: true, erreur: null,
+        sessions: [], formations: [], formateurs: [], selectionnees: [], sessionsBloquees: [], modeSelection: false, chargementEnCours: true, erreur: null,
         filtres: {
             q: '', date_debut_min: '', date_debut_max: '', domaine_id: '',
             formation_id: '', type: '', statut: '', formateur_id: '', remplissage: '', tri: '',
@@ -93,6 +93,81 @@ function pageSessionsData() {
             }
         },
 
+        basculerModeSelection() {
+            this.modeSelection = !this.modeSelection;
+            this.selectionnees = [];
+            this.sessionsBloquees = [];
+        },
+
+        toggleSelection(id) {
+            if (this.selectionnees.includes(id)) {
+                this.selectionnees = this.selectionnees.filter(item => item !== id);
+            } else {
+                this.selectionnees = [...this.selectionnees, id];
+            }
+        },
+
+        toggleSelectionGlobale() {
+            const visibles = this.sessionsFiltrees().map(s => s.id);
+            if (this.selectionnees.length === visibles.length && visibles.length > 0) {
+                this.selectionnees = this.selectionnees.filter(id => !visibles.includes(id));
+            } else {
+                const union = new Set([...this.selectionnees, ...visibles]);
+                this.selectionnees = [...union];
+            }
+        },
+
+        async supprimerSelection() {
+            if (this.selectionnees.length === 0) return;
+            const ok = await window.demanderConfirmation(
+                `${this.selectionnees.length} session(s) sélectionnée(s) seront définitivement supprimées.`
+            );
+            if (!ok) return;
+
+            try {
+                const res = await fetch(urlSessions, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ ids: this.selectionnees }),
+                });
+
+                const data = await res.json().catch(() => ({}));
+                this.sessionsBloquees = data.bloquees || [];
+                if (!res.ok) {
+                    if (this.sessionsBloquees.length) {
+                        const sessionBloquee = this.sessions.find(session => session.id === this.sessionsBloquees[0].id) || {};
+                        this.aSupprimer = { ...sessionBloquee, formation_id: this.sessionsBloquees[0].formation_id };
+                        this.erreurSuppression = data.erreur || 'Cette session possède encore des inscriptions.';
+                        this.modaleSuppressionOuverte = true;
+                        this.$nextTick(() => lucide.createIcons());
+                        return;
+                    }
+                    throw new Error(data.erreur || 'Impossible de supprimer les sessions sélectionnées.');
+                }
+
+                const supprimees = data.supprimees || [];
+                const bloquees = data.bloquees || [];
+                this.sessions = this.sessions.filter(s => !supprimees.includes(s.id));
+                this.selectionnees = bloquees.map(session => session.id);
+                if (typeof window.afficherToast === 'function') {
+                    if (bloquees.length) {
+                        const sessionBloquee = this.sessions.find(session => session.id === bloquees[0].id) || {};
+                        this.aSupprimer = { ...sessionBloquee, formation_id: bloquees[0].formation_id };
+                        this.erreurSuppression = `${supprimees.length} session(s) supprimée(s). ${bloquees.length} session(s) conservée(s) car elles ont des inscriptions.`;
+                        this.modaleSuppressionOuverte = true;
+                        this.$nextTick(() => lucide.createIcons());
+                    } else {
+                        window.afficherToast('succes', `${supprimees.length} session(s) supprimée(s).`);
+                    }
+                }
+            } catch (err) {
+                console.error('Erreur suppression sélection sessions :', err);
+                if (typeof window.afficherToast === 'function') window.afficherToast('erreur', err.message || 'Erreur lors de la suppression.');
+                else alert(err.message || 'Erreur lors de la suppression.');
+            }
+        },
+
         async confirmerSuppression() {
             this.suppressionEnCours = true;
             this.erreurSuppression = null;
@@ -105,6 +180,7 @@ function pageSessionsData() {
 
                 if (res.status === 204) {
                     this.sessions = this.sessions.filter(s => s.id !== this.aSupprimer.id);
+                    this.selectionnees = this.selectionnees.filter(id => id !== this.aSupprimer.id);
                     this.modaleSuppressionOuverte = false;
                     this.aSupprimer = null;
                     if (typeof window.afficherToast === 'function') window.afficherToast('succes', 'Session supprimée avec succès.');
@@ -342,7 +418,7 @@ function pageSessionsData() {
         },
 
         ouvrirModaleCreation() {
-            this.formulaire = { formation_id: '', formateur_id: '', date_debut: '', date_fin: '', type: 'intra', capacite_max: 15, lieu: '', statut: 'planifiee' };
+            this.formulaire = { formation_id: '', formateur_id: '', date_debut: '', date_fin: '', type: 'intra', capacite_max: 15, lieu: '' };
             this.erreurFormulaire = null;
             this.modaleOuverte = true;
             this.$nextTick(() => lucide.createIcons());
@@ -362,7 +438,7 @@ function pageSessionsData() {
                         formation_id: this.formulaire.formation_id, formateur_id: this.formulaire.formateur_id,
                         date_debut: this.formulaire.date_debut, date_fin: this.formulaire.date_fin,
                         type: this.formulaire.type, capacite_max: this.formulaire.capacite_max,
-                        lieu: this.formulaire.lieu || null, statut: this.formulaire.statut,
+                        lieu: this.formulaire.lieu || null,
                     }),
                 });
                 const data = await res.json();

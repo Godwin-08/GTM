@@ -28,6 +28,9 @@ function pageSessionDetailData(sessionId, peutGererInscriptions) {
     return {
         session: null,
         inscriptions: [],
+        modeSelection: false,
+        selectionnees: [],
+        suppressionEnCours: false,
         chargementEnCours: true,
         erreur: null,
 
@@ -105,6 +108,41 @@ function pageSessionDetailData(sessionId, peutGererInscriptions) {
             });
             this.statutsCandidats = statuts;
             this.enCoursDeChargementStatut = chargements;
+        },
+
+        toggleSelection(id) {
+            this.selectionnees = this.selectionnees.includes(id)
+                ? this.selectionnees.filter(item => item !== id)
+                : [...this.selectionnees, id];
+        },
+
+        toggleSelectionGlobale() {
+            const ids = this.inscriptions.map(inscription => inscription.id);
+            const tousSelectionnes = ids.length > 0 && ids.every(id => this.selectionnees.includes(id));
+            this.selectionnees = tousSelectionnes ? [] : ids;
+        },
+
+        async supprimerSelection() {
+            if (!this.selectionnees.length || !await window.demanderConfirmation(`${this.selectionnees.length} inscription(s) sélectionnée(s) seront définitivement supprimées.`)) return;
+            this.suppressionEnCours = true;
+            try {
+                const res = await fetch('/api/inscriptions', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ ids: this.selectionnees }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.erreur || 'Impossible de supprimer les inscriptions sélectionnées.');
+                this.inscriptions = this.inscriptions.filter(inscription => !this.selectionnees.includes(inscription.id));
+                this.selectionnees = [];
+                this.initialiserStatutsCandidats(this.inscriptions);
+                window.afficherToast?.('succes', `${data.supprimees?.length || 0} inscription(s) supprimée(s).`);
+            } catch (err) {
+                window.afficherToast?.('erreur', err.message || 'Erreur lors de la suppression.');
+            } finally {
+                this.suppressionEnCours = false;
+            }
         },
 
         // ── Rechargement partiel après mutation ──────────────────

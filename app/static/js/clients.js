@@ -20,6 +20,8 @@ function pageClientsData() {
     return {
         /** @type {Array} Clients chargés depuis l'API */
         clients: [],
+        modeSelection: false,
+        selectionnees: [],
 
         /** @type {boolean} Indicateur de chargement réseau */
         chargementEnCours: true,
@@ -46,6 +48,12 @@ function pageClientsData() {
         editionEnCours: false,
         erreurEdition: null,
         edition: { id: null, nom_entreprise: '', secteur: '', contact_email: '' },
+
+        // --- État de la modale de suppression ---
+        modaleSuppressionOuverte: false,
+        suppressionEnCours: false,
+        erreurSuppression: null,
+        aSupprimer: null,
 
         /**
          * Enregistre l'écouteur popstate pour la navigation arrière/avant avec filtres persistés dans l'URL.
@@ -220,6 +228,30 @@ function pageClientsData() {
         /**
          * Ouvre la modale de création et réinitialise le formulaire.
          */
+        basculerModeSelection() {
+            this.modeSelection = !this.modeSelection;
+            this.selectionnees = [];
+        },
+        toggleSelection(id) {
+            this.selectionnees = this.selectionnees.includes(id) ? this.selectionnees.filter(item => item !== id) : [...this.selectionnees, id];
+        },
+        toggleSelectionGlobale() {
+            const visibles = this.clientsFiltres().map(client => client.id);
+            const tousSelectionnes = visibles.length > 0 && visibles.every(id => this.selectionnees.includes(id));
+            this.selectionnees = tousSelectionnes ? this.selectionnees.filter(id => !visibles.includes(id)) : [...new Set([...this.selectionnees, ...visibles])];
+        },
+        async supprimerSelection() {
+            if (!this.selectionnees.length || !await window.demanderConfirmation(`${this.selectionnees.length} client(s) sélectionné(s) seront définitivement supprimé(s).`)) return;
+            try {
+                const res = await fetch(urlClients, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ ids: this.selectionnees }) });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.erreur || 'Suppression impossible.');
+                this.clients = this.clients.filter(client => !this.selectionnees.includes(client.id));
+                this.modeSelection = false; this.selectionnees = [];
+                window.afficherToast?.('succes', `${data.supprimees.length} client(s) supprimé(s).`);
+            } catch (err) { window.afficherToast?.('erreur', err.message); }
+        },
+
         ouvrirModaleCreation() {
             this.formulaire = { nom_entreprise: '', secteur: '', contact_email: '' };
             this.erreurFormulaire = null;
@@ -334,6 +366,72 @@ function pageClientsData() {
                 this.erreurEdition = 'Impossible de contacter le serveur.';
             } finally {
                 this.editionEnCours = false;
+            }
+        },
+
+        /**
+         * Ouvre la modale de confirmation de suppression pour un client donné.
+         * @param {object} client
+         */
+        ouvrirModaleSuppression(client) {
+            this.aSupprimer = client;
+            this.erreurSuppression = null;
+            this.modaleSuppressionOuverte = true;
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        /**
+         * Ferme la modale de suppression si aucune opération n'est en cours.
+         */
+        fermerModaleSuppression() {
+            if (!this.suppressionEnCours) {
+                this.modaleSuppressionOuverte = false;
+                this.aSupprimer = null;
+                this.erreurSuppression = null;
+            }
+        },
+
+        /**
+         * Confirme et exécute la suppression du client via DELETE /api/clients/<id>.
+         */
+        async confirmerSuppression() {
+            if (!this.aSupprimer) return;
+            this.suppressionEnCours = true;
+            this.erreurSuppression = null;
+
+            try {
+                const res = await fetch(`${urlClients}/${this.aSupprimer.id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                });
+
+                if (!res.ok) {
+                    let errData = {};
+                    try {
+                        errData = await res.json();
+                    } catch {}
+                    this.erreurSuppression = errData.erreur || 'Erreur lors de la suppression du client.';
+                    if (typeof window.afficherToast === 'function') {
+                        window.afficherToast('erreur', this.erreurSuppression);
+                    }
+                    return;
+                }
+
+                const nomSupprime = this.aSupprimer.nom_entreprise;
+                this.clients = this.clients.filter(c => c.id !== this.aSupprimer.id);
+                this.modaleSuppressionOuverte = false;
+                this.aSupprimer = null;
+
+                if (typeof window.afficherToast === 'function') {
+                    window.afficherToast('succes', `Client "${nomSupprime}" supprimé avec succès.`);
+                }
+            } catch (err) {
+                console.error('Erreur suppression client :', err);
+                this.erreurSuppression = 'Impossible de contacter le serveur.';
+            } finally {
+                this.suppressionEnCours = false;
+                this.$nextTick(() => lucide.createIcons());
             }
         },
     };

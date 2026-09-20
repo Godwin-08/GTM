@@ -140,38 +140,46 @@ class PermissionsTestCase(unittest.TestCase):
     def test_formateur_listes_et_acces_direct_securise(self):
         self.connecter(self.user_formateur_1)
 
-        # 1. Vérification des listes filtrées
+        # 1. Vérification des listes autorisées filtrées
         sessions = self.client.get("/api/sessions").get_json()
         participants = self.client.get("/api/participants").get_json()
-        clients = self.client.get("/api/clients").get_json()
         formations = self.client.get("/api/formations").get_json()
 
         self.assertEqual([s["id"] for s in sessions], [self.session_1.id])
         self.assertEqual([p["id"] for p in participants], [self.participant_1.id])
-        self.assertEqual([c["id"] for c in clients], [self.client_1.id])
         self.assertEqual([f["id"] for f in formations], [self.formation_1.id])
 
-        # 2. Vérification des rejets 403 Forbidden sur accès direct par ID aux ressources d'autrui
+        # 2. Interdiction d'accès pour les formateurs aux listes de clients et formateurs (403 Forbidden)
+        res_clients = self.client.get("/api/clients")
+        self.assertEqual(res_clients.status_code, 403)
+
+        res_formateurs = self.client.get("/api/formateurs")
+        self.assertEqual(res_formateurs.status_code, 403)
+
+        res_client_detail = self.client.get(f"/api/clients/{self.client_1.id}")
+        self.assertEqual(res_client_detail.status_code, 403)
+
+        # 3. Vérification des rejets 403 Forbidden sur accès direct par ID aux ressources d'autrui
         res_session = self.client.get(f"/api/sessions/{self.session_2.id}")
         self.assertEqual(res_session.status_code, 403)
 
         res_participant = self.client.get(f"/api/participants/{self.participant_2.id}")
         self.assertEqual(res_participant.status_code, 403)
 
-        res_client = self.client.get(f"/api/clients/{self.client_2.id}")
-        self.assertEqual(res_client.status_code, 403)
-
         res_formation = self.client.get(f"/api/formations/{self.formation_2.id}")
         self.assertEqual(res_formation.status_code, 403)
 
-        # 3. Vérification de l'isolation des agrégats (pas de fuite des sessions/participants des autres formateurs)
-        client_data = self.client.get(f"/api/clients/{self.client_1.id}").get_json()
-        self.assertEqual(client_data["nb_sessions"], 1)
-        self.assertEqual(client_data["nb_participants"], 1)
-
+        # 4. Vérification des données autorisées pour le participant
         participant_data = self.client.get(f"/api/participants/{self.participant_1.id}").get_json()
         self.assertEqual(participant_data["nb_inscriptions"], 1)
         self.assertEqual(participant_data["nb_formations"], 1)
+
+        # 5. Redirection des pages HTML /clients et /formateurs pour le formateur (302)
+        res_page_clients = self.client.get("/clients")
+        self.assertEqual(res_page_clients.status_code, 302)
+
+        res_page_formateurs = self.client.get("/formateurs")
+        self.assertEqual(res_page_formateurs.status_code, 302)
 
 
 if __name__ == "__main__":

@@ -44,6 +44,11 @@ function pageFormateursData() {
         erreurFormulaire: null,
         formulaire: { nom: '', domaine_id: '', email: '', telephone: '', utilisateur_id: '' },
 
+        // Sélecteur Interne / Externe (Point 3)
+        typeFormateur: 'externe',       // 'interne' | 'externe'
+        utilisateursDispo: [],          // utilisateurs avec rôle formateur non encore liés
+        chargementUtilisateurs: false,
+
         // --- État de la modale d'édition ---
         modaleEditionOuverte: false,
         editionEnCours: false,
@@ -206,6 +211,8 @@ function pageFormateursData() {
         /** Ouvre la modale de création et réinitialise le formulaire. */
         ouvrirModaleCreation() {
             this.formulaire = { nom: '', domaine_id: '', email: '', telephone: '', utilisateur_id: '' };
+            this.typeFormateur = 'externe';
+            this.utilisateursDispo = [];
             this.erreurFormulaire = null;
             this.modaleOuverte = true;
             this.$nextTick(() => typeof lucide !== 'undefined' && lucide.createIcons());
@@ -217,26 +224,60 @@ function pageFormateursData() {
         },
 
         /**
+         * Charge les utilisateurs ayant le rôle 'formateur' et sans profil Formateur existant.
+         * Appelé quand l'admin bascule sur le choix 'Interne'.
+         * @returns {Promise<void>}
+         */
+        async chargerUtilisateursFormateurs() {
+            this.chargementUtilisateurs = true;
+            this.utilisateursDispo = [];
+            this.formulaire.utilisateur_id = '';
+            try {
+                const res = await fetch(`${urlUtilisateurs}?role=formateur`, {
+                    credentials: 'include',
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    this.utilisateursDispo = data;
+                }
+            } catch (err) {
+                console.error('Erreur chargement utilisateurs formateurs :', err);
+            } finally {
+                this.chargementUtilisateurs = false;
+            }
+        },
+
+        /**
          * Soumet la création d'un nouveau formateur via POST.
-         * L'identifiant utilisateur est optionnel (formateur interne uniquement).
+         * Si typeFormateur === 'interne', envoie l'utilisateur_id sélectionné.
+         * Si typeFormateur === 'externe', le nom/email/téléphone sont saisis librement.
          * @returns {Promise<void>}
          */
         async soumettreCreation() {
             this.envoiEnCours = true;
             this.erreurFormulaire = null;
             try {
+                // Construire le payload selon le type (interne / externe)
+                const payload = {
+                    domaine_id: this.formulaire.domaine_id,
+                    email: this.formulaire.email || null,
+                    telephone: this.formulaire.telephone || null,
+                };
+                if (this.typeFormateur === 'interne') {
+                    // Le nom vient du compte utilisateur sélectionné
+                    const userChoisi = this.utilisateursDispo.find(u => u.id === this.formulaire.utilisateur_id);
+                    payload.nom = userChoisi ? userChoisi.nom : '';
+                    payload.utilisateur_id = this.formulaire.utilisateur_id;
+                } else {
+                    // Formateur externe : nom obligatoirement saisi
+                    payload.nom = this.formulaire.nom;
+                }
+
                 const res = await fetch(urlFormateurs, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({
-                        nom: this.formulaire.nom,
-                        domaine_id: this.formulaire.domaine_id,
-                        email: this.formulaire.email || null,
-                        telephone: this.formulaire.telephone || null,
-                        // Rattachement optionnel à un compte utilisateur (formateur interne)
-                        ...(this.formulaire.utilisateur_id ? { utilisateur_id: this.formulaire.utilisateur_id } : {}),
-                    }),
+                    body: JSON.stringify(payload),
                 });
                 const data = await res.json();
                 if (!res.ok) {
@@ -247,6 +288,7 @@ function pageFormateursData() {
                 this.modaleOuverte = false;
                 if (typeof window.afficherToast === 'function') window.afficherToast('succes', 'Formateur créé avec succès.');
                 await this.appliquerFiltres(false);
+
             } catch (err) {
                 console.error('Erreur création formateur :', err);
                 this.erreurFormulaire = 'Impossible de contacter le serveur.';

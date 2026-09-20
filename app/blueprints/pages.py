@@ -105,6 +105,8 @@ def session_detail(session_id):
 @login_required
 def clients():
     """Page de gestion du portefeuille d'entreprises clientes."""
+    if current_user.a_role("formateur"):
+        return redirect(url_for('pages.dashboard_formateur'))
     return render_template('clients/liste.html')
 
 
@@ -112,6 +114,8 @@ def clients():
 @login_required
 def client_detail(client_id):
     """Page de fiche client, salariés rattachés et historique de participation."""
+    if current_user.a_role("formateur"):
+        return redirect(url_for('pages.dashboard_formateur'))
     return render_template('clients/detail.html', client_id=client_id)
 
 
@@ -119,6 +123,8 @@ def client_detail(client_id):
 @login_required
 def formateurs():
     """Page de l'annuaire des formateurs et intervenants par domaine."""
+    if current_user.a_role("formateur"):
+        return redirect(url_for('pages.dashboard_formateur'))
     return render_template('formateurs/liste.html')
 
 

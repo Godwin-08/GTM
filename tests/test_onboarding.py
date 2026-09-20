@@ -141,7 +141,7 @@ class OnboardingTestCase(unittest.TestCase):
         # 2. Soumission de l'activation
         res_act = self.client.post(
             "/api/auth/activer-compte",
-            json={"token": token_brut, "mot_de_passe": "MonNouveauPass123"},
+            json={"token": token_brut, "mot_de_passe": "MonNouveauPass123!"},
         )
         self.assertEqual(res_act.status_code, 200)
         self.assertIn("activé avec succès", res_act.get_json()["message"])
@@ -157,7 +157,7 @@ class OnboardingTestCase(unittest.TestCase):
         # 4. Connexion normale avec le nouveau mot de passe
         res_login = self.client.post(
             "/api/auth/login",
-            json={"email": "karim.onboard@test.ma", "mot_de_passe": "MonNouveauPass123"},
+            json={"email": "karim.onboard@test.ma", "mot_de_passe": "MonNouveauPass123!"},
         )
         self.assertEqual(res_login.status_code, 200)
         self.assertEqual(res_login.get_json()["message"], "Connexion réussie")
@@ -166,7 +166,7 @@ class OnboardingTestCase(unittest.TestCase):
         """Un token inconnu ou altéré doit être rejeté."""
         res = self.client.post(
             "/api/auth/activer-compte",
-            json={"token": "faux-token-inconnu", "mot_de_passe": "Password123"},
+            json={"token": "faux-token-inconnu", "mot_de_passe": "Password123!"},
         )
         self.assertEqual(res.status_code, 400)
         self.assertIn("invalide", res.get_json()["erreur"])
@@ -193,7 +193,7 @@ class OnboardingTestCase(unittest.TestCase):
         # Tentative d'activation
         res_act = self.client.post(
             "/api/auth/activer-compte",
-            json={"token": token_brut, "mot_de_passe": "Password123"},
+            json={"token": token_brut, "mot_de_passe": "Password123!"},
         )
         self.assertEqual(res_act.status_code, 400)
         self.assertIn("expiré", res_act.get_json()["erreur"])
@@ -215,14 +215,14 @@ class OnboardingTestCase(unittest.TestCase):
         # 1ère utilisation -> 200 OK
         res1 = self.client.post(
             "/api/auth/activer-compte",
-            json={"token": token_brut, "mot_de_passe": "SuperPass123"},
+            json={"token": token_brut, "mot_de_passe": "SuperPass123!"},
         )
         self.assertEqual(res1.status_code, 200)
 
         # 2ème utilisation avec le même token -> 400 Rejeté
         res2 = self.client.post(
             "/api/auth/activer-compte",
-            json={"token": token_brut, "mot_de_passe": "AutrePass123"},
+            json={"token": token_brut, "mot_de_passe": "AutrePass123!"},
         )
         self.assertEqual(res2.status_code, 400)
 
