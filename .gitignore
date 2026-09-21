@@ -10,6 +10,9 @@ instance/
 cookies*.txt
 *.log
 
+# Documents internes non publiés
+Cahier_des_charges_detaille_Galaxy_Solutions.md.pdf
+
 # Images locales & assets générés
 app/static/img/
 
