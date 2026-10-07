@@ -35,7 +35,7 @@ if __name__ == "__main__":
     print(f"  * Accès réseau/Wi-Fi: http://{local_ip}:{port}")
     print("=" * 60 + "\n")
 
-    # Démarrage effectif du serveur web Flask
-    app.run(host=host, port=port, debug=debug)
+    # Démarrage effectif du serveur web Flask en mode multi-threadé (traite les requêtes API en parallèle)
+    app.run(host=host, port=port, debug=debug, threaded=True)
 
 

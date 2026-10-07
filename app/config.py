@@ -32,19 +32,69 @@ class Config:
     # -------------------------------------------------------------------------
     # 2. Base de Données Relationnelle MySQL / MariaDB via SQLAlchemy
     # -------------------------------------------------------------------------
-    DB_USER = os.environ.get("DB_USER")
-    DB_HOST = os.environ.get("DB_HOST", "localhost")
-    DB_NAME = os.environ.get("DB_NAME")
+    DATABASE_URL = os.environ.get("DATABASE_URL")
 
-    # Encodage sécurisé du mot de passe (quote_plus protège contre les caractères
-    # réservés dans les URLs comme '@', ':', '/', '%', etc.)
+    DB_USER = os.environ.get("DB_USER", "root")
+    DB_HOST = os.environ.get("DB_HOST", "localhost")
+    DB_PORT = os.environ.get("DB_PORT", "3306")
+    DB_NAME = os.environ.get("DB_NAME", "galaxy_solutions")
     DB_PASSWORD = quote_plus(os.environ.get("DB_PASSWORD", ""))
 
-    # URI de connexion officielle SQLAlchemy au format :
-    # mysql+pymysql://<user>:<password>@<host>/<database>
-    SQLALCHEMY_DATABASE_URI = (
-        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
-    )
+    # Support SSL (requis par TiDB Cloud, Aiven, etc.)
+    DB_USE_SSL = os.environ.get("DB_USE_SSL", "false").lower() in ("true", "1", "yes")
+    DB_SSL_CA = os.environ.get("DB_SSL_CA", "")
+
+    # Construction de l'URI SQLAlchemy
+    if DATABASE_URL:
+        # Normalisation du protocole si nécessaire (ex: mysql:// -> mysql+pymysql://)
+        if DATABASE_URL.startswith("mysql://"):
+            SQLALCHEMY_DATABASE_URI = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
+        else:
+            SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    else:
+        # URI de connexion officielle SQLAlchemy avec port :
+        # mysql+pymysql://<user>:<password>@<host>:<port>/<database>
+        SQLALCHEMY_DATABASE_URI = (
+            f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+        )
+
+    # Options de connexion au moteur SQLAlchemy (SSL, pool pre-ping, etc.)
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+    }
+
+    if DB_USE_SSL:
+        # PyMySQL 1.x + SQLAlchemy : format flat (ssl_ca, ssl_verify_cert, ssl_verify_identity)
+        # Le format {"ssl": {"ca": ...}} ne fonctionne pas correctement avec PyMySQL 1.2+
+        ca_path = None
+        if DB_SSL_CA and os.path.exists(DB_SSL_CA):
+            ca_path = DB_SSL_CA
+        else:
+            try:
+                import certifi
+                ca_path = certifi.where()
+            except ImportError:
+                for _p in [
+                    "/etc/ssl/certs/ca-certificates.crt",
+                    "/etc/pki/tls/certs/ca-bundle.crt",
+                    "/etc/ssl/ca-bundle.pem",
+                ]:
+                    if os.path.exists(_p):
+                        ca_path = _p
+                        break
+
+        if ca_path:
+            SQLALCHEMY_ENGINE_OPTIONS["connect_args"] = {
+                "ssl_ca": ca_path,
+                "ssl_verify_cert": True,
+                "ssl_verify_identity": True,
+            }
+        else:
+            # Fallback : impose SSL sans vérifier le certificat
+            SQLALCHEMY_ENGINE_OPTIONS["connect_args"] = {
+                "ssl": {"ssl_mode": "REQUIRED"}
+            }
 
     # Désactivation du suivi superflu des modifications SQLAlchemy (économise de la mémoire)
     SQLALCHEMY_TRACK_MODIFICATIONS = False

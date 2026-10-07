@@ -6,8 +6,8 @@
     <title>Activation de votre compte | Galaxy Solutions — GTM</title>
     <title>Activation de votre compte | GTM — Training Manager</title>
     
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS (Local Offline) -->
+    <script src="{{ url_for('static', filename='vendor/tailwind.min.js') }}"></script>
 
     <!-- Config Tailwind : palette Galaxy Solutions & Tokens GTM -->
     <script>
@@ -32,8 +32,8 @@
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="{{ url_for('static', filename='vendor/lucide.min.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='vendor/alpine.min.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
 <body class="bg-slate-900 font-sans text-slate-900 min-h-screen flex items-center justify-center p-4 sm:p-6">

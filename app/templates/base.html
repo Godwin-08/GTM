@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}GTM — Training Manager{% endblock %}</title>
 
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS (Local Offline) -->
+    <script src="{{ url_for('static', filename='vendor/tailwind.min.js') }}"></script>
 
     <!-- Config Tailwind : palette Galaxy Solutions & Tokens GTM centralisés -->
     <script>
@@ -46,15 +46,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Alpine.js -->
+    <!-- Alpine.js (Local Offline) -->
     <style>[x-cloak] { display: none !important; }</style>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="{{ url_for('static', filename='vendor/alpine.min.js') }}" defer></script>
 
-    <!-- Lucide icônes -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Lucide icônes (Local Offline) -->
+    <script src="{{ url_for('static', filename='vendor/lucide.min.js') }}"></script>
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <!-- Chart.js (Local Offline) -->
+    <script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 
