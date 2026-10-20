@@ -373,7 +373,6 @@ function pageDashboardData() {
 
         /**
          * Construit et affiche le graphique en courbe de l'évolution mensuelle des inscriptions.
-         * Calcule et affiche également la variation en pourcentage par rapport au mois précédent.
          * @param {Array<{annee: number, mois: number, nb_inscriptions: number}>} data Série temporelle mensuelle.
          */
         rendreChartEvolution(data) {
@@ -383,25 +382,6 @@ function pageDashboardData() {
             if (chartEvolutionInstance) {
                 chartEvolutionInstance.destroy();
                 chartEvolutionInstance = null;
-            }
-
-            // Calcul de la tendance mensuelle si au moins deux points de données sont disponibles
-            const elTendance = document.getElementById('kpi-participants-tendance');
-            if (elTendance) {
-                if (data.length >= 2) {
-                    const dernier = data[data.length - 1].nb_inscriptions;
-                    const prec = data[data.length - 2].nb_inscriptions;
-                    if (prec > 0) {
-                        const variation = ((dernier - prec) / prec) * 100;
-                        const signe = variation >= 0 ? '+' : '';
-                        elTendance.textContent = `${signe}${variation.toFixed(0)}% vs mois précédent`;
-                        elTendance.className = `text-xs mt-1 font-semibold ${variation >= 0 ? 'text-emerald-700' : 'text-red-600'}`;
-                    } else {
-                        elTendance.textContent = '';
-                    }
-                } else {
-                    elTendance.textContent = '';
-                }
             }
 
             const labels = data.map(d => formaterMoisAnnee(d.annee, d.mois));
