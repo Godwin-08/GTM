@@ -307,7 +307,7 @@ Cette séparation nette des responsabilités garantit la maintenabilité du code
 - **Scikit-learn 1.9+** (inclus dans l'environnement pour extensions analytiques futures)
 
 ### Tests & Qualité
-- **Pytest 9.x** & **Python `unittest`** (suite de 120 tests automatisés)
+- **Pytest 9.x** & **Python `unittest`** (suite de 166 tests automatisés)
 
 ### Gestion de version
 - **Git** & **GitHub**
@@ -434,7 +434,7 @@ PFA_galaxy_solutions/
 │   ├── diagnostic_encodage.py       # Diagnostic de la chaîne d'encodage UTF-8 (MySQL / PyMySQL)
 │   └── verifier_donnees_accents.py  # Script de contrôle HEX des données accentuées
 │
-├── tests/                           # Suite de 124 tests unitaires et d'intégration (19 fichiers)
+├── tests/                           # Suite de 166 tests unitaires et d'intégration (22 fichiers)
 │   ├── test_auth.py                 # Authentification et login
 │   ├── test_roles.py                # Référentiel des rôles et création avec base minimale
 │   ├── test_permissions.py          # Autorisations RBAC
@@ -452,13 +452,18 @@ PFA_galaxy_solutions/
 │   ├── test_homepage.py             # Page d'accueil et redirections
 │   ├── test_seed_generator.py       # Générateur de données de démo
 │   ├── test_exports.py              # Exports CSV, Excel et PDF
-│   └── test_phase1_fiabilisation.py # Fiabilisation phase 1
+│   ├── test_phase1_fiabilisation.py # Fiabilisation phase 1
+│   ├── test_deletions.py            # Suppressions sécurisées et cascades
+│   ├── test_vague2_securite.py      # Sécurité renforcée & mots de passe
+│   ├── test_vague3_formateurs.py    # Gestion avancée des formateurs
+│   └── test_vague4_imports_exports.py # Imports / Exports par lot (CSV / Excel)
 │
 ├── .env.example                     # Modèle d'exemple des variables d'environnement
 ├── .gitignore                       # Exclusions Git (.env, venv, pycache...)
 ├── requirements.txt                 # Dépendances Python au format UTF-8
 ├── README.md                        # Documentation officielle du projet
 ├── RECETTE_SOUTENANCE.md            # Protocole et scénarios de démonstration pour le jury
+├── init_db.py                       # Initialisation automatique, audit DDL/DML et seed (python init_db.py --seed)
 └── run.py                           # Point d'entrée serveur Flask (python run.py)
 ```
 
@@ -1082,8 +1087,8 @@ Lancer la suite de tests complète :
 
 Résultat du dernier lancement sur la version finale :
 ```text
-============================ 124 passed in 55.74s =============================
-OK (124 tests validés, 100% de réussite)
+============================ 166 passed in 5.72s ==============================
+OK (166 tests validés, 100% de réussite)
 ```
 
 ---
@@ -1188,7 +1193,7 @@ Dashboard & KPI           ✅ Validé (6 KPI + 5 graphiques interactifs Chart.js
 Points d'attention        ✅ Validé (Badge compteur numérique, gestion état vu/non vu)
 Exports Métier            ✅ Validé (CSV UTF-8, Excel stylisé openpyxl, Rapports PDF ReportLab, Feuilles d'émargement PDF)
 Analyse ACP               ✅ Validé (Interprétation business en 1ère position, projection 2D et détails mathématiques)
-Suite de tests (pytest)   ✅ 120 / 120 tests réussis (100%)
+Suite de tests (pytest)   ✅ 166 / 166 tests réussis (100%)
 Documentation & Recette   ✅ Validé (Protocole RECETTE_SOUTENANCE.md & README)
 ```
 
