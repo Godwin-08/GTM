@@ -117,6 +117,18 @@ class Vague3FormateursTestCase(unittest.TestCase):
         self.assertEqual(roles, {"formateur"})
         self.assertEqual(len(data), 2)  # youssef et salma
 
+    def test_api_utilisateurs_accepte_date_creation_absente(self):
+        """Les comptes historiques sans date de création restent sérialisables."""
+        self.connecter_admin()
+        self.admin.date_creation = None
+        db.session.commit()
+
+        res = self.client.get("/api/utilisateurs")
+
+        self.assertEqual(res.status_code, 200)
+        utilisateur = next(u for u in res.get_json() if u["id"] == self.admin.id)
+        self.assertIsNone(utilisateur["date_creation"])
+
     def test_api_utilisateurs_sans_profil_formateur(self):
         """L'API /api/utilisateurs?role=formateur&sans_profil_formateur=1 ne renvoie que ceux non rattachés."""
         self.connecter_admin()

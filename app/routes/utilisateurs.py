@@ -43,7 +43,7 @@ def utilisateur_vers_dict(utilisateur):
         "statut": utilisateur.statut,
         "est_en_attente": utilisateur.est_en_attente,
         "expiration_token": utilisateur.expiration_token.isoformat() if utilisateur.expiration_token else None,
-        "date_creation": utilisateur.date_creation.isoformat(),
+        "date_creation": utilisateur.date_creation.isoformat() if utilisateur.date_creation else None,
         "role": {
             "id": utilisateur.role.id,
             "nom": utilisateur.role.nom,
