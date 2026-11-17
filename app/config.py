@@ -58,11 +58,24 @@ class Config:
             f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
         )
 
-    # Options de connexion au moteur SQLAlchemy (SSL, pool pre-ping, etc.)
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_pre_ping": True,
-        "pool_recycle": 300,
-    }
+    # Options de connexion au moteur SQLAlchemy
+    # Sur Vercel serverless : NullPool évite de maintenir un pool de connexions
+    # (les fonctions sont éphémères, le pool ne survit pas entre les requêtes)
+    import os as _os
+    _is_serverless = _os.environ.get("VERCEL") or _os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
+
+    if _is_serverless:
+        from sqlalchemy.pool import NullPool
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "poolclass": NullPool,
+        }
+    else:
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "pool_pre_ping": True,
+            "pool_recycle": 300,
+            "pool_size": 5,
+            "max_overflow": 10,
+        }
 
     if DB_USE_SSL:
         # PyMySQL 1.x + SQLAlchemy : format flat (ssl_ca, ssl_verify_cert, ssl_verify_identity)
