@@ -65,9 +65,12 @@ class Config:
     _is_serverless = _os.environ.get("VERCEL") or _os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
 
     if _is_serverless:
-        from sqlalchemy.pool import NullPool
+        # StaticPool : réutilise UNE seule connexion si la fonction est "chaude"
+        # (meilleur que NullPool qui reconnecte à chaque requête)
+        from sqlalchemy.pool import StaticPool
         SQLALCHEMY_ENGINE_OPTIONS = {
-            "poolclass": NullPool,
+            "poolclass": StaticPool,
+            "pool_pre_ping": False,  # évite le ping inutile vers la DB
         }
     else:
         SQLALCHEMY_ENGINE_OPTIONS = {
