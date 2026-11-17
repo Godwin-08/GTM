@@ -59,18 +59,14 @@ class Config:
         )
 
     # Options de connexion au moteur SQLAlchemy
-    # Sur Vercel serverless : NullPool évite de maintenir un pool de connexions
-    # (les fonctions sont éphémères, le pool ne survit pas entre les requêtes)
     import os as _os
     _is_serverless = _os.environ.get("VERCEL") or _os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
 
     if _is_serverless:
-        # StaticPool : réutilise UNE seule connexion si la fonction est "chaude"
-        # (meilleur que NullPool qui reconnecte à chaque requête)
-        from sqlalchemy.pool import StaticPool
+        # Évite de partager une connexion DBAPI entre des requêtes serverless concurrentes.
+        from sqlalchemy.pool import NullPool
         SQLALCHEMY_ENGINE_OPTIONS = {
-            "poolclass": StaticPool,
-            "pool_pre_ping": False,  # évite le ping inutile vers la DB
+            "poolclass": NullPool,
         }
     else:
         SQLALCHEMY_ENGINE_OPTIONS = {
