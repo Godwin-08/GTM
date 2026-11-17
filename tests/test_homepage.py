@@ -14,7 +14,9 @@ class HomepageTestCase(unittest.TestCase):
     def setUpClass(cls):
         """Configure l'application de test Flask en mémoire."""
         cls.original_database_uri = Config.SQLALCHEMY_DATABASE_URI
+        cls.original_engine_options = Config.SQLALCHEMY_ENGINE_OPTIONS
         Config.SQLALCHEMY_DATABASE_URI = "sqlite://"
+        Config.SQLALCHEMY_ENGINE_OPTIONS = {}
         cls.app = create_app()
         cls.app.config.update(TESTING=True)
 
@@ -22,6 +24,7 @@ class HomepageTestCase(unittest.TestCase):
     def tearDownClass(cls):
         """Restaure la configuration initiale de la base de données."""
         Config.SQLALCHEMY_DATABASE_URI = cls.original_database_uri
+        Config.SQLALCHEMY_ENGINE_OPTIONS = cls.original_engine_options
 
     def setUp(self):
         """Instancie le client de test HTTP."""
@@ -50,6 +53,14 @@ class HomepageTestCase(unittest.TestCase):
         self.assertIn("GTM", contenu)
         self.assertIn("Galaxy Solutions", contenu)
         self.assertIn("Plateforme de Pilotage & Gestion des Formations", contenu)
+
+    def test_static_assets_are_served(self):
+        """Vérifie que les ressources déplacées sous public restent disponibles localement."""
+        for path in ("/static/css/app.css", "/static/vendor/tailwind.min.js"):
+            with self.subTest(path=path):
+                res = self.client.get(path)
+                self.assertEqual(res.status_code, 200)
+                res.close()
 
 
 if __name__ == "__main__":

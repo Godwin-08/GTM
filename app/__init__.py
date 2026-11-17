@@ -9,7 +9,9 @@ centralisés (400, 403, 404, 409, 500) et raccorde l'ensemble des blueprints
 de l'API REST et des pages HTML.
 """
 
-from flask import Flask, jsonify, redirect, request, url_for
+from pathlib import Path
+
+from flask import Flask, jsonify, redirect, request, send_from_directory, url_for
 from flask_login import current_user, logout_user
 from sqlalchemy.exc import IntegrityError
 from app.config import Config
@@ -27,9 +29,15 @@ def create_app():
 	
 	:return: Instance configurée de Flask (app)
 	"""
-	app = Flask(__name__)
+	app = Flask(__name__, static_folder=None)
 	# Chargement de tous les paramètres depuis la classe Config (config.py)
 	app.config.from_object(Config)
+
+	repertoire_statique = Path(__file__).resolve().parent.parent / "public" / "static"
+
+	@app.route("/static/<path:filename>", endpoint="static")
+	def servir_fichier_statique(filename):
+		return send_from_directory(repertoire_statique, filename)
 
 	# -------------------------------------------------------------------------
 	# 1. Initialisation des extensions Flask
